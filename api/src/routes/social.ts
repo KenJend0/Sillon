@@ -256,11 +256,13 @@ router.get('/feed', requireAuthOptional, async (req, res) => {
         SELECT fe.*,
                u.display_name, u.username, u.picture_url,
                a.title AS album_title, a.cover_url,
-               ar.name AS artist_name
+               ar.name AS artist_name,
+               de.review_body, de.rating, de.listened_at
         FROM feed_events fe
         LEFT JOIN users u ON u.id = fe.user_id
         LEFT JOIN albums a ON a.id = fe.album_id
         LEFT JOIN artists ar ON ar.id = a.artist_id
+        LEFT JOIN diary_entries de ON de.id = fe.entry_id
         WHERE fe.type = 'discover'
         ORDER BY fe.created_at DESC
         LIMIT $1 OFFSET $2
@@ -271,17 +273,25 @@ router.get('/feed', requireAuthOptional, async (req, res) => {
             return res.json({ items: rows });
         }
 
-        // connecté → feed normal
+        // connecté → feed normal avec TOUTES les données
         const { rows } = await pool.query(
             `
                 SELECT fe.*,
                        u.display_name, u.username, u.picture_url,
                        a.title AS album_title, a.cover_url,
-                       ar.name AS artist_name
+                       ar.name AS artist_name,
+                       de.review_body, de.rating, de.listened_at,
+                       tu.display_name AS target_display_name, 
+                       tu.username AS target_username,
+                       tu.picture_url AS target_avatar,
+                       (SELECT COUNT(*)::int FROM diary_likes WHERE entry_id = fe.entry_id) AS likes_count,
+                       EXISTS(SELECT 1 FROM diary_likes WHERE entry_id = fe.entry_id AND user_id = $1) AS is_liked
                 FROM feed_events fe
                          LEFT JOIN users u ON u.id = fe.user_id
                          LEFT JOIN albums a ON a.id = fe.album_id
                          LEFT JOIN artists ar ON ar.id = a.artist_id
+                         LEFT JOIN diary_entries de ON de.id = fe.entry_id
+                         LEFT JOIN users tu ON tu.id = fe.target_user_id
                 WHERE fe.user_id = $1
                    OR fe.user_id IN (SELECT followee_id FROM follows WHERE follower_id = $1)
                 ORDER BY fe.created_at DESC, fe.event_id DESC

@@ -1,26 +1,99 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --font-dm-sans: 'DM Sans', system-ui, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-dm-sans), Arial, Helvetica, sans-serif;
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Typographie Letterboxd-like */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-dm-sans);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+h1 { font-size: 2.25rem; } /* text-4xl */
+h2 { font-size: 1.875rem; } /* text-3xl */
+h3 { font-size: 1.5rem; } /* text-2xl */
+h4 { font-size: 1.25rem; } /* text-xl */
+h5 { font-size: 1.125rem; } /* text-lg */
+h6 { font-size: 1rem; } /* text-base */
+
+/* Styles réutilisables Letterboxd-like */
+.card {
+  background: #171717; /* bg-neutral-900 */
+  border: 1px solid #262626; /* border-neutral-800 */
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: box-shadow 0.2s;
+}
+
+.card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+.card-interactive {
+  cursor: pointer;
+}
+
+.card-interactive:hover {
+  background: #262626; /* bg-neutral-800 */
+}
+
+/* Boutons */
+.btn-primary {
+  background: #34d399; /* emerald-400 */
+  color: #0a0a0a;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #10b981; /* emerald-500 */
+}
+
+.btn-secondary {
+  background: #171717;
+  border: 1px solid #262626;
+  color: #fafafa;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #262626;
+}
+
+/* Inputs */
+.input {
+  background: #171717;
+  border: 1px solid #262626;
+  color: #fafafa;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #34d399;
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.2);
+}
+
+.input::placeholder {
+  color: #737373; /* text-neutral-500 */
 }
