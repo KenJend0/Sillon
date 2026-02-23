@@ -61,7 +61,7 @@ export default function EditDiaryEntryButton({
       });
 
       if (result.success) {
-        setStatus("Mis Ã  jour !");
+        setStatus("Mis à jour !");
         setTimeout(() => {
           setIsEditOpen(false);
           setStatus(null);
@@ -86,7 +86,7 @@ export default function EditDiaryEntryButton({
       const result = await deleteDiaryEntry(entryId);
 
       if (result.success) {
-        setStatus("SupprimÃ© !");
+        setStatus("Supprimé !");
         setTimeout(() => {
           setIsDeleteConfirm(false);
           setStatus(null);
@@ -129,7 +129,7 @@ export default function EditDiaryEntryButton({
         {isEditOpen && (
           <div className="fixed inset-0 bg-[#1C1C1C]/20 flex items-center justify-center z-50 p-4">
             <div className="bg-background rounded-[12px] p-6 max-w-md w-full border border-border">
-              <h2 className="text-[14px] font-medium text-text-primary mb-section-sm">Mettre Ã  jour</h2>
+              <h2 className="text-[14px] font-medium text-text-primary mb-section-sm">Mettre à jour</h2>
 
               <form onSubmit={handleUpdate} className="mt-3 space-y-3">
                 {/* Stars Rating */}
@@ -152,7 +152,7 @@ export default function EditDiaryEntryButton({
 
                 {/* Date */}
                 <div>
-                  <label className="block text-[12px] text-text-secondary mb-2">Date d'ecoute</label>
+                  <label className="block text-[12px] text-text-secondary mb-2">Date d'écoute</label>
                   <div className="relative">
                     <input
                       type="date"
@@ -178,7 +178,7 @@ export default function EditDiaryEntryButton({
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  placeholder="Vos pensÃ©es..."
+                  placeholder="Vos pensées..."
                   className="w-full border border-border rounded-[10px] p-3 text-[14px] bg-background-secondary text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] transition-colors duration-150"
                 />
 
@@ -201,7 +201,7 @@ export default function EditDiaryEntryButton({
                     disabled={loading}
                     className="flex-1 px-3 py-2.5 bg-[#1C1C1C] hover:opacity-85 text-[#F5F3EF] rounded-[8px] text-[14px] disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-150"
                   >
-                    Mettre Ã  jour
+                    Mettre à jour
                   </button>
                 </div>
               </form>
@@ -214,7 +214,7 @@ export default function EditDiaryEntryButton({
           <div className="fixed inset-0 bg-[#1C1C1C]/20 flex items-center justify-center z-50 p-4">
             <div className="bg-background rounded-[12px] p-6 max-w-md w-full border border-border">
               <h2 className="text-[14px] font-medium text-text-primary mb-2">Supprimer ?</h2>
-              <p className="text-[12px] text-text-secondary mb-section-sm">Cette action ne peut pas Ãªtre annulÃ©e.</p>
+              <p className="text-[12px] text-text-secondary mb-section-sm">Cette action ne peut pas être annulée.</p>
 
               {status && (
                 <p className="text-[12px] font-medium text-text-primary bg-background-secondary rounded-[8px] px-3 py-2 mb-4">

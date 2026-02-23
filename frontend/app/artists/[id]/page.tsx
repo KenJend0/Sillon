@@ -1,8 +1,14 @@
+import React from 'react';
 import BackButton from '@/components/BackButton';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { ArtistPageContent } from '@/components/ArtistPageContent';
 import { getArtistReleases } from '@/app/actions/musicbrainz';
 import { getOrFetchArtistMeta } from '@/app/actions/artists';
+
+// Deduplicate concurrent calls within the same render cycle (cold DB cache path)
+const cachedGetOrFetchArtistMeta = React.cache(async (artistId: string, mbid: string | null) => {
+    return await getOrFetchArtistMeta(artistId, mbid);
+});
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -20,7 +26,7 @@ export async function generateMetadata({ params }: any) {
 
     if (!artist) return { title: 'Artiste' };
 
-    const meta = await getOrFetchArtistMeta(artist.id, artist.mbid);
+    const meta = await cachedGetOrFetchArtistMeta(artist.id, artist.mbid);
 
     return {
         title: `${artist.name}`,
@@ -100,7 +106,7 @@ export default async function ArtistPage({ params }: PageProps) {
     })) || [];
 
     // 5. Fetch bio/image from DB cache (or fetch + cache if first time)
-    const meta = await getOrFetchArtistMeta(artist.id, artist.mbid);
+    const meta = await cachedGetOrFetchArtistMeta(artist.id, artist.mbid);
 
     // 6. Fetch MB releases WITHOUT covers (lightweight, 1 API call)
     let mbReleases: Array<{ mbid: string; releaseGroupMbid: string; title: string; date: string | null; type: string | null }> = [];

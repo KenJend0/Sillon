@@ -1,6 +1,6 @@
 'use server';
 
-import { getAuthUser, createSupabaseServer } from '@/lib/supabase/server';
+import { getAuthUser, createSupabaseServer, createSupabaseAdmin } from '@/lib/supabase/server';
 import { fanoutEvent } from './feed';
 import { ensureProfile } from './profile';
 
@@ -24,8 +24,10 @@ export async function toggleFollow(idOrUsername: string) {
     // Resolve username/id to profile id
     let targetId: string;
 
-    if (idOrUsername.startsWith('user_') || idOrUsername.length === 36) {
-      // Looks like UUID
+    // Detect UUIDs with a regex instead of brittle length/startsWith heuristics.
+    // Supabase UUIDs follow the standard 8-4-4-4-12 hex format.
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(idOrUsername)) {
       targetId = idOrUsername;
     } else {
       // Resolve by username
@@ -55,6 +57,8 @@ export async function toggleFollow(idOrUsername: string) {
       .eq('followee_id', targetId)
       .single();
 
+    const supabaseAdmin = createSupabaseAdmin();
+
     if (existing) {
       // Unfollow
       const { error: deleteError } = await supabase
@@ -66,6 +70,14 @@ export async function toggleFollow(idOrUsername: string) {
       if (deleteError) {
         return { success: false, error: deleteError.message };
       }
+
+      // Clean up all follow feed events for this pair (actor + followee)
+      await supabaseAdmin
+        .from('feed_events')
+        .delete()
+        .eq('type', 'follow')
+        .eq('actor_id', user.id)
+        .eq('followee_id', targetId);
 
       return { success: true, following: false };
     } else {
@@ -81,6 +93,14 @@ export async function toggleFollow(idOrUsername: string) {
         return { success: false, error: insertError.message };
       }
 
+      // Remove any stale follow events for this pair before inserting fresh ones
+      await supabaseAdmin
+        .from('feed_events')
+        .delete()
+        .eq('type', 'follow')
+        .eq('actor_id', user.id)
+        .eq('followee_id', targetId);
+
       // Fanout
       try {
         await fanoutEvent('follow', { followerId: user.id, followeeId: targetId }, [
@@ -93,7 +113,8 @@ export async function toggleFollow(idOrUsername: string) {
       return { success: true, following: true };
     }
   } catch (err) {
-    return { success: false, error: String(err) };
+    console.error('toggleFollow error:', err);
+    return { success: false, error: 'An error occurred' };
   }
 }
 

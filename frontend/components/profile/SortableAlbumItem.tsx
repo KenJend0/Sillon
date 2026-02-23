@@ -3,6 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X } from "lucide-react";
+import Image from "next/image";
 
 type Album = {
   id: string;
@@ -47,11 +48,9 @@ export default function SortableAlbumItem({ album, onRemove }: Props) {
       </div>
 
       {album.cover_url && (
-        <img
-          src={album.cover_url}
-          alt={album.title}
-          className="w-12 h-12 rounded-[8px] object-cover flex-shrink-0"
-        />
+        <div className="flex-shrink-0 w-12 h-12 rounded-[8px] overflow-hidden relative">
+          <Image src={album.cover_url} alt={album.title} fill className="object-cover" />
+        </div>
       )}
 
       <div className="flex-1 min-w-0">

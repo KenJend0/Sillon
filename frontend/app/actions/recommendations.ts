@@ -14,6 +14,10 @@ export async function createRecommendation({
   const user = await getAuthUser();
   if (!user) return { ok: false, error: 'Not authenticated' };
 
+  if (message && message.length > 500) {
+    return { ok: false, error: 'message_too_long' };
+  }
+
   const supabase = await createSupabaseServer();
 
   const { error } = await supabase.from('recommendations' as any).insert({
@@ -23,7 +27,7 @@ export async function createRecommendation({
     message: message || null,
   });
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: 'An error occurred' };
 
   // Create a notification for private recommendations
   if (recommendedToId) {

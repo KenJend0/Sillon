@@ -9,12 +9,18 @@ type SuggestItem = {
   cover_url: string | null;
 };
 
+function escapeILike(s: string): string {
+  return s.replace(/[%_\\]/g, '\\$&');
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get("q") || "").trim();
   const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 50);
 
-  if (!q) return NextResponse.json({ items: [] });
+  if (q.length < 2) return NextResponse.json({ items: [] });
+
+  const safeQ = escapeILike(q);
 
   const supabase = await createSupabaseServer();
   const user = await getAuthUser();
@@ -38,14 +44,14 @@ export async function GET(request: NextRequest) {
     .from("albums")
     .select("id, title, cover_url, artists(id, name)")
     .in("id", albumIds)
-    .ilike("title", `%${q}%`)
+    .ilike("title", `%${safeQ}%`)
     .limit(limit);
 
   // Search by artist name
   const { data: matchingArtists } = await supabase
     .from("artists")
     .select("id")
-    .ilike("name", `%${q}%`);
+    .ilike("name", `%${safeQ}%`);
 
   const artistIds = (matchingArtists || []).map((a) => a.id);
 

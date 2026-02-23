@@ -114,6 +114,12 @@ export default function FeedInfiniteList({ initialEvents, currentUserId }: FeedI
   const [hasMore, setHasMore] = useState(initialEvents.length >= 20);
   const observerTarget = useRef<HTMLDivElement>(null);
   const mountedRef = useRef(false);
+  const eventsRef = useRef<FeedEvent[]>(initialEvents);
+
+  // Use a ref for events to avoid stale closures in the callback
+  useEffect(() => {
+    eventsRef.current = events;
+  }, [events]);
 
   const loadMore = useCallback(async () => {
     if (loading || !hasMore) return;
@@ -122,26 +128,30 @@ export default function FeedInfiniteList({ initialEvents, currentUserId }: FeedI
     try {
       const result = await getMyFeed({
         limit: 20,
-        offset: events.length
+        offset: eventsRef.current.length,
       });
 
       if (result.success && result.events.length > 0) {
-        // Deduplicate before adding
-        const dedupMap = new Set(events.map(getDedupKey));
-        const newEvents = result.events.filter(e => !dedupMap.has(getDedupKey(e)));
-        
-        setEvents(prev => [...prev, ...newEvents]);
+        // Deduplicate against the latest events snapshot
+        const dedupMap = new Set(eventsRef.current.map(getDedupKey));
+        const newEvents = result.events.filter((e) => !dedupMap.has(getDedupKey(e)));
+
+        setEvents((prev) => {
+          const merged = [...prev, ...newEvents];
+          eventsRef.current = merged;
+          return merged;
+        });
         setHasMore(result.events.length >= 20);
       } else {
         setHasMore(false);
       }
     } catch (error) {
-      console.error('Error loading more events:', error);
+      console.error("Error loading more events:", error);
       setHasMore(false);
     } finally {
       setLoading(false);
     }
-  }, [loading, hasMore, events.length, events]);
+  }, [loading, hasMore]);
 
   useEffect(() => {
     // Avoid firing loadMore immediately during hydration (can cause duplicate fetch)

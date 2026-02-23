@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { searchInternal } from "@/app/actions/search";
 
 type AlbumUI = {
@@ -104,11 +105,9 @@ export default function AlbumSearchForDiary({ onSelectAlbum }: AlbumSearchForDia
                             className="w-full flex items-center gap-3 p-3 hover:bg-background-secondary transition-colors duration-150 border-b border-border-divider last:border-b-0 text-left"
                         >
                             {album.coverUrl && (
-                                <img
-                                    src={album.coverUrl}
-                                    alt={album.title}
-                                    className="w-12 h-12 rounded-[8px] object-cover flex-shrink-0"
-                                />
+                                <div className="w-12 h-12 rounded-[8px] overflow-hidden relative flex-shrink-0">
+                                    <Image src={album.coverUrl} alt={album.title} fill className="object-cover" />
+                                </div>
                             )}
                             <div className="flex-1 min-w-0">
                                 <div className="font-medium text-[14px] text-text-primary truncate">{album.title}</div>

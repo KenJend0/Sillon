@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, LogOut, Settings, Heart } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { UserAvatar } from "@/components/avatars/DefaultAvatar";
 
@@ -29,12 +29,14 @@ type Props = {
 export default function ProfileHeader({ user, stats, onFollowClick }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
+  const { signOut } = useAuth();
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await signOut();
       setMenuOpen(false);
       router.push("/");
+      router.refresh();
     } catch (e) {
       console.error("Logout error:", e);
     }

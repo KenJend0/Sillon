@@ -112,10 +112,23 @@ async function getNewOnWaveform(): Promise<DiscoverItem[]> {
 }
 
 export default async function ExplorePage() {
-    const [trending, newOnWaveform] = await Promise.all([
-        getTrendingThisWeek(),
-        getNewOnWaveform(),
-    ]);
+    let trending: DiscoverItem[] = [];
+    let newOnWaveform: DiscoverItem[] = [];
+
+    try {
+        [trending, newOnWaveform] = await Promise.all([
+            getTrendingThisWeek(),
+            getNewOnWaveform(),
+        ]);
+    } catch (err) {
+        // In case of Supabase/network errors, fall back to empty lists so UI shows the friendly onboarding state.
+        // This avoids an empty-explore experience for new users when the backend refresh script hasn't run.
+        // Server-side logs are useful to investigate the root cause.
+        // eslint-disable-next-line no-console
+        console.error("Explore data fetch failed:", err);
+        trending = [];
+        newOnWaveform = [];
+    }
 
     const isEmpty = trending.length === 0 && newOnWaveform.length === 0;
 

@@ -1,10 +1,11 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, MessageCircle } from "lucide-react";
 import type { DiaryEntryUI } from "@/app/actions/diary";
+import { toggleDiaryLike } from "@/app/actions/diary";
 
 type SortOption = "date_listened" | "release_date" | "personal_rating";
 
@@ -21,6 +22,38 @@ const SORT_LABELS: Record<SortOption, string> = {
 export default function ReviewsList({ reviews }: Props) {
   const [sortBy, setSortBy] = useState<SortOption>("date_listened");
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+
+  // Local optimistic like state per review
+  const [likesState, setLikesState] = useState<Record<string, { isLiked: boolean; likesCount: number; liking?: boolean }>>(() => {
+    const s: Record<string, { isLiked: boolean; likesCount: number; liking?: boolean }> = {};
+    reviews.forEach((r) => {
+      s[r.id] = { isLiked: r.is_liked ?? false, likesCount: r.likes_count ?? 0, liking: false };
+    });
+    return s;
+  });
+
+  useEffect(() => {
+    const s: Record<string, { isLiked: boolean; likesCount: number; liking?: boolean }> = {};
+    reviews.forEach((r) => {
+      s[r.id] = { isLiked: r.is_liked ?? false, likesCount: r.likes_count ?? 0, liking: false };
+    });
+    setLikesState(s);
+  }, [reviews]);
+
+  const handleLike = async (entryId: string) => {
+    const cur = likesState[entryId];
+    if (!cur || cur.liking) return;
+    setLikesState((prev) => ({ ...prev, [entryId]: { ...prev[entryId], liking: true } }));
+    try {
+      await toggleDiaryLike(entryId);
+      const newLiked = !cur.isLiked;
+      const newCount = newLiked ? cur.likesCount + 1 : Math.max(0, cur.likesCount - 1);
+      setLikesState((prev) => ({ ...prev, [entryId]: { ...prev[entryId], isLiked: newLiked, likesCount: newCount, liking: false } }));
+    } catch (err) {
+      console.error('Like error:', err);
+      setLikesState((prev) => ({ ...prev, [entryId]: { ...prev[entryId], liking: false } }));
+    }
+  };
 
   if (reviews.length === 0)
     return <div className="text-center text-text-tertiary py-12">Aucune revue pour l'instant</div>;
@@ -119,13 +152,24 @@ export default function ReviewsList({ reviews }: Props) {
                 </div>
               )}
               <div className="flex items-center gap-2 text-[12px] text-text-tertiary ml-auto">
-                <button className="flex items-center gap-1 hover:text-[#C86C6C] transition-colors duration-150">
-                  <Heart size={14} className={review.is_liked ? "fill-[#C86C6C] text-[#C86C6C]" : ""} />
-                  <span>{review.likes_count}</span>
+                <button
+                  onClick={() => handleLike(review.id)}
+                  disabled={likesState[review.id]?.liking}
+                  className="flex items-center gap-1 hover:text-[#C86C6C] transition-colors duration-150 disabled:opacity-50"
+                >
+                  <Heart
+                    size={14}
+                    className={likesState[review.id]?.isLiked ? "fill-[#C86C6C] text-[#C86C6C]" : ""}
+                  />
+                  <span>{likesState[review.id]?.likesCount ?? review.likes_count}</span>
                 </button>
-                <button className="flex items-center gap-1 hover:text-text-secondary transition-colors duration-150">
+                <Link
+                  href={`/diary/${review.id}#comments`}
+                  className="flex items-center gap-1 text-text-tertiary hover:text-text-primary transition-colors duration-150"
+                >
                   <MessageCircle size={14} />
-                </button>
+                  <span className="text-[12px]">{review.comments_count ?? 0}</span>
+                </Link>
               </div>
             </div>
           </div>

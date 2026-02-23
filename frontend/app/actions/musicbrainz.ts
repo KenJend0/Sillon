@@ -224,6 +224,9 @@ async function fetchWithRetry(
  * - Frontend handles fallback gracefully
  */
 export async function searchMusicBrainzAlbums(query: string, limit = 30): Promise<{ success: boolean; results?: AlbumSearchResult[]; error?: string }> {
+  const authUser = await getAuthUser();
+  if (!authUser) return { success: false, error: 'not_authenticated' };
+
   try {
     // Direct query to MusicBrainz - single source, no double calls
     const mbUrl = new URL('https://musicbrainz.org/ws/2/release');
@@ -309,6 +312,9 @@ export async function searchMusicBrainzAlbums(query: string, limit = 30): Promis
  * Ported from backend for single source of truth
  */
 export async function searchMusicBrainzArtists(query: string, limit = 30): Promise<{ success: boolean; results?: ArtistSearchResult[]; error?: string }> {
+  const authUser = await getAuthUser();
+  if (!authUser) return { success: false, error: 'not_authenticated' };
+
   try {
     const response = await fetchWithRetry(
       `${MUSICBRAINZ_API}/artist?query=${encodeURIComponent(query)}&fmt=json&limit=${limit}`,
@@ -333,7 +339,8 @@ export async function searchMusicBrainzArtists(query: string, limit = 30): Promi
 
     return { success: true, results };
   } catch (err) {
-    return { success: false, error: String(err) };
+    console.error('searchMusicBrainzArtists error:', err);
+    return { success: false, error: 'An error occurred' };
   }
 }
 
@@ -437,7 +444,7 @@ export async function previewAlbumFromMusicBrainz(mbid: string) {
       },
     };
   } catch (err) {
-    return { success: false, error: String(err) };
+    return { success: false, error: 'An error occurred' };
   }
 }
 
@@ -590,7 +597,7 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
 
     return { success: true, albumId: newAlbumId, imported: true };
   } catch (err) {
-    return { success: false, error: String(err) };
+    return { success: false, error: 'An error occurred' };
   }
 }
 
@@ -726,7 +733,7 @@ export async function previewArtistFromMusicBrainz(mbid: string) {
       },
     };
   } catch (err) {
-    return { success: false, error: String(err) };
+    return { success: false, error: 'An error occurred' };
   }
 }
 
@@ -782,7 +789,7 @@ export async function getArtistReleases(mbid: string): Promise<{
 
     return { success: true, releases: result };
   } catch (err) {
-    return { success: false, error: String(err) };
+    return { success: false, error: 'An error occurred' };
   }
 }
 
@@ -876,6 +883,9 @@ export async function fetchArtistMetadata(mbid: string): Promise<{
 }
 
 export async function searchMusicBrainzPreview(query: string): Promise<SearchResultUI[]> {
+  const authUser = await getAuthUser();
+  if (!authUser) return [];
+
   const limit = 5;
   try {
     const response = await fetch(

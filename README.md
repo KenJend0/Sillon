@@ -188,6 +188,24 @@ bash scripts/refresh_discover.sh
 
 Il appelle l'endpoint admin qui remplit `discover_items` avec 7 catégories : trending semaine/mois, all-time top, momentum, hidden gems, nouvelles sorties, community pick.
 
+### Discover — population (notes pratiques)
+
+Si `discover_items` est vide, la page `app/explore` affiche un message d'accueil invitant l'utilisateur à rechercher des albums. En développement ou en production, remplissez la table avec le script suivant :
+
+PowerShell (Windows) :
+
+```powershell
+.\scripts\refresh_discover.ps1
+```
+
+Unix / Bash :
+
+```bash
+bash scripts/refresh_discover.sh
+```
+
+En production (Vercel) : planifiez l'appel périodique du script via une tâche cron externe, un GitHub Actions workflow, ou les Scheduled Functions / Cron Jobs de Vercel pour exécuter l'endpoint admin qui peuple `discover_items` (la clé `SUPABASE_SERVICE_KEY` est requise et doit rester côté serveur).
+
 ---
 
 ## Déploiement (Vercel)

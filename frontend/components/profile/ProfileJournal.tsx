@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 type Entry = {
   id: string;
@@ -48,12 +49,10 @@ export default function ProfileJournal({ entries }: ProfileJournalProps) {
             >
               {/* Cover */}
               {album.cover_url && (
-                <div className="flex-shrink-0">
-                  <img
-                    src={album.cover_url}
-                    alt={album.title}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-[10px] object-cover"
-                  />
+                <div className="flex-shrink-0 relative" style={{ width: 64 }}>
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[10px] overflow-hidden relative">
+                    <Image src={album.cover_url} alt={album.title} fill className="object-cover" />
+                  </div>
                 </div>
               )}
 

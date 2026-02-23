@@ -27,14 +27,17 @@ interface UserAvatarProps {
  * Avatar utilisateur — affiche la vraie photo (src) si disponible, sinon SVG déterministe.
  * Size in pixels (default: 18)
  */
+import Image from "next/image";
+
 export function UserAvatar({ userId, src, size = 18, className = "" }: UserAvatarProps) {
   if (src) {
     return (
-      <img
+      <Image
         src={src}
         alt=""
+        width={size}
+        height={size}
         className={`flex-shrink-0 rounded-full object-cover ${className}`}
-        style={{ width: size, height: size }}
       />
     );
   }

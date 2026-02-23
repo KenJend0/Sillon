@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import MyActivitiesModal from "@/components/MyActivitiesModal";
 import SaveAlbumButton from "@/components/SaveAlbumButton";
@@ -56,11 +57,12 @@ export default function AlbumHero({
                 {/* Cover */}
                 <div className="flex-shrink-0 w-full md:w-48 mb-2 md:mb-0">
                     {album.coverUrl && !coverError ? (
-                        <div className="rounded-[10px] overflow-hidden aspect-square w-full max-w-48 mx-auto md:mx-0">
-                            <img
+                        <div className="rounded-[10px] overflow-hidden aspect-square w-full max-w-48 mx-auto md:mx-0 relative">
+                            <Image
                                 src={album.coverUrl}
                                 alt={album.title}
-                                className="w-full h-full object-cover"
+                                fill
+                                className="object-cover"
                                 onError={() => setCoverError(true)}
                             />
                         </div>

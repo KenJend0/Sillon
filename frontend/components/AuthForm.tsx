@@ -97,9 +97,26 @@ export default function AuthForm() {
           throw new Error("Signup succeeded but no user returned");
         }
       } else if (mode === "reset") {
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth?mode=login`,
+        const getFrontendBase = () => {
+          const envBase = process.env.NEXT_PUBLIC_FRONTEND_BASE;
+          if (envBase && !envBase.includes("localhost")) return envBase;
+          if (typeof window !== "undefined") return window.location.origin;
+          return "";
+        };
+
+        const base = getFrontendBase();
+        if (!base) {
+          console.error('Missing NEXT_PUBLIC_FRONTEND_BASE and window.location.origin not available');
+          setError("Impossible d'envoyer l'email de réinitialisation pour l'instant.");
+          setLoading(false);
+          return;
+        }
+
+        const { data, error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${base}/auth/reset`,
         });
+
+        console.log('resetPasswordForEmail result', { data, error: resetError });
 
         if (resetError) {
           throw new Error(resetError.message);

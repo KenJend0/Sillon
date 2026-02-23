@@ -8,6 +8,8 @@
 .env.*.local
 frontend/.env.local
 frontend/.env.*.local
+supabase
+supabase_rls*
 
 # ── Node ─────────────────────────────────────────────────────
 node_modules/

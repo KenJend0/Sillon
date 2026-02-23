@@ -2,7 +2,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/AuthContext";
 import AvatarCropModal from "@/components/AvatarCropModal";
+import Image from "next/image";
 import { UserAvatar } from "@/components/avatars/DefaultAvatar";
 import { uploadAvatar, deleteAvatar as deleteAvatarAction } from "@/app/actions/avatarActions";
 import {
@@ -282,10 +284,13 @@ export default function ProfileSettings() {
         setUsernameCheckState(result.available ? "available" : "taken");
     };
 
+    const { signOut } = useAuth();
+
     const handleLogout = async () => {
         try {
-            await supabase.auth.signOut();
+            await signOut();
             router.push("/");
+            router.refresh();
         } catch (e: any) {
             console.error("Logout error:", e);
             setStatus(`error:${e.message}`);
@@ -305,7 +310,7 @@ export default function ProfileSettings() {
                 setDeleting(false);
                 return;
             }
-            await supabase.auth.signOut();
+            await signOut();
             router.push("/");
         } catch (e: any) {
             console.error("Delete account error:", e);
@@ -363,11 +368,9 @@ export default function ProfileSettings() {
                                         className="w-20 h-20 rounded-full object-cover bg-background-tertiary"
                                     />
                                 ) : profile.avatar_url ? (
-                                    <img
-                                        src={profile.avatar_url}
-                                        alt="Profile avatar"
-                                        className="w-20 h-20 rounded-full object-cover bg-background-tertiary"
-                                    />
+                                    <div className="w-20 h-20 rounded-full overflow-hidden relative">
+                                        <Image src={profile.avatar_url} alt="Profile avatar" fill className="object-cover" />
+                                    </div>
                                 ) : (
                                     <div className="w-20 h-20 rounded-full bg-background-tertiary flex items-center justify-center">
                                         <UserAvatar userId={profile.id} size={80} />

@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { UserAvatar } from "@/components/avatars/DefaultAvatar";
 
 type User = {
@@ -20,10 +21,12 @@ export default function UserCard({
                 className="flex items-center gap-3.5 flex-1 min-w-0"
             >
                 {user.picture_url ? (
-                    <img
+                    <Image
                         src={user.picture_url}
                         alt={user.display_name}
-                        className="w-11 h-11 rounded-full border border-border bg-background-tertiary flex-shrink-0 object-cover"
+                        width={44}
+                        height={44}
+                        className="rounded-full border border-border bg-background-tertiary flex-shrink-0 object-cover"
                     />
                 ) : (
                     <div className="w-11 h-11 rounded-full border border-border bg-background-tertiary flex-shrink-0 flex items-center justify-center">

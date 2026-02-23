@@ -4,24 +4,26 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-type Album = {
+export type FavoriteAlbum = {
   id: string;
   title: string;
   artist_name: string;
-  cover_url?: string;
+  cover_url?: string | null;
   position: number;
 };
 
 type Props = {
   userId: string;
   isMe?: boolean;
+  initialAlbums?: FavoriteAlbum[];
 };
 
-export default function Top3Albums({ userId, isMe }: Props) {
-  const [albums, setAlbums] = useState<Album[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function Top3Albums({ userId, isMe, initialAlbums }: Props) {
+  const [albums, setAlbums] = useState<FavoriteAlbum[]>(initialAlbums ?? []);
+  const [loading, setLoading] = useState(!initialAlbums);
 
   useEffect(() => {
+    if (initialAlbums) return;
     (async () => {
       try {
         const res = await fetch(`/api/users/${userId}/favorite-albums`, {

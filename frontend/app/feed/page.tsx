@@ -33,14 +33,14 @@ export default async function FeedPage() {
             Le fil est calme pour l&apos;instant.
           </p>
           <p className="text-[14px] text-text-tertiary mb-8 leading-relaxed">
-            Quand tu suivras quelqu&apos;un, ses Ã©coutes<br />
-            et ses notes apparaÃ®tront ici.
+            Quand tu suivras quelqu&apos;un, ses écoutes<br />
+            et ses notes apparaîtront ici.
           </p>
           <Link
             href="/explore"
             className="text-[14px] text-text-secondary hover:text-[#8E6F5E] transition-colors duration-150"
           >
-            DÃ©couvrir des albums
+            Découvrir des albums
           </Link>
         </div>
       ) : (

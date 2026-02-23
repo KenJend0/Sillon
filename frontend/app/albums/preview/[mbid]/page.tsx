@@ -1,7 +1,10 @@
 ﻿import BackButton from "@/components/BackButton";
+import Image from "next/image";
 import { msToMMSS } from "@/lib/time";
 import { previewAlbumFromMusicBrainz } from "@/app/actions/musicbrainz";
 import ImportButton from "@/components/ImportButton";
+import { createSupabaseServer } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 export default async function AlbumPreviewPage({
     params,
@@ -9,6 +12,18 @@ export default async function AlbumPreviewPage({
     params: Promise<{ mbid: string }>;
 }) {
     const { mbid } = await params;
+
+    // If the album is already in the database, go straight to the real page
+    const supabase = await createSupabaseServer();
+    const { data: existing } = await supabase
+        .from("albums")
+        .select("id")
+        .eq("mbid", mbid)
+        .maybeSingle();
+
+    if (existing) {
+        redirect(`/albums/${existing.id}`);
+    }
 
     const result = await previewAlbumFromMusicBrainz(mbid);
 
@@ -31,12 +46,8 @@ export default async function AlbumPreviewPage({
                     {/* Cover */}
                     <div className="flex-shrink-0 w-full md:w-48">
                         {preview.coverUrl ? (
-                            <div className="rounded-[10px] overflow-hidden aspect-square w-full max-w-48 mx-auto md:mx-0">
-                                <img
-                                    src={preview.coverUrl}
-                                    alt={preview.title}
-                                    className="w-full h-full object-cover"
-                                />
+                            <div className="rounded-[10px] overflow-hidden aspect-square w-full max-w-48 mx-auto md:mx-0 relative">
+                                <Image src={preview.coverUrl} alt={preview.title} fill className="object-cover" />
                             </div>
                         ) : (
                             <div className="rounded-[10px] bg-background-tertiary aspect-square w-full max-w-48 mx-auto md:mx-0 flex items-center justify-center">

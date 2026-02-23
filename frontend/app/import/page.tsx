@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
+import Image from "next/image";
 import { searchMusicBrainz, previewAlbumFromMusicBrainz, importAlbumFromMusicBrainz } from "@/app/actions/musicbrainz";
 import { showToast } from "@/components/Toast";
 
@@ -173,13 +174,11 @@ export default function ImportPage() {
                                         onClick={() => handleSelectAlbum(album)}
                                         className="w-full flex items-center gap-3 p-3 hover:bg-background-secondary transition-colors duration-150 border-b border-border-divider last:border-b-0 text-left"
                                     >
-                                        {album.coverUrl && (
-                                            <img
-                                                src={album.coverUrl}
-                                                alt={album.title}
-                                                className="w-12 h-12 rounded-[8px] object-cover flex-shrink-0"
-                                            />
-                                        )}
+                                                {album.coverUrl && (
+                                                    <div className="w-12 h-12 rounded-[8px] overflow-hidden relative flex-shrink-0">
+                                                        <Image src={album.coverUrl} alt={album.title} fill className="object-cover" />
+                                                    </div>
+                                                )}
                                         <div className="flex-1 min-w-0">
                                             <div className="font-medium text-text-primary truncate">{album.title}</div>
                                             <div className="text-[14px] text-text-secondary truncate">{album.artist}</div>
@@ -203,11 +202,9 @@ export default function ImportPage() {
                             {/* Album info */}
                             <div className="pb-6 border-b border-border-divider">
                                 {selectedAlbum.coverUrl && (
-                                    <img
-                                        src={selectedAlbum.coverUrl}
-                                        alt={selectedAlbum.title}
-                                        className="w-32 h-32 rounded-[10px] object-cover mb-4"
-                                    />
+                                    <div className="w-32 h-32 rounded-[10px] overflow-hidden mb-4 relative">
+                                        <Image src={selectedAlbum.coverUrl} alt={selectedAlbum.title} fill className="object-cover" />
+                                    </div>
                                 )}
                                 <h2 className="text-[24px] font-medium text-text-primary mb-1">
                                     {selectedAlbum.title}

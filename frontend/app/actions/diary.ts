@@ -1,7 +1,6 @@
 'use server';
 
-import { getAuthUser, createSupabaseServer } from '@/lib/supabase/server';
-import { createClient } from '@supabase/supabase-js';
+import { getAuthUser, createSupabaseServer, createSupabaseAdmin } from '@/lib/supabase/server';
 import { fanoutEvent } from './feed';
 
 export interface UpsertDiaryEntryInput {
@@ -36,6 +35,14 @@ export async function upsertDiaryEntry(input: UpsertDiaryEntryInput) {
       return { success: false, error: 'Rating must be 0-10' };
     }
 
+    if (input.reviewTitle && input.reviewTitle.length > 200) {
+      return { success: false, error: 'Review title too long — max 200 characters' };
+    }
+
+    if (input.reviewBody && input.reviewBody.length > 5000) {
+      return { success: false, error: 'Review body too long — max 5000 characters' };
+    }
+
     // Upsert entry
     const { data, error } = await supabase
       .from('diary_entries')
@@ -58,7 +65,7 @@ export async function upsertDiaryEntry(input: UpsertDiaryEntryInput) {
       .single();
 
     if (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: 'An error occurred' };
     }
 
     // Fanout to followers
@@ -74,7 +81,8 @@ export async function upsertDiaryEntry(input: UpsertDiaryEntryInput) {
 
     return { success: true, data };
   } catch (err) {
-    return { success: false, error: String(err) };
+    console.error('upsertDiaryEntry error:', err);
+    return { success: false, error: 'An error occurred' };
   }
 }
 
@@ -119,12 +127,13 @@ export async function deleteDiaryEntry(entryId: string) {
       .eq('id', entryId);
 
     if (deleteError) {
-      return { success: false, error: deleteError.message };
+      return { success: false, error: 'An error occurred' };
     }
 
     return { success: true };
   } catch (err) {
-    return { success: false, error: String(err) };
+    console.error('deleteDiaryEntry error:', err);
+    return { success: false, error: 'An error occurred' };
   }
 }
 
@@ -139,41 +148,55 @@ export async function addComment(entryId: string, body: string): Promise<void> {
     throw new Error('Comment body cannot be empty');
   }
 
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-  );
-  const { error } = await supabaseAdmin.from('diary_comments').insert({
+  if (body.trim().length > 1000) {
+    throw new Error('Comment too long — max 1000 characters');
+  }
+
+  const supabase = await createSupabaseServer();
+
+  // Verify the parent entry is visible to this user (public or owned by them)
+  const { data: entryCheck, error: entryCheckError } = await supabase
+    .from('diary_entries')
+    .select('id, user_id, is_public')
+    .eq('id', entryId)
+    .single();
+
+  if (entryCheckError || !entryCheck) {
+    throw new Error('Entry not found');
+  }
+
+  if (!entryCheck.is_public && entryCheck.user_id !== user.id) {
+    throw new Error('Entry not found');
+  }
+
+  const { error } = await supabase.from('diary_comments').insert({
     entry_id: entryId,
     user_id: user.id,
     body,
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error('An error occurred');
   }
 
   // Fanout comment event to: entry owner + previous commenters + actor's followers (discovery)
-  const [{ data: entry }, { data: previousCommenters }, { data: actorFollowers }] = await Promise.all([
-    supabaseAdmin.from('diary_entries').select('user_id').eq('id', entryId).single(),
-    supabaseAdmin.from('diary_comments').select('user_id').eq('entry_id', entryId).neq('user_id', user.id),
-    supabaseAdmin.from('follows').select('follower_id').eq('followee_id', user.id),
+  const [{ data: previousCommenters }, { data: actorFollowers }] = await Promise.all([
+    supabase.from('diary_comments').select('user_id').eq('entry_id', entryId).neq('user_id', user.id),
+    supabase.from('follows').select('follower_id').eq('followee_id', user.id),
   ]);
 
-  if (entry) {
-    try {
-      const targetSet = new Set<string>([entry.user_id]);
-      (previousCommenters || []).forEach((c: any) => targetSet.add(c.user_id));
-      (actorFollowers || []).forEach((f: any) => targetSet.add(f.follower_id));
-      targetSet.delete(user.id); // fanoutEvent always adds actor to its own feed
+  try {
+    const targetSet = new Set<string>([entryCheck.user_id]);
+    (previousCommenters || []).forEach((c: any) => targetSet.add(c.user_id));
+    (actorFollowers || []).forEach((f: any) => targetSet.add(f.follower_id));
+    targetSet.delete(user.id); // fanoutEvent always adds actor to its own feed
 
-      await fanoutEvent('comment', {
-        userId: user.id,
-        entryId: entryId,
-      }, [...targetSet]);
-    } catch (fanoutErr) {
-      console.error('Comment fanout error:', fanoutErr);
-    }
+    await fanoutEvent('comment', {
+      userId: user.id,
+      entryId: entryId,
+    }, [...targetSet]);
+  } catch (fanoutErr) {
+    console.error('Comment fanout error:', fanoutErr);
   }
 }
 
@@ -184,10 +207,7 @@ export async function deleteComment(commentId: string): Promise<void> {
     throw new Error('Not authenticated');
   }
 
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-  );
+  const supabaseAdmin = createSupabaseAdmin();
   const { data: comment, error: fetchError } = await supabaseAdmin
     .from('diary_comments')
     .select('user_id')
@@ -208,7 +228,7 @@ export async function deleteComment(commentId: string): Promise<void> {
     .eq('id', commentId);
 
   if (deleteError) {
-    throw new Error(deleteError.message);
+    throw new Error('An error occurred');
   }
 }
 
@@ -230,7 +250,7 @@ export async function toggleDiaryLike(entryId: string): Promise<void> {
     .single();
 
   if (fetchError && fetchError.code !== 'PGRST116') {
-    throw new Error(fetchError.message);
+    throw new Error('An error occurred');
   }
 
   // Get entry to find the owner
@@ -244,10 +264,7 @@ export async function toggleDiaryLike(entryId: string): Promise<void> {
     throw new Error('Entry not found');
   }
 
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-  );
+  const supabaseAdmin = createSupabaseAdmin();
 
   if (existingLike) {
     // Unlike: delete the like and remove related feed_events
@@ -258,7 +275,7 @@ export async function toggleDiaryLike(entryId: string): Promise<void> {
       .eq('user_id', user.id);
 
     if (deleteError) {
-      throw new Error(deleteError.message);
+      throw new Error('An error occurred');
     }
 
     await supabaseAdmin
@@ -275,7 +292,7 @@ export async function toggleDiaryLike(entryId: string): Promise<void> {
     });
 
     if (insertError) {
-      throw new Error(insertError.message);
+      throw new Error('An error occurred');
     }
 
     // Ensure no duplicate like events before fanout
@@ -313,12 +330,20 @@ export async function toggleDiaryLike(entryId: string): Promise<void> {
  */
 export async function getEntryComments(entryId: string): Promise<DiaryEntryComment[]> {
   const currentUser = await getAuthUser();
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-  );
+  const supabase = await createSupabaseServer();
 
-  const { data: commentsData, error } = await supabaseAdmin
+  // Verify the parent entry is visible (RLS on diary_entries enforces this,
+  // and the RLS patch on diary_comments mirrors it at DB level)
+  const { data: entryCheck } = await supabase
+    .from('diary_entries')
+    .select('id, user_id, is_public')
+    .eq('id', entryId)
+    .single();
+
+  if (!entryCheck) return [];
+  if (!entryCheck.is_public && entryCheck.user_id !== currentUser?.id) return [];
+
+  const { data: commentsData, error } = await supabase
     .from('diary_comments')
     .select('id, body, created_at, user_id')
     .eq('entry_id', entryId)
@@ -330,7 +355,7 @@ export async function getEntryComments(entryId: string): Promise<DiaryEntryComme
   }
 
   const userIds = [...new Set((commentsData || []).map((c) => c.user_id))];
-  const { data: profilesData } = await supabaseAdmin
+  const { data: profilesData } = await supabase
     .from('profiles')
     .select('id, username, display_name, avatar_url')
     .in('id', userIds);
@@ -372,6 +397,7 @@ export type DiaryEntryUI = {
   listened_at: string;
   release_date: string | null;
   likes_count: number;
+  comments_count: number;
   is_liked: boolean;
 };
 
@@ -403,16 +429,18 @@ export async function getUserDiary(userId: string): Promise<DiaryEntryUI[]> {
       )
     `)
     .eq('user_id', userId)
-    .order('listened_at', { ascending: false });
+    .order('listened_at', { ascending: false })
+    .limit(100);
 
   // Get likes count from the stats view
   const entryIds = (entries || []).map(e => e.id);
   const { data: statsData } = await supabase
     .from('diary_entry_stats')
-    .select('entry_id, likes_count')
+    .select('entry_id, likes_count, comments_count')
     .in('entry_id', entryIds);
 
   const likesMap = new Map((statsData || []).map(s => [s.entry_id, s.likes_count || 0]));
+  const commentsMap = new Map((statsData || []).map(s => [s.entry_id, s.comments_count || 0]));
 
   if (error || !entries) {
     console.error('getUserDiary error:', error);
@@ -444,6 +472,7 @@ export async function getUserDiary(userId: string): Promise<DiaryEntryUI[]> {
       listened_at: e.listened_at,
       release_date: album?.release_date || null,
       likes_count: likesMap.get(e.id) || 0,
+      comments_count: commentsMap.get(e.id) || 0,
       is_liked: likedEntryIds.has(e.id),
     };
   });
@@ -478,7 +507,8 @@ export async function getUserReviews(userId: string): Promise<DiaryEntryUI[]> {
     `)
     .eq('user_id', userId)
     .not('review_body', 'is', null)
-    .order('listened_at', { ascending: false });
+    .order('listened_at', { ascending: false })
+    .limit(100);
 
   if (error || !entries) {
     console.error('getUserReviews error:', error);
@@ -489,10 +519,11 @@ export async function getUserReviews(userId: string): Promise<DiaryEntryUI[]> {
   const entryIds = entries.map(e => e.id);
   const { data: statsData } = await supabase
     .from('diary_entry_stats')
-    .select('entry_id, likes_count')
+    .select('entry_id, likes_count, comments_count')
     .in('entry_id', entryIds);
 
   const likesMap = new Map((statsData || []).map(s => [s.entry_id, s.likes_count || 0]));
+  const commentsMap = new Map((statsData || []).map(s => [s.entry_id, s.comments_count || 0]));
 
   // Get user's likes if authenticated
   let likedEntryIds = new Set<string>();
@@ -519,6 +550,7 @@ export async function getUserReviews(userId: string): Promise<DiaryEntryUI[]> {
       listened_at: e.listened_at,
       release_date: album?.release_date || null,
       likes_count: likesMap.get(e.id) || 0,
+      comments_count: commentsMap.get(e.id) || 0,
       is_liked: likedEntryIds.has(e.id),
     };
   });
@@ -791,12 +823,8 @@ export async function getDiaryEntry(entryId: string): Promise<GetDiaryEntryResul
       hasLiked = !!likeData;
     }
 
-    // Fetch comments (service role to bypass RLS)
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
-    );
-    const { data: commentsData } = await supabaseAdmin
+    // Fetch comments — RLS patch (Phase 1) enforces parent-entry visibility
+    const { data: commentsData } = await supabase
       .from('diary_comments')
       .select('id, body, created_at, user_id')
       .eq('entry_id', entryId)
@@ -805,7 +833,7 @@ export async function getDiaryEntry(entryId: string): Promise<GetDiaryEntryResul
     // Batch-fetch profiles for comment authors
     const commentUserIds = [...new Set((commentsData || []).map((c) => c.user_id))];
     const { data: commentProfiles } = commentUserIds.length > 0
-      ? await supabaseAdmin
+      ? await supabase
           .from('profiles')
           .select('id, username, display_name, avatar_url')
           .in('id', commentUserIds)
@@ -866,6 +894,6 @@ export async function getDiaryEntry(entryId: string): Promise<GetDiaryEntryResul
     };
   } catch (err) {
     console.error('getDiaryEntry error:', err);
-    return { success: false, error: String(err) };
+    return { success: false, error: 'An error occurred' };
   }
 }

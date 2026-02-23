@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, MessageCircle } from "lucide-react";
-import Top3Albums from "./Top3Albums";
+import Top3Albums, { type FavoriteAlbum } from "./Top3Albums";
 import type { DiaryEntryUI } from "@/app/actions/diary";
 import { toggleDiaryLike } from "@/app/actions/diary";
 import type { SavedAlbumUI } from "@/app/actions/saved-albums";
@@ -23,6 +23,7 @@ type Props = {
   myListenedAlbums: Record<string, number | null>;
   mySavedAlbumIds: string[];
   isLoggedIn: boolean;
+  favoriteAlbums?: FavoriteAlbum[];
 };
 
 // ─── Ghost filter toggle (charte : minimal, éditorial) ───────────────────────
@@ -111,6 +112,7 @@ export default function PublicProfileTabs({
   myListenedAlbums,
   mySavedAlbumIds,
   isLoggedIn,
+  favoriteAlbums,
 }: Props) {
   const [tab, setTab] = useState<Tab>("journal");
   const [listenFilter, setListenFilter] = useState<ListenFilter>("all");
@@ -222,7 +224,7 @@ export default function PublicProfileTabs({
   return (
     <div className="max-w-page mx-auto px-4 sm:px-6">
       {/* Albums favoris */}
-      <Top3Albums userId={profileUserId} />
+      <Top3Albums userId={profileUserId} initialAlbums={favoriteAlbums} />
       <div className="py-6" />
 
       <div className="pb-28">

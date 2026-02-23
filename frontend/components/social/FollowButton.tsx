@@ -39,7 +39,7 @@ export default function FollowButton({
       disabled={isLoading}
       className={`px-6 py-2.5 text-[14px] font-medium rounded-[8px] transition-colors duration-150 ${
         isFollowing
-          ? "bg-background-secondary text-text-primary border border-border hover:bg-background-tertiary"
+          ? "bg-[#1C1C1C] text-[#F5F3EF] border-transparent hover:bg-[#1C1C1C]"
           : "bg-transparent text-text-primary border border-border hover:bg-background-secondary"
       } disabled:opacity-50`}
     >

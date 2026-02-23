@@ -122,7 +122,7 @@ export async function getMyFeed({
       .range(offset, offset + limit - 1);
 
     if (error) {
-      return { success: false, error: error.message, events: [] };
+      return { success: false, error: 'An error occurred', events: [] };
     }
 
     if (!rawEvents || rawEvents.length === 0) {
@@ -191,7 +191,8 @@ export async function getMyFeed({
 
     return { success: true, events };
   } catch (err) {
-    return { success: false, error: String(err), events: [] };
+    console.error('getFeedEvents error:', err);
+    return { success: false, error: 'An error occurred', events: [] };
   }
 }
 
@@ -375,6 +376,9 @@ export async function fanoutEvent(
       recipientIds.push(actorId);
     }
 
+    // Bound fanout to avoid runaway inserts for viral accounts
+    recipientIds = recipientIds.slice(0, 5000);
+
     if (recipientIds.length === 0) {
       return { success: true, fanned: 0 };
     }
@@ -401,11 +405,12 @@ export async function fanoutEvent(
       .insert(safeEvents as any[]);
 
     if (insertError) {
-      return { success: false, error: insertError.message };
+      return { success: false, error: 'An error occurred' };
     }
 
     return { success: true, fanned: recipientIds.length };
   } catch (err) {
-    return { success: false, error: String(err) };
+    console.error('fanoutEvent error:', err);
+    return { success: false, error: 'An error occurred' };
   }
 }

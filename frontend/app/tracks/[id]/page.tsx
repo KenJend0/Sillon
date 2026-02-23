@@ -1,5 +1,6 @@
 ﻿import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import BackButton from '@/components/BackButton';
 import { msToMMSS } from '@/lib/time';
 import { getTrack } from '@/app/actions/tracks';
@@ -17,9 +18,9 @@ export default async function TrackPage({ params }: PageProps) {
             <BackButton />
 
             <div className="mt-4 flex gap-6">
-                <div className="w-48 h-48 rounded-[10px] overflow-hidden bg-background-tertiary shrink-0">
+                <div className="w-48 h-48 rounded-[10px] overflow-hidden bg-background-tertiary shrink-0 relative">
                     {t.cover_url ? (
-                        <img src={t.cover_url} alt={`${t.album_title} cover`} className="w-full h-full object-cover" />
+                        <Image src={t.cover_url} alt={`${t.album_title} cover`} fill className="object-cover" />
                     ) : (
                         <div className="w-full h-full grid place-items-center text-[12px] text-text-tertiary">No cover</div>
                     )}

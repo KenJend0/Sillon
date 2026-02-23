@@ -56,8 +56,21 @@ export async function importAllArtistAlbums(artistId: string, artistMbid: string
       return { success: true, imported: 0, message: 'All albums already imported' };
     }
 
-    // Rate limit: default 10 imports per 24h (configurable)
+    // Rate limit: insert-first pattern prevents TOCTOU race condition
     const perDay = parseInt(process.env.IMPORTS_PER_DAY || '10', 10) || 10;
+
+    // 1. Record the request first (atomic write)
+    const { data: insertedReq, error: insertReqError } = await supabase
+      .from('import_requests')
+      .insert({ user_id: user.id, artist_id: artistId, artist_mbid: artistMbid })
+      .select('id')
+      .single();
+
+    if (insertReqError || !insertedReq) {
+      return { success: false, error: 'failed_to_record_request' };
+    }
+
+    // 2. Recount within the 24-hour window AFTER the insert
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { count } = await supabase
       .from('import_requests')
@@ -65,10 +78,9 @@ export async function importAllArtistAlbums(artistId: string, artistMbid: string
       .eq('user_id', user.id)
       .gte('created_at', cutoff);
 
-    if ((count || 0) >= perDay) {
-      // Calculate next reset (hours remaining)
-      const oldestWindow = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      // We don't fetch the exact timestamps here; provide a friendly message
+    // 3. If over limit, rollback the insert and reject
+    if ((count || 0) > perDay) {
+      await supabase.from('import_requests').delete().eq('id', insertedReq.id);
       return {
         success: false,
         error: 'rate_limited',
@@ -78,13 +90,7 @@ export async function importAllArtistAlbums(artistId: string, artistMbid: string
       };
     }
 
-    // Record the import request (this counts as one usage)
-    const { error: insertReqError } = await supabase.from('import_requests').insert({ user_id: user.id, artist_id: artistId, artist_mbid: artistMbid });
-    if (insertReqError) {
-      return { success: false, error: 'failed_to_record_request' };
-    }
-
-    const used = (count || 0) + 1;
+    const used = count || 1;
     const remaining = Math.max(0, perDay - used);
 
     // Import each missing release sequentially (keeps MusicBrainz friendly)
@@ -111,6 +117,7 @@ export async function importAllArtistAlbums(artistId: string, artistMbid: string
       message: remaining > 0 ? `Import lancé — il vous reste ${remaining} import(s) aujourd'hui.` : `Import lancé — vous avez atteint la limite quotidienne (${perDay}).`,
     };
   } catch (err) {
-    return { success: false, error: String(err) };
+    console.error('importAllArtistAlbums error:', err);
+    return { success: false, error: 'An error occurred' };
   }
 }

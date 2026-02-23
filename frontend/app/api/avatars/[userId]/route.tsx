@@ -37,9 +37,7 @@ export async function GET(
     }
 
     const svgString = ReactDOMServer.renderToStaticMarkup(
-      <div className="w-full h-full bg-background-tertiary">
-        <AvatarComponent />
-      </div>
+      <AvatarComponent />
     );
 
     return new NextResponse(svgString, {

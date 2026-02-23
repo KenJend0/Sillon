@@ -14,7 +14,32 @@ const inter = Inter({
   display: 'swap',
 });
 
-export const metadata: Metadata = {};
+export const metadata: Metadata = {
+  title: {
+    default: 'Waveform',
+    template: '%s — Waveform',
+  },
+  description:
+    "Une application de journal musical. Suivis tes écoutes, note tes albums, lis les avis de tes amis.",
+  authors: [{ name: 'Waveform' }],
+  keywords: ['musique', 'journal', 'albums', 'reviews', 'Waveform'],
+  openGraph: {
+    title: 'Waveform — Journal musical',
+    description:
+      "Une application de journal musical. Suivis tes écoutes, note tes albums, lis les avis de tes amis.",
+    siteName: 'Waveform',
+    type: 'website',
+    locale: 'fr_FR',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Waveform',
+    description:
+      "Une application de journal musical. Suivis tes écoutes, note tes albums, lis les avis de tes amis.",
+  },
+  // metadataBase permet de construire des URL pour les pages / OG images.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+};
 
 export const viewport: Viewport = {
   width: 'device-width',

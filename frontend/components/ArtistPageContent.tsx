@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { importAllArtistAlbums } from '@/app/actions/importAllArtistAlbums';
 
 type Album = {
@@ -146,12 +147,13 @@ export function ArtistPageContent({
                 <div className="flex items-start gap-5">
                     {/* Artist image */}
                     {imageUrl ? (
-                        <div className="flex-shrink-0 w-20 h-20 rounded-full overflow-hidden">
-                            <img
+                        <div className="flex-shrink-0 w-20 h-20 rounded-full overflow-hidden relative">
+                            <Image
                                 src={imageUrl}
                                 alt={artistName}
-                                className="w-full h-full object-cover"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                fill
+                                className="object-cover"
+                                onError={() => { /* handled by fallback */ }}
                             />
                         </div>
                     ) : (
@@ -256,11 +258,12 @@ function AlbumCover({ album }: { album: DiscographyItem }) {
     // For DB albums, use stored cover
     if (album.cover && !error) {
         return (
-            <div className="aspect-square overflow-hidden">
-                <img
+            <div className="aspect-square overflow-hidden relative">
+                <Image
                     src={album.cover}
                     alt={album.title}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                     onError={() => setError(true)}
                 />
             </div>
@@ -270,11 +273,12 @@ function AlbumCover({ album }: { album: DiscographyItem }) {
     // For MB albums, try CoverArt Archive directly (browser handles 307 redirect)
     if (album.coverFromArchive && album.releaseGroupMbid && !error) {
         return (
-            <div className="aspect-square overflow-hidden">
-                <img
+            <div className="aspect-square overflow-hidden relative">
+                <Image
                     src={`https://coverartarchive.org/release-group/${album.releaseGroupMbid}/front-250`}
                     alt={album.title}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                     loading="lazy"
                     onError={() => setError(true)}
                 />

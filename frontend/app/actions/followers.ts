@@ -22,10 +22,11 @@ export async function getFollowersList(username: string) {
     const { data: follows, error: followsError } = await supabase
       .from("follows")
       .select("follower_id")
-      .eq("followee_id", profile.id);
+      .eq("followee_id", profile.id)
+      .limit(500);
 
     if (followsError) {
-      return { success: false, error: followsError.message };
+      return { success: false, error: 'An error occurred' };
     }
 
     const followerIds = (follows || []).map((f: any) => f.follower_id);
@@ -41,7 +42,7 @@ export async function getFollowersList(username: string) {
       .in("id", followerIds);
 
     if (profilesError) {
-      return { success: false, error: profilesError.message };
+      return { success: false, error: 'An error occurred' };
     }
 
     // Transformer les données

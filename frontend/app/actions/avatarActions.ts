@@ -16,6 +16,15 @@ export async function uploadAvatar(
     const file = formData.get('file') as File | null;
     if (!file) throw new Error('No file provided');
 
+    const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      throw new Error('Invalid file type — JPEG, PNG or WebP only');
+    }
+    if (file.size > MAX_SIZE) {
+      throw new Error('File too large — max 5 MB');
+    }
+
     const arrayBuffer = await file.arrayBuffer();
 
     // Use admin client to bypass Storage RLS
@@ -47,7 +56,7 @@ export async function uploadAvatar(
     return { ok: true, avatarUrl: urlData.publicUrl };
   } catch (error: any) {
     console.error('Avatar upload error:', error);
-    return { ok: false, error: error.message || 'Failed to upload avatar' };
+    return { ok: false, error: 'Failed to upload avatar' };
   }
 }
 
@@ -76,6 +85,6 @@ export async function deleteAvatar(userId: string) {
     return { ok: true };
   } catch (error: any) {
     console.error('Avatar delete error:', error);
-    return { ok: false, error: error.message || 'Failed to delete avatar' };
+    return { ok: false, error: 'Failed to delete avatar' };
   }
 }

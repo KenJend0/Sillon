@@ -25,15 +25,11 @@ export default function DiaryList({ entries, isMe }: Props) {
   if (entries.length === 0)
     return <div className="text-center text-text-tertiary py-12">Aucune entrée dans le journal</div>;
 
-  // Group entries by album_id and keep only the latest for each
-  let latestEntriesByAlbum = Array.from(
-    new Map(
-      entries.map((entry) => [entry.album_id, entry])
-    ).values()
-  );
+  // Show all entries (including multiple listens of the same album)
+  let displayedEntries = [...entries];
 
   // Sort entries based on selected option
-  latestEntriesByAlbum = [...latestEntriesByAlbum].sort((a, b) => {
+  displayedEntries = [...displayedEntries].sort((a, b) => {
     switch (sortBy) {
       case "date_listened":
         return new Date(b.listened_at).getTime() - new Date(a.listened_at).getTime();
@@ -83,7 +79,7 @@ export default function DiaryList({ entries, isMe }: Props) {
       </div>
 
       <div className="grid grid-cols-3 md:grid-cols-4 gap-6">
-      {latestEntriesByAlbum.map((entry) => (
+      {displayedEntries.map((entry) => (
         <div key={entry.id}>
           <div className="flex flex-col">
             <Link

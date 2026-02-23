@@ -409,13 +409,9 @@ export default function SearchPage() {
                                         className="group block p-4 hover:bg-background-secondary rounded-[10px] transition-colors duration-150"
                                     >
                                         <div className="flex items-start gap-4">
-                                            <div className="w-12 h-12 rounded-full bg-background-tertiary flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                            <div className="w-12 h-12 rounded-full bg-background-tertiary flex items-center justify-center flex-shrink-0 overflow-hidden relative">
                                                 {img ? (
-                                                    <img
-                                                        src={img}
-                                                        alt={artist.name}
-                                                        className="w-full h-full object-cover"
-                                                    />
+                                                    <Image src={img} alt={artist.name} fill className="object-cover" />
                                                 ) : (
                                                     <User size={20} className="text-text-tertiary" />
                                                 )}

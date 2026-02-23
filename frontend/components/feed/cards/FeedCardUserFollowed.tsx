@@ -41,7 +41,7 @@ export default function FeedCardUserFollowed({
           <>
             <Link
               href={`/u/${event.actor.username}`}
-              className="hover:text-text-primary transition-colors duration-150"
+              className="text-text-secondary hover:text-text-primary transition-colors duration-150"
             >
               {event.actor.display_name || event.actor.username}
             </Link>

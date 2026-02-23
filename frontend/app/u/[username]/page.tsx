@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseServer } from "@/lib/supabase/server";
-import { getAuthUser } from "@/lib/supabase/server";
+import { getAuthUser, createSupabaseAdmin } from "@/lib/supabase/server";
 
 export async function generateMetadata({ params }: any) {
   const resolvedParams = params && typeof params.then === "function" ? await params : params;
@@ -23,6 +23,7 @@ export async function generateMetadata({ params }: any) {
     },
   };
 }
+
 import FollowButton from "@/components/social/FollowButton";
 import BackButton from "@/components/BackButton";
 import { UserAvatar } from "@/components/avatars/DefaultAvatar";
@@ -62,42 +63,59 @@ export default async function PublicProfilePage({
     redirect("/me");
   }
 
-  // ── Counts, diary, saved, follow status ────────────────────────────────
+  // ── Counts, diary, saved ────────────────────────────────
+  const adminClient = createSupabaseAdmin();
   const [
     { count: followersCount },
     { count: followingCount },
     { count: diaryCount },
     profileDiary,
     profileSaved,
+    favoriteAlbumsResult,
   ] = await Promise.all([
     supabase.from("follows").select("*", { count: "exact", head: true }).eq("followee_id", profile.id),
     supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", profile.id),
     supabase.from("diary_entries").select("*", { count: "exact", head: true }).eq("user_id", profile.id).eq("is_public", true),
     getUserDiary(profile.id),
     getUserSavedAlbums(profile.id),
+    adminClient
+      .from("user_favorite_albums")
+      .select("position, album_id, albums (id, title, cover_url, artists (name))")
+      .eq("user_id", profile.id)
+      .order("position", { ascending: true })
+      .limit(3),
   ]);
+
+  const favoriteAlbums = (favoriteAlbumsResult.data || []).map((item: any) => ({
+    id: (item.albums as any)?.id || item.album_id,
+    title: (item.albums as any)?.title || "Album inconnu",
+    artist_name: (item.albums as any)?.artists?.name || "Artiste inconnu",
+    cover_url: (item.albums as any)?.cover_url ?? null,
+    position: item.position,
+  }));
 
   let isFollowing = false;
   let isFollowingYou = false;
+  let myListenedAlbums: Record<string, number | null> = {};
+  let mySavedAlbumIds: string[] = [];
 
   if (authUser) {
-    const [{ data: followStatus }, { data: followBackStatus }] = await Promise.all([
+    // Run follow checks and current user lookups in parallel (single roundtrip)
+    const [
+      { data: followStatus },
+      { data: followBackStatus },
+      myDiaryRes,
+      mySavedRes,
+    ] = await Promise.all([
       supabase.from("follows").select("follower_id").eq("follower_id", authUser.id).eq("followee_id", profile.id).maybeSingle(),
       supabase.from("follows").select("follower_id").eq("follower_id", profile.id).eq("followee_id", authUser.id).maybeSingle(),
-    ]);
-    isFollowing = !!followStatus;
-    isFollowingYou = !!followBackStatus;
-  }
-
-  // ── Current user's data for filters & sort ─────────────────────────────
-  const myListenedAlbums: Record<string, number | null> = {};
-  const mySavedAlbumIds: string[] = [];
-
-  if (authUser) {
-    const [myDiaryRes, mySavedRes] = await Promise.all([
       supabase.from("diary_entries").select("album_id, rating").eq("user_id", authUser.id),
       supabase.from("saved_albums").select("album_id").eq("user_id", authUser.id),
     ]);
+
+    isFollowing = !!followStatus;
+    isFollowingYou = !!followBackStatus;
+
     (myDiaryRes.data || []).forEach((e) => {
       myListenedAlbums[e.album_id] = e.rating;
     });
@@ -179,6 +197,7 @@ export default async function PublicProfilePage({
         myListenedAlbums={myListenedAlbums}
         mySavedAlbumIds={mySavedAlbumIds}
         isLoggedIn={!!authUser}
+        favoriteAlbums={favoriteAlbums}
       />
     </>
   );

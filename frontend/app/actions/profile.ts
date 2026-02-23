@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { getAuthUser } from '@/lib/supabase/server';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseAdmin } from '@/lib/supabase/server';
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{2,32}$/;
 
@@ -82,7 +82,7 @@ export async function ensureProfile() {
     console.error('Error ensuring profile:', error);
     return {
       ok: false,
-      error: error.message || 'Failed to ensure profile',
+      error: 'An error occurred',
     };
   }
 }
@@ -124,7 +124,7 @@ export async function getMyProfileSettings() {
       .maybeSingle();
 
     if (partialError && partialError.code !== 'PGRST116') {
-      return { ok: false, error: partialError.message };
+      return { ok: false, error: 'An error occurred' };
     }
     data = partialData;
   } else {
@@ -174,7 +174,7 @@ export async function updateProfileSettings(input: {
     .eq('id', user.id);
 
   if (error) {
-    return { ok: false, error: error.message };
+    return { ok: false, error: 'An error occurred' };
   }
 
   revalidatePath('/me');
@@ -202,7 +202,7 @@ export async function checkUsernameAvailability(username: string) {
     .maybeSingle();
 
   if (error && error.code !== 'PGRST116') {
-    return { ok: false, error: error.message };
+    return { ok: false, error: 'An error occurred' };
   }
 
   return { ok: true, available: !data };
@@ -230,7 +230,7 @@ export async function changeUsername(newUsername: string) {
 
   // Ignore error if username_changed column doesn't exist
   if (currentError && currentError.code !== 'PGRST116' && !currentError.message?.includes('username_changed')) {
-    return { ok: false, error: currentError.message };
+    return { ok: false, error: 'An error occurred' };
   }
 
   if ((current as any)?.username_changed) {
@@ -249,7 +249,7 @@ export async function changeUsername(newUsername: string) {
     .maybeSingle();
 
   if (existingError && existingError.code !== 'PGRST116') {
-    return { ok: false, error: existingError.message };
+    return { ok: false, error: 'An error occurred' };
   }
 
   if (existing) {
@@ -262,7 +262,7 @@ export async function changeUsername(newUsername: string) {
     .eq('id', user.id);
 
   if (updateError) {
-    return { ok: false, error: updateError.message };
+    return { ok: false, error: 'An error occurred' };
   }
 
   revalidatePath('/me');
@@ -280,17 +280,28 @@ export async function deleteAccount(): Promise<{ ok: boolean; error?: string }> 
     const user = await getAuthUser();
     if (!user) return { ok: false, error: 'not_authenticated' };
 
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
-    );
+    const supabaseAdmin = createSupabaseAdmin();
+
+    // Remove avatar from Storage before cascading the account deletion
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('avatar_url')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile?.avatar_url) {
+      await supabaseAdmin.storage
+        .from('avatars')
+        .remove([`${user.id}.jpg`]);
+    }
 
     const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id);
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: 'An error occurred' };
 
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: String(err) };
+    console.error('deleteAccount error:', err);
+    return { ok: false, error: 'An error occurred' };
   }
 }
 
