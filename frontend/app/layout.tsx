@@ -1,4 +1,5 @@
 ﻿import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 import Toast from "@/components/Toast";
 import { AuthProvider } from "@/lib/AuthContext";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   {children}
               </AuthenticatedLayout>
               <Toast />
+              <Analytics />
             </BackgroundWrapper>
           </BackgroundColorProvider>
         </AuthProvider>
