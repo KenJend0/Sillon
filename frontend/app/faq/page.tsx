@@ -98,8 +98,8 @@ const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[
                     <>
                         La modification d'adresse e-mail n'est pas encore disponible directement dans l'app.
                         Contacte-nous à{" "}
-                        <a href="mailto:contact@waveform.app" className="text-text-primary underline underline-offset-2">
-                            contact@waveform.app
+                        <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                            waveform.contact@proton.me
                         </a>{" "}
                         depuis ton adresse actuelle.
                     </>
@@ -121,8 +121,8 @@ const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[
                     <>
                         L'export automatique n'est pas encore disponible. Tu peux en faire la demande
                         à{" "}
-                        <a href="mailto:contact@waveform.app" className="text-text-primary underline underline-offset-2">
-                            contact@waveform.app
+                        <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                            waveform.contact@proton.me
                         </a>
                         . Conformément au RGPD, nous répondrons sous 30 jours.
                     </>
@@ -209,7 +209,7 @@ export default function FAQ() {
                 <h1 className="text-h1 text-text-primary mb-2">Questions fréquentes</h1>
                 <p className="text-[14px] text-text-secondary mb-10">
                     Une autre question ?{" "}
-                    <a href="mailto:contact@waveform.app" className="text-text-primary underline underline-offset-2">
+                    <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
                         Écris-nous
                     </a>
                     .

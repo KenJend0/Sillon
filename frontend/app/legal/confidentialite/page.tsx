@@ -17,7 +17,7 @@ export default function Confidentialite() {
                     et quels droits vous avez sur celles-ci.
                 </p>
                 <p className="mt-3">
-                    Responsable de traitement : Waveform — <a href="mailto:contact@waveform.app" className="text-text-primary underline underline-offset-2">contact@waveform.app</a>
+                    Responsable de traitement : Waveform — <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">waveform.contact@proton.me</a>
                 </p>
             </Section>
 
@@ -113,8 +113,8 @@ export default function Confidentialite() {
                 </ul>
                 <p className="mt-4">
                     Pour exercer ces droits :{" "}
-                    <a href="mailto:contact@waveform.app" className="text-text-primary underline underline-offset-2">
-                        contact@waveform.app
+                    <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                        waveform.contact@proton.me
                     </a>
                     . Vous pouvez également introduire une réclamation auprès de la{" "}
                     <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer" className="text-text-primary underline underline-offset-2">
@@ -134,8 +134,8 @@ export default function Confidentialite() {
             <Section title="Contact">
                 <p>
                     Pour toute question relative à vos données personnelles :{" "}
-                    <a href="mailto:contact@waveform.app" className="text-text-primary underline underline-offset-2">
-                        contact@waveform.app
+                    <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                        waveform.contact@proton.me
                     </a>
                 </p>
             </Section>

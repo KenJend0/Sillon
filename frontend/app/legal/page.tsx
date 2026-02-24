@@ -64,10 +64,10 @@ export default function LegalIndex() {
                 <p className="text-[13px] text-text-tertiary">
                     Une question ?{" "}
                     <a
-                        href="mailto:contact@waveform.app"
+                        href="mailto:waveform.contact@proton.me"
                         className="text-text-secondary underline underline-offset-2 hover:text-text-primary transition-colors duration-150"
                     >
-                        contact@waveform.app
+                        waveform.contact@proton.me
                     </a>
                 </p>
             </div>

@@ -70,8 +70,8 @@ export default function CGU() {
                 <p className="mt-3">
                     Si vous estimez qu'un contenu affiché porte atteinte à vos droits,
                     contactez-nous à{" "}
-                    <a href="mailto:contact@waveform.app" className="text-text-primary underline underline-offset-2">
-                        contact@waveform.app
+                    <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                        waveform.contact@proton.me
                     </a>
                     .
                 </p>
@@ -104,8 +104,8 @@ export default function CGU() {
             <Section title="Contact">
                 <p>
                     Pour toute question :{" "}
-                    <a href="mailto:contact@waveform.app" className="text-text-primary underline underline-offset-2">
-                        contact@waveform.app
+                    <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                        waveform.contact@proton.me
                     </a>
                 </p>
             </Section>

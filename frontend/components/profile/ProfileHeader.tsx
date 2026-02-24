@@ -76,7 +76,7 @@ export default function ProfileHeader({ user, stats, onFollowClick }: Props) {
                 <Link
                   href="/legal"
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-[14px] text-text-secondary border-t border-border-divider"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-[14px] text-text-primary"
                 >
                   <FileText size={16} />
                   Légal & infos

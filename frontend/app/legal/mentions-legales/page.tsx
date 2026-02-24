@@ -17,7 +17,7 @@ export default function MentionsLegales() {
                 <dl>
                     <Row label="Nom du projet" value="Waveform" />
                     <Row label="Site" value="waveform-alpha.vercel.app" />
-                    <Row label="Contact" value="contact@waveform.app" />
+                    <Row label="Contact" value="waveform.contact@proton.me" />
                     <Row label="Statut" value="Projet personnel non commercial" />
                 </dl>
             </Section>
@@ -69,8 +69,8 @@ export default function MentionsLegales() {
             <Section title="Contact">
                 <p>
                     Pour toute question relative aux présentes mentions légales :{" "}
-                    <a href="mailto:contact@waveform.app" className="text-text-primary underline underline-offset-2">
-                        contact@waveform.app
+                    <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                        waveform.contact@proton.me
                     </a>
                 </p>
             </Section>
