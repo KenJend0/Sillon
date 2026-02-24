@@ -15,6 +15,7 @@ import {
     deleteAccount,
 } from "@/app/actions/profile";
 import BackButton from "@/components/BackButton";
+import { showToast } from "@/components/Toast";
 
 type Profile = {
     id: string;
@@ -39,7 +40,6 @@ export default function ProfileSettings() {
         username_changed: null,
         email: "",
     });
-    const [status, setStatus] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export default function ProfileSettings() {
                         router.push("/auth");
                         return;
                     }
-                    setStatus("Erreur au chargement du profil");
+                    showToast("Erreur au chargement du profil", "error");
                     return;
                 }
 
@@ -74,7 +74,7 @@ export default function ProfileSettings() {
                 });
             } catch (e: any) {
                 console.error("Error loading profile:", e);
-                setStatus("Erreur au chargement du profil");
+                showToast("Erreur au chargement du profil", "error");
             } finally {
                 setLoading(false);
             }
@@ -103,7 +103,6 @@ export default function ProfileSettings() {
         setAvatarPreview(previewUrl);
 
         setUploading(true);
-        setStatus(null);
         try {
             const {
                 data: { user },
@@ -126,12 +125,12 @@ export default function ProfileSettings() {
                 avatar_url: result.avatarUrl ?? null,
             }));
 
-            setStatus("success:Avatar uploadé avec succès!");
+            showToast("Avatar uploadé avec succès !", "success");
             setAvatarPreview(null);
             URL.revokeObjectURL(previewUrl);
         } catch (e: any) {
             console.error("Avatar upload error:", e);
-            setStatus(`error:${e.message}`);
+            showToast(e.message || "Erreur lors de l'upload", "error");
             setAvatarPreview(null);
             URL.revokeObjectURL(previewUrl);
         } finally {
@@ -146,7 +145,6 @@ export default function ProfileSettings() {
 
     const deleteAvatar = async () => {
         setUploading(true);
-        setStatus(null);
         try {
             const {
                 data: { user },
@@ -167,18 +165,17 @@ export default function ProfileSettings() {
                 avatar_url: null,
             }));
 
-            setStatus("success:Photo de profil supprimée!");
+            showToast("Photo de profil supprimée", "success");
             setConfirmDeleteAvatar(false);
         } catch (e: any) {
             console.error("Avatar delete error:", e);
-            setStatus(`error:${e.message}`);
+            showToast(e.message || "Erreur lors de la suppression", "error");
         } finally {
             setUploading(false);
         }
     };
 
     const saveProfile = async () => {
-        setStatus(null);
         try {
             const result = await updateProfileSettings({
                 display_name: profile.display_name,
@@ -189,10 +186,10 @@ export default function ProfileSettings() {
                 throw new Error(result.error || "update_failed");
             }
 
-            setStatus("success:Profil mis a jour!");
+            showToast("Profil mis à jour !", "success");
         } catch (e: any) {
             console.error("Profile update error:", e);
-            setStatus(`error:${e.message}`);
+            showToast(e.message || "Erreur lors de la mise à jour", "error");
         }
     };
 
@@ -207,28 +204,27 @@ export default function ProfileSettings() {
         const trimmed = newUsername.trim();
 
         if (!trimmed) {
-            setStatus("error:Veuillez entrer un pseudo");
+            showToast("Veuillez entrer un pseudo", "error");
             return;
         }
 
         if (!USERNAME_REGEX.test(trimmed)) {
-            setStatus("error:Pseudo invalide");
+            showToast("Pseudo invalide", "error");
             setUsernameCheckState("invalid");
             return;
         }
 
         if (profile.username_changed) {
-            setStatus("error:Vous avez deja change votre pseudo");
+            showToast("Vous avez déjà changé votre pseudo", "error");
             return;
         }
 
         if (trimmed === (profile.username || "")) {
-            setStatus("error:Ce pseudo est deja le votre");
+            showToast("Ce pseudo est déjà le vôtre", "error");
             return;
         }
 
         setChangingUsername(true);
-        setStatus(null);
         try {
             const availability = await checkUsernameAvailability(trimmed);
             if (!availability.ok) {
@@ -236,7 +232,7 @@ export default function ProfileSettings() {
             }
             if (!availability.available) {
                 setUsernameCheckState("taken");
-                setStatus("error:Pseudo deja pris");
+                showToast("Pseudo déjà pris", "error");
                 return;
             }
 
@@ -251,13 +247,13 @@ export default function ProfileSettings() {
                 username: trimmed,
                 username_changed: true,
             }));
-            setStatus("success:Pseudo change avec succes!");
+            showToast("Pseudo changé avec succès !", "success");
             setShowUsernameForm(false);
             setNewUsername("");
             setUsernameCheckState("idle");
         } catch (e: any) {
             console.error("Username change error:", e);
-            setStatus(`error:${e.message}`);
+            showToast(e.message || "Erreur lors du changement de pseudo", "error");
         } finally {
             setChangingUsername(false);
         }
@@ -293,7 +289,7 @@ export default function ProfileSettings() {
             router.refresh();
         } catch (e: any) {
             console.error("Logout error:", e);
-            setStatus(`error:${e.message}`);
+            showToast(e.message || "Erreur lors de la déconnexion", "error");
         }
     };
 
@@ -306,7 +302,7 @@ export default function ProfileSettings() {
         try {
             const result = await deleteAccount();
             if (!result.ok) {
-                setStatus(`error:${result.error || "Erreur lors de la suppression"}`);
+                showToast(result.error || "Erreur lors de la suppression", "error");
                 setDeleting(false);
                 return;
             }
@@ -314,14 +310,10 @@ export default function ProfileSettings() {
             router.push("/");
         } catch (e: any) {
             console.error("Delete account error:", e);
-            setStatus(`error:${e.message}`);
+            showToast(e.message || "Erreur lors de la suppression", "error");
             setDeleting(false);
         }
     };
-
-    const isSuccess = status?.startsWith("success:");
-    const isError = status?.startsWith("error:");
-    const statusMessage = status?.replace(/^(success|error):/, "") || "";
 
     if (loading) {
         return (
@@ -341,17 +333,6 @@ export default function ProfileSettings() {
                     <BackButton fallbackHref="/me" className="mb-6 flex items-center gap-2 text-[14px] text-text-secondary hover:text-text-primary transition-colors duration-150" />
                     <h1 className="text-h1 text-text-primary mb-1">Modifier le profil</h1>
                 </div>
-
-                {/* Status Message */}
-                {status && (
-                    <div className={`mb-6 p-3 border rounded-[8px] text-[14px] transition-all ${
-                        isSuccess
-                            ? "bg-background-secondary border-border text-text-secondary"
-                            : "bg-background-secondary border-border text-[#C86C6C]"
-                    }`}>
-                        {statusMessage}
-                    </div>
-                )}
 
                 {/* Avatar Section */}
                 <section className="mb-12">
@@ -526,7 +507,7 @@ export default function ProfileSettings() {
                                     >
                                         {changingUsername ? "..." : "Confirmer"}
                                     </button>
-                                    <span className="text-[#D8D3CB]">Â·</span>
+                                    <span className="text-[#D8D3CB]">·</span>
                                     <button
                                         onClick={() => {
                                             setShowUsernameForm(false);

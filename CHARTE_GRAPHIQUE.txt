@@ -308,7 +308,40 @@ Même hiérarchie typo
 ❌ Border radius incohérent
 ❌ Police mixée
 
-1️⃣4️⃣ Test final produit
+1️⃣4️⃣ Notifications (Toast)
+
+Composant : components/Toast.tsx
+Fonction globale : showToast(message, type)
+
+Usage
+import { showToast } from "@/components/Toast";
+showToast("Album importé", "success");
+showToast("Déjà dans la bibliothèque", "info");
+showToast("Erreur lors de l'import", "error");
+
+Types
+success  →  fond #1C1C1C  /  texte #F5F3EF  /  pas d'icône  →  action réussie
+info     →  fond #1C1C1C  /  texte #F5F3EF  /  pas d'icône  →  information neutre
+error    →  fond #1C1C1C  /  texte #C86C6C  /  AlertCircle  →  erreur
+
+Comportement
+Durée : disparaît automatiquement après 4 secondes
+Position : bas de l'écran (bottom-20 mobile, bottom-4 right-4 desktop)
+Plusieurs toasts peuvent se stacker
+Fermeture manuelle via croix
+
+Règles
+showToast est client-only — toujours appeler depuis un handler client,
+après un await d'une server action. Jamais dans un server component.
+Le composant <Toast /> est monté une seule fois dans le layout global.
+Ne jamais l'ajouter dans des pages individuelles.
+
+Style
+Fond sombre (#1C1C1C) sur fond clair de l'app = contraste intentionnel.
+Radius 8px. Padding 12px 16px.
+Cohérent avec le bouton primaire (même fond).
+
+1️⃣5️⃣ Test final produit
 
 Waveform est cohérent si :
 

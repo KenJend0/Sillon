@@ -118,4 +118,62 @@ export async function toggleFollow(idOrUsername: string) {
   }
 }
 
+export type SuggestedUser = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
+/**
+ * Returns up to `limit` suggested profiles to follow.
+ * Prioritises users with recent public diary entries.
+ * Excludes the current user.
+ */
+export async function getSuggestedUsers(limit = 5): Promise<SuggestedUser[]> {
+  const user = await getAuthUser();
+  if (!user) return [];
+
+  const supabase = await createSupabaseServer();
+
+  // Users with recent public activity, deduped
+  const { data: recentEntries } = await supabase
+    .from('diary_entries')
+    .select('user_id')
+    .eq('is_public', true)
+    .neq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  const suggestedIds: string[] = [];
+  if (recentEntries?.length) {
+    const seen = new Set<string>();
+    for (const entry of recentEntries) {
+      if (!seen.has(entry.user_id) && suggestedIds.length < limit) {
+        seen.add(entry.user_id);
+        suggestedIds.push(entry.user_id);
+      }
+    }
+  }
+
+  if (suggestedIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, username, display_name, avatar_url')
+      .in('id', suggestedIds)
+      .not('username', 'is', null);
+    return (profiles as SuggestedUser[]) || [];
+  }
+
+  // Fallback: recently joined users
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, username, display_name, avatar_url')
+    .neq('id', user.id)
+    .not('username', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  return (profiles as SuggestedUser[]) || [];
+}
+
 // Ajouter un commentaire

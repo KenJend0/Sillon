@@ -113,6 +113,33 @@ export async function toggleSaveAlbum(albumId: string): Promise<{ saved: boolean
 }
 
 /**
+ * Save album to library if not already saved (idempotent, no toggle).
+ * Used by the import flow to auto-add to the "à écouter" list.
+ */
+export async function saveAlbumOnce(albumId: string): Promise<void> {
+  const user = await getAuthUser();
+  if (!user) return;
+
+  const supabase = await createSupabaseServer();
+
+  const { data: existing } = await supabase
+    .from('saved_albums')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('album_id', albumId)
+    .maybeSingle();
+
+  if (!existing) {
+    await supabase.from('saved_albums').insert({
+      user_id: user.id,
+      album_id: albumId,
+    });
+    const { fanoutEvent } = await import('./feed');
+    await fanoutEvent('discover', { albumId, userId: user.id }).catch(console.error);
+  }
+}
+
+/**
  * Check if album is saved by current user
  */
 export async function isAlbumSaved(albumId: string): Promise<boolean> {

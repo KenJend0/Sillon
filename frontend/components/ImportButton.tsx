@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { importAlbumFromMusicBrainz } from "@/app/actions/musicbrainz";
+import { saveAlbumOnce } from "@/app/actions/saved-albums";
 import { showToast } from "@/components/Toast";
 
 type ImportButtonProps = {
@@ -26,9 +27,8 @@ export default function ImportButton({ albumId }: ImportButtonProps) {
             const importedAlbumId = (response as { albumId: string }).albumId;
             const wasImported = (response as { imported?: boolean }).imported ?? true;
 
-            if (!wasImported) {
-                showToast("Deja dans la bibliotheque", "info");
-            }
+            await saveAlbumOnce(importedAlbumId);
+            showToast("Album importé", "success");
 
             const target = wasImported ? `/albums/${importedAlbumId}?addToDiary=1` : `/albums/${importedAlbumId}`;
             router.push(target);
@@ -52,4 +52,3 @@ export default function ImportButton({ albumId }: ImportButtonProps) {
         </>
     );
 }
-

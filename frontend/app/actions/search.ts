@@ -6,6 +6,7 @@ export type SearchResultUI = {
   id: string;
   title: string;
   subtitle?: string;
+  slug?: string; // for users: actual username used in URLs (≠ display_name)
   kind: "album" | "artist" | "user";
   coverUrl?: string | null;
   releaseDate?: string | null;
@@ -85,6 +86,7 @@ export async function searchInternal(
           id: u.id,
           title: u.display_name || u.username,
           subtitle: `@${u.username}`,
+          slug: u.username,
           kind: "user",
           coverUrl: u.avatar_url,
           source: "internal",

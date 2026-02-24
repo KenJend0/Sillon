@@ -164,7 +164,7 @@ export default function SearchOverlay() {
             const route = item.source === "musicbrainz" ? `/artists/preview/${item.id}` : `/artists/${item.id}`;
             router.push(route);
         } else if (item.kind === "user") {
-            router.push(`/u/${item.title}`);
+            router.push(`/u/${item.slug ?? item.title}`);
         }
     };
 

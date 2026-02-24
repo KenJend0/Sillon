@@ -1,12 +1,13 @@
-﻿// components/AuthForm.tsx
+// components/AuthForm.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import type { Database } from "@/types/database";
 import { useSearchParams } from "next/navigation";
 import { canAttemptAuth } from "@/lib/rateLimit";
+import { showToast } from "@/components/Toast";
 
 type AuthMode = "login" | "signup" | "reset";
 
@@ -24,24 +25,26 @@ export default function AuthForm() {
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const urlError = searchParams.get("error");
-  const [error, setError] = useState<string | null>(
-    urlError === "confirmation_failed"
-      ? "Le lien de confirmation est invalide ou expiré. Crée un nouveau compte ou demande un renvoi."
-      : null
-  );
-  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (urlError === "confirmation_failed") {
+      showToast(
+        "Le lien de confirmation est invalide ou expiré. Crée un nouveau compte ou demande un renvoi.",
+        "error"
+      );
+    }
+  }, [urlError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
 
     // Rate limiting check
     const { allowed, remainingTime } = canAttemptAuth(mode === "login" ? "login" : mode === "signup" ? "signup" : "reset");
     if (!allowed) {
       const minutes = Math.ceil(remainingTime / 60);
-      setError(
-        `Trop de tentatives. Réessaye dans ${minutes} minute${minutes > 1 ? "s" : ""}.`
+      showToast(
+        `Trop de tentatives. Réessaye dans ${minutes} minute${minutes > 1 ? "s" : ""}.`,
+        "error"
       );
       return;
     }
@@ -66,7 +69,7 @@ export default function AuthForm() {
         }
 
         if (data.user && data.session) {
-          setSuccess("Connexion réussie!");
+          showToast("Connexion réussie !", "success");
           router.push("/feed");
         }
       } else if (mode === "signup") {
@@ -92,8 +95,9 @@ export default function AuthForm() {
         }
 
         if (data.user) {
-          setSuccess(
-            "Compte créé ! Un email de confirmation a été envoyé. Vérifie ta boîte mail et clique sur le lien pour activer ton compte, puis connecte-toi."
+          showToast(
+            "Compte créé ! Vérifie ta boîte mail et clique sur le lien pour activer ton compte.",
+            "success"
           );
           setMode("login");
           setEmail("");
@@ -113,7 +117,7 @@ export default function AuthForm() {
         const base = getFrontendBase();
         if (!base) {
           console.error('Missing NEXT_PUBLIC_FRONTEND_BASE and window.location.origin not available');
-          setError("Impossible d'envoyer l'email de réinitialisation pour l'instant.");
+          showToast("Impossible d'envoyer l'email de réinitialisation pour l'instant.", "error");
           setLoading(false);
           return;
         }
@@ -128,15 +132,16 @@ export default function AuthForm() {
           throw new Error(resetError.message);
         }
 
-        setSuccess(
-          "Email de réinitialisation envoyé ! Vérifie ta boîte mail pour réinitialiser ton mot de passe."
+        showToast(
+          "Email de réinitialisation envoyé ! Vérifie ta boîte mail.",
+          "success"
         );
         setMode("login");
         setEmail("");
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Une erreur s'est produite");
+      showToast(err.message || "Une erreur s'est produite", "error");
     } finally {
       setLoading(false);
     }
@@ -150,18 +155,6 @@ export default function AuthForm() {
           {mode === "login" ? "Connecte-toi à ton compte" : mode === "signup" ? "Crée ton compte Waveform" : "Réinitialise ton mot de passe"}
         </p>
       </div>
-
-      {error && (
-        <div className="p-3 bg-background-secondary border border-border rounded-[8px] text-[#C86C6C] text-[14px]">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="p-3 bg-background-secondary border border-border rounded-[8px] text-text-secondary text-[14px]">
-          {success}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {mode === "signup" && (
@@ -251,8 +244,6 @@ export default function AuthForm() {
               <button
                 onClick={() => {
                   setMode("signup");
-                  setError(null);
-                  setSuccess(null);
                   setEmail("");
                   setPassword("");
                 }}
@@ -265,8 +256,6 @@ export default function AuthForm() {
               <button
                 onClick={() => {
                   setMode("reset");
-                  setError(null);
-                  setSuccess(null);
                   setPassword("");
                 }}
                 className="text-text-primary hover:text-[#8E6F5E] transition-colors duration-150"
@@ -281,8 +270,6 @@ export default function AuthForm() {
             <button
               onClick={() => {
                 setMode("login");
-                setError(null);
-                setSuccess(null);
                 setDisplayName("");
               }}
               className="text-text-primary hover:text-[#8E6F5E] transition-colors duration-150"
@@ -295,8 +282,6 @@ export default function AuthForm() {
             <button
               onClick={() => {
                 setMode("login");
-                setError(null);
-                setSuccess(null);
                 setEmail("");
               }}
               className="text-text-secondary hover:text-[#8E6F5E] transition-colors duration-150"
@@ -309,5 +294,3 @@ export default function AuthForm() {
     </div>
   );
 }
-
-
