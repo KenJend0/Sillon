@@ -23,7 +23,15 @@ export default function AuthPage() {
                 <AuthForm />
 
                 <p className="text-center text-[12px] text-text-tertiary mt-8">
-                    En continuant, tu acceptes nos conditions d'utilisation
+                    En continuant, tu acceptes nos{" "}
+                    <a href="/legal/cgu" className="underline underline-offset-2 hover:text-text-secondary transition-colors duration-150">
+                        conditions d&apos;utilisation
+                    </a>
+                    {" "}et notre{" "}
+                    <a href="/legal/confidentialite" className="underline underline-offset-2 hover:text-text-secondary transition-colors duration-150">
+                        politique de confidentialité
+                    </a>
+                    .
                 </p>
             </div>
         </div>

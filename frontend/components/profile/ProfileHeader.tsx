@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu, LogOut, Settings, Heart } from "lucide-react";
+import { Menu, LogOut, Settings, Heart, FileText } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { UserAvatar } from "@/components/avatars/DefaultAvatar";
@@ -72,6 +72,14 @@ export default function ProfileHeader({ user, stats, onFollowClick }: Props) {
                 >
                   <Heart size={16} />
                   Albums favoris
+                </Link>
+                <Link
+                  href="/legal"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-[14px] text-text-secondary border-t border-border-divider"
+                >
+                  <FileText size={16} />
+                  Légal & infos
                 </Link>
                 <button
                   onClick={handleLogout}

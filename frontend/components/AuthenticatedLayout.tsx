@@ -7,7 +7,7 @@ import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 
 // Pages publiques qui ne nÃ©cessitent pas d'authentification
-const PUBLIC_PATHS = ['/auth', '/search', '/albums', '/artists', '/explore'];
+const PUBLIC_PATHS = ['/auth', '/search', '/albums', '/artists', '/explore', '/legal', '/faq'];
 
 function isPublicPath(pathname: string): boolean {
   if (pathname === '/') return true;
