@@ -87,6 +87,52 @@ export async function upsertDiaryEntry(input: UpsertDiaryEntryInput) {
 }
 
 /**
+ * Update an existing diary entry by its id (owner only)
+ */
+export async function updateDiaryEntry(input: {
+  entryId: string;
+  listenedAt: string;
+  reviewBody?: string;
+  rating?: number | null;
+}) {
+  try {
+    const user = await getAuthUser();
+    if (!user) return { success: false, error: 'Not authenticated' };
+
+    if (!input.listenedAt) return { success: false, error: 'listenedAt required' };
+
+    if (input.rating !== undefined && input.rating !== null && (input.rating < 0 || input.rating > 10)) {
+      return { success: false, error: 'Rating must be 0-10' };
+    }
+
+    if (input.reviewBody && input.reviewBody.length > 5000) {
+      return { success: false, error: 'Review body too long — max 5000 characters' };
+    }
+
+    const supabase = await createSupabaseServer();
+
+    const { data, error } = await supabase
+      .from('diary_entries')
+      .update({
+        listened_at: input.listenedAt,
+        review_body: input.reviewBody || null,
+        rating: input.rating ?? null,
+      })
+      .eq('id', input.entryId)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (error) return { success: false, error: 'An error occurred' };
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('updateDiaryEntry error:', err);
+    return { success: false, error: 'An error occurred' };
+  }
+}
+
+/**
  * Delete diary entry (owner only)
  * Also deletes related feed_events
  */

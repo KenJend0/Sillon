@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { upsertDiaryEntry, deleteDiaryEntry } from "@/app/actions/diary";
+import { updateDiaryEntry, deleteDiaryEntry } from "@/app/actions/diary";
 import { Edit2, Trash2 } from "lucide-react";
 import StarIcon from "@/components/icons/StarIcon";
 
@@ -53,10 +53,10 @@ export default function EditDiaryEntryButton({
     }
 
     try {
-      const result = await upsertDiaryEntry({
-        albumId,
+      const result = await updateDiaryEntry({
+        entryId,
         listenedAt,
-        rating: rating ?? 0,
+        rating: rating ?? null,
         reviewBody: body || undefined,
       });
 
