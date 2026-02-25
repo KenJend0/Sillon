@@ -11,6 +11,7 @@ export type SearchResultUI = {
   coverUrl?: string | null;
   releaseDate?: string | null;
   source: "internal" | "musicbrainz";
+  score?: number; // used for client-side re-ranking
 };
 
 /**
@@ -56,17 +57,18 @@ export async function searchInternal(
 
   // Artists
   if (kind === "all" || kind === "artists") {
-    const { data: artists } = await supabase
+    const { data: artists } = await (supabase
       .from("artists")
-      .select("id, name")
+      .select("id, name, image_url") as any)
       .ilike("name", `%${escapedQuery}%`)
       .limit(5);
 
-    artists?.forEach((a) =>
+    (artists || []).forEach((a: any) =>
       results.push({
         id: a.id,
         title: a.name,
         kind: "artist",
+        coverUrl: a.image_url || null,
         source: "internal",
       })
     );
@@ -94,6 +96,19 @@ export async function searchInternal(
       }
     });
   }
+
+  // Client-side similarity ranking: exact > starts-with > contains
+  const qLower = q.trim().toLowerCase();
+  results.sort((a, b) => {
+    const aT = a.title.toLowerCase();
+    const bT = b.title.toLowerCase();
+    const rankOf = (t: string) => {
+      if (t === qLower) return 3;
+      if (t.startsWith(qLower)) return 2;
+      return 1;
+    };
+    return rankOf(bT) - rankOf(aT);
+  });
 
   return results;
 }

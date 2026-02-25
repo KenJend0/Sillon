@@ -1,4 +1,5 @@
 import React from 'react';
+import { notFound } from 'next/navigation';
 import BackButton from '@/components/BackButton';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { ArtistPageContent } from '@/components/ArtistPageContent';
@@ -48,14 +49,7 @@ export default async function ArtistPage({ params }: PageProps) {
         .eq("id", id)
         .maybeSingle();
 
-    if (!artist) {
-        return (
-            <main className="max-w-page mx-auto px-4 py-8 pb-24">
-                <BackButton />
-                <div className="mt-6 text-text-tertiary text-[14px]">Artiste introuvable</div>
-            </main>
-        );
-    }
+    if (!artist) notFound();
 
     // 2. Fetch albums
     const { data: albums } = await supabase

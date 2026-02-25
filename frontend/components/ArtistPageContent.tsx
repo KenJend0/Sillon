@@ -3,7 +3,9 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { importAllArtistAlbums } from '@/app/actions/importAllArtistAlbums';
+import { useRouter } from 'next/navigation';
+import { importAlbumFromMusicBrainz } from '@/app/actions/musicbrainz';
+import { showToast } from '@/components/Toast';
 
 type Album = {
     id: string;
@@ -63,8 +65,8 @@ export function ArtistPageContent({
     imageUrl,
     mbReleases = []
 }: ArtistPageContentProps) {
-    const [importing, setImporting] = useState(false);
-    const [importProgress, setImportProgress] = useState('');
+    const router = useRouter();
+    const [importingMbid, setImportingMbid] = useState<string | null>(null);
 
     const isPreviewMode = !artist && previewMbid;
     const artistName = artist?.name || previewName || '';
@@ -103,37 +105,20 @@ export function ArtistPageContent({
         });
     }, [albums, mbReleases]);
 
-    const missingAlbumsCount = discography.filter(d => !d.inDatabase).length;
-
-    const handleImportAll = async () => {
-        if (!artist?.id || !mbid || importing) return;
-
-        setImporting(true);
-        setImportProgress(`Importation de ${missingAlbumsCount} album(s)...`);
-
+    const handleImportAlbum = async (mbid: string) => {
+        if (importingMbid) return;
+        setImportingMbid(mbid);
         try {
-            const result = await importAllArtistAlbums(artist.id, mbid);
-
-            if (result.success) {
-                // Friendly message coming from action (includes quota)
-                const msg = result.message || `${result.imported} album(s) importé(s)`;
-                setImportProgress(msg);
-                // Reload to reflect DB changes after short delay
-                setTimeout(() => window.location.reload(), 2000);
+            const result = await importAlbumFromMusicBrainz(mbid);
+            if (result.success && result.albumId) {
+                router.push(`/albums/${result.albumId}`);
             } else {
-                // Show clear reason to user
-                const userMsg = result.message || (
-                    result.error === 'rate_limited'
-                        ? `Limite atteinte (${result.limit} imports / 24h).` 
-                        : (result.error || 'Erreur lors de l\'import')
-                );
-                setImportProgress(userMsg);
-                // Clear status after a few seconds and re-enable button
-                setTimeout(() => { setImportProgress(''); setImporting(false); }, 5000);
+                showToast("Erreur lors de l'import", 'error');
+                setImportingMbid(null);
             }
-        } catch (err) {
-            setImportProgress('Erreur lors de l\'import');
-            setTimeout(() => { setImportProgress(''); setImporting(false); }, 3000);
+        } catch {
+            showToast("Erreur lors de l'import", 'error');
+            setImportingMbid(null);
         }
     };
 
@@ -177,21 +162,6 @@ export function ArtistPageContent({
                     </div>
                 </div>
 
-                {/* Import All — btn-secondary per charte */}
-                {!isPreviewMode && artist && (missingAlbumsCount > 0 || albums.length === 0) && (
-                    <div className="mt-5">
-                        <button
-                            onClick={handleImportAll}
-                            disabled={importing}
-                            className="border border-border text-text-secondary text-[14px] font-medium px-4 py-2.5 rounded-[8px] hover:border-accent hover:text-accent transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {importing ? 'Importation...' : `Importer tous les albums (${missingAlbumsCount})`}
-                        </button>
-                        {importProgress && (
-                            <p className="text-[14px] text-text-tertiary mt-2">{importProgress}</p>
-                        )}
-                    </div>
-                )}
             </div>
 
             {/* Discography */}
@@ -200,41 +170,66 @@ export function ArtistPageContent({
                     Discographie
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {discography.map((album) => (
-                        <Link
-                            key={`${album.inDatabase ? 'db' : 'mb'}-${album.title}`}
-                            href={album.href}
-                            className="group rounded-[12px] overflow-hidden bg-background-secondary hover:bg-background-tertiary transition-colors duration-150"
-                        >
-                            <AlbumCover album={album} />
-                            <div className="px-3 py-2.5">
-                                <div className="flex items-start justify-between gap-2">
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-[14px] font-medium text-text-primary truncate">
-                                            {album.title}
+                    {discography.map((album) => {
+                        const isImporting = importingMbid === album.mbid;
+                        const isDisabled = !!importingMbid && !isImporting;
+                        const cardClass = `group rounded-[12px] overflow-hidden bg-background-secondary hover:bg-background-tertiary transition-colors duration-150 text-left w-full ${isDisabled ? 'opacity-50' : ''}`;
+
+                        const cardContent = (
+                            <>
+                                <AlbumCover album={album} />
+                                <div className="px-3 py-2.5">
+                                    {isImporting ? (
+                                        <div className="flex items-center gap-2 py-1">
+                                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-[#8E6F5E] flex-shrink-0" />
+                                            <span className="text-[13px] text-text-secondary">Import en cours…</span>
                                         </div>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            {album.date && (
-                                                <span className="text-[12px] text-text-secondary">
-                                                    {year(album.date)}
+                                    ) : (
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-[14px] font-medium text-text-primary truncate">
+                                                    {album.title}
+                                                </div>
+                                                {album.date && (
+                                                    <span className="text-[12px] text-text-secondary">
+                                                        {year(album.date)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {album.avgRating != null && (
+                                                <span className="text-[12px] text-text-primary flex-shrink-0 whitespace-nowrap">
+                                                    {album.avgRating.toFixed(1)}/10
                                                 </span>
                                             )}
                                         </div>
-                                    </div>
-                                    {album.avgRating != null && (
-                                        <span className="text-[12px] text-text-primary flex-shrink-0 whitespace-nowrap">
-                                            {album.avgRating.toFixed(1)}/10
-                                        </span>
                                     )}
                                 </div>
-                                {!album.inDatabase && (
-                                    <div className="text-[12px] text-text-tertiary mt-0.5">
-                                        Non import&eacute;
-                                    </div>
-                                )}
-                            </div>
-                        </Link>
-                    ))}
+                            </>
+                        );
+
+                        if (album.inDatabase) {
+                            return (
+                                <Link
+                                    key={`db-${album.title}`}
+                                    href={album.href}
+                                    className={cardClass}
+                                >
+                                    {cardContent}
+                                </Link>
+                            );
+                        }
+
+                        return (
+                            <button
+                                key={`mb-${album.title}`}
+                                onClick={() => album.mbid && !importingMbid && handleImportAlbum(album.mbid)}
+                                disabled={!!importingMbid}
+                                className={cardClass}
+                            >
+                                {cardContent}
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {discography.length === 0 && (
