@@ -1,7 +1,9 @@
-﻿import BackButton from "@/components/BackButton";
+﻿import { notFound } from "next/navigation";
+import BackButton from "@/components/BackButton";
 import { msToMMSS } from "@/lib/time";
 import { createSupabaseServer, getAuthUser } from "@/lib/supabase/server";
 import { isAlbumSaved } from "@/app/actions/saved-albums";
+import { getAlbumStreamingLinks } from "@/app/actions/musicbrainz";
 import AlbumHero from "@/components/AlbumHero";
 import AlbumReviewSection from "@/components/AlbumReviewSection";
 import ScrollToHashClient from "@/components/ScrollToHashClient";
@@ -51,18 +53,11 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
     // Fetch album
     const { data: album } = await supabase
         .from("albums")
-        .select("id, title, cover_url, release_date, artist_id")
+        .select("id, title, cover_url, release_date, artist_id, mbid")
         .eq("id", id)
         .maybeSingle();
 
-    if (!album) {
-        return (
-            <main className="max-w-page mx-auto px-4 py-8 pb-24">
-                <BackButton />
-                <div className="mt-section-sm text-text-tertiary text-meta">Album introuvable</div>
-            </main>
-        );
-    }
+    if (!album) notFound();
 
     // Fetch artist
     const { data: artist } = await supabase
@@ -79,9 +74,12 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
         .order("disc_no", { ascending: true, nullsFirst: true })
         .order("track_no", { ascending: true, nullsFirst: true });
 
-    // Get current user and album saved status
+    // Get current user and album saved status + streaming links in parallel
     const user = await getAuthUser();
-    const albumSaved = user ? await isAlbumSaved(album.id) : false;
+    const [albumSaved, streamingLinks] = await Promise.all([
+        user ? isAlbumSaved(album.id) : Promise.resolve(false),
+        album.mbid ? getAlbumStreamingLinks(album.mbid) : Promise.resolve({}),
+    ]);
 
     // Fetch stats from DB view (latest entry per user)
     const { data: albumStats } = await supabase
@@ -149,6 +147,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                     myLatestEntry={myLatestEntry}
                     myEntriesCount={myEntries.length}
                     autoOpenDiary={autoOpenDiary}
+                    streamingLinks={streamingLinks}
                 />
             </div>
 

@@ -8,6 +8,7 @@ import MyActivitiesModal from "@/components/MyActivitiesModal";
 import SaveAlbumButton from "@/components/SaveAlbumButton";
 import AddToDiaryButton from "@/components/AddToDiaryButton";
 import EditDiaryEntryButton from "@/components/EditDiaryEntryButton";
+import type { StreamingLinks } from "@/app/actions/musicbrainz";
 
 type AlbumHeroProps = {
     album: {
@@ -35,6 +36,7 @@ type AlbumHeroProps = {
     };
     myEntriesCount?: number;
     autoOpenDiary?: boolean;
+    streamingLinks?: StreamingLinks;
 };
 
 export default function AlbumHero({
@@ -46,6 +48,7 @@ export default function AlbumHero({
     myLatestEntry,
     myEntriesCount = 0,
     autoOpenDiary = false,
+    streamingLinks,
 }: AlbumHeroProps) {
     const [coverError, setCoverError] = useState(false);
     const [isMyActivitiesOpen, setIsMyActivitiesOpen] = useState(false);
@@ -88,6 +91,34 @@ export default function AlbumHero({
                         )}
                         {album.year && ` · ${album.year}`}
                     </div>
+
+                    {/* Streaming links */}
+                    {streamingLinks && Object.keys(streamingLinks).length > 0 && (
+                        <div className="flex items-center gap-2 mt-3 flex-wrap">
+                            {[
+                                { key: 'spotify', label: 'Spotify', href: streamingLinks.spotify },
+                                { key: 'appleMusic', label: 'Apple Music', href: streamingLinks.appleMusic },
+                                { key: 'deezer', label: 'Deezer', href: streamingLinks.deezer },
+                                { key: 'tidal', label: 'Tidal', href: streamingLinks.tidal },
+                            ]
+                                .filter((s) => s.href)
+                                .map((s, i, arr) => (
+                                    <span key={s.key} className="flex items-center gap-2">
+                                        <a
+                                            href={s.href}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[12px] text-text-tertiary hover:text-text-secondary transition-colors duration-150"
+                                        >
+                                            {s.label}
+                                        </a>
+                                        {i < arr.length - 1 && (
+                                            <span className="text-[12px] text-text-disabled">·</span>
+                                        )}
+                                    </span>
+                                ))}
+                        </div>
+                    )}
 
                     {/* Stats */}
                     {stats && (stats.avg_rating !== null || stats.listeners_count > 0 || stats.reviews_count > 0) && (

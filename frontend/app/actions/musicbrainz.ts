@@ -6,6 +6,13 @@ import type { SearchResultUI } from './search';
 const MUSICBRAINZ_API = 'https://musicbrainz.org/ws/2';
 const USER_AGENT = 'Waveform/1.0 (https://waveform.app)';
 
+// Secondary types that indicate non-studio releases (live, compilation, etc.)
+const EXCLUDED_SECONDARY_TYPES = new Set([
+  'Live', 'Compilation', 'Remix', 'Demo',
+  'Mixtape/Street', 'Spokenword', 'Interview',
+  'Audiobook', 'Audio drama', 'Field recording',
+]);
+
 function normalizeReleaseDate(date?: string | null): string | null {
   if (!date) return null;
   const trimmed = date.trim();
@@ -66,6 +73,7 @@ interface MBArtistSearchResult {
     name: string;
     type?: string;
     country?: string;
+    score?: number;
     'life-span'?: { begin?: string; end?: string };
   }>;
 }
@@ -92,6 +100,7 @@ export type AlbumSearchResult = {
   releaseDate?: string;
   coverUrl?: string;
   hasCover: boolean;
+  score: number; // MB relevance score 0-100
 };
 
 export type ArtistSearchResult = {
@@ -99,6 +108,7 @@ export type ArtistSearchResult = {
   name: string;
   type?: string;
   country?: string;
+  score: number; // MB relevance score 0-100
 };
 
 export type SearchFilter = 'all' | 'albums' | 'artists';
@@ -264,17 +274,21 @@ export async function searchMusicBrainzAlbums(query: string, limit = 30): Promis
       }
     }
 
-    // Get deduplicated list and exclude release-groups that are Singles
+    // Get deduplicated list — keep only studio Albums and EPs, exclude Live/Compilation/etc.
     const uniqueAlbums = Array.from(releaseGroupMap.values())
       .filter((release) => {
-        const primaryType = release['release-group']?.['primary-type'];
-        // Keep only Album or EP types (exclude Single and other types)
-        return primaryType === 'Album' || primaryType === 'EP';
+        const rg = release['release-group'];
+        const primaryType = rg?.['primary-type'];
+        const secondaryTypes: string[] = rg?.['secondary-types'] || [];
+        return (primaryType === 'Album' || primaryType === 'EP')
+          && !secondaryTypes.some((t: string) => EXCLUDED_SECONDARY_TYPES.has(t));
       })
+      // Sort by MB relevance score descending before slicing
+      .sort((a: any, b: any) => (b.score || 0) - (a.score || 0))
       .slice(0, limit);
 
-    // Fetch covers for top 8 results only (not all 30) to avoid rate limiting and slow responses
-    const coverLimit = Math.min(8, uniqueAlbums.length);
+    // Fetch covers for top 12 results only to avoid rate limiting
+    const coverLimit = Math.min(12, uniqueAlbums.length);
     const coverPromises = uniqueAlbums.slice(0, coverLimit).map(release =>
       fetchCoverUrl(release['release-group'].id)
     );
@@ -293,9 +307,9 @@ export async function searchMusicBrainzAlbums(query: string, limit = 30): Promis
         title: release.title,
         artistName: artistName || 'Unknown',
         releaseDate: release.date,
-        // Use actual cover URL if found, otherwise undefined
         coverUrl: coverUrl || undefined,
         hasCover: !!coverUrl,
+        score: release.score || 0,
       };
     });
 
@@ -335,6 +349,7 @@ export async function searchMusicBrainzArtists(query: string, limit = 30): Promi
         name: a.name,
         type: a.type,
         country: a.country,
+        score: a.score || 0,
       }));
 
     return { success: true, results };
@@ -879,6 +894,83 @@ export async function fetchArtistMetadata(mbid: string): Promise<{
     };
   } catch {
     return { bio: null, imageUrl: null, country: null, type: null, name: '' };
+  }
+}
+
+export type StreamingLinks = {
+  spotify?: string;
+  appleMusic?: string;
+  deezer?: string;
+  tidal?: string;
+};
+
+function extractStreamingLinks(relations: any[]): StreamingLinks {
+  const links: StreamingLinks = {};
+  for (const rel of relations) {
+    const url: string | undefined = rel.url?.resource;
+    if (!url) continue;
+    if (url.includes('spotify.com') && !links.spotify) links.spotify = url;
+    else if (url.includes('music.apple.com') && !links.appleMusic) links.appleMusic = url;
+    else if (url.includes('deezer.com') && !links.deezer) links.deezer = url;
+    else if (url.includes('tidal.com') && !links.tidal) links.tidal = url;
+  }
+  return links;
+}
+
+/**
+ * Fetch streaming platform links for an album via MusicBrainz url-rels.
+ * Streaming links (Spotify, Apple Music…) are attached to specific releases in MB,
+ * not necessarily the one we have stored (which may be a physical edition).
+ * Strategy:
+ *   1. Fetch the stored release → check its url-rels + get the release-group id
+ *   2. If no links found, browse all releases in the release-group with url-rels
+ *      and collect links from whichever release has them (typically the digital edition)
+ * Both calls are cached 24h by Next.js.
+ */
+export async function getAlbumStreamingLinks(mbid: string): Promise<StreamingLinks> {
+  try {
+    // Step 1 — fetch the stored release
+    const releaseRes = await fetch(
+      `${MUSICBRAINZ_API}/release/${encodeURIComponent(mbid)}?inc=url-rels+release-groups&fmt=json`,
+      {
+        headers: { 'User-Agent': USER_AGENT },
+        next: { revalidate: 86400 },
+      }
+    );
+    if (!releaseRes.ok) return {};
+
+    const releaseData = await releaseRes.json();
+    const releaseLinks = extractStreamingLinks(releaseData.relations || []);
+    if (Object.keys(releaseLinks).length > 0) return releaseLinks;
+
+    // Step 2 — browse all releases in the same release-group
+    const rgId: string | undefined = releaseData['release-group']?.id;
+    if (!rgId) return {};
+
+    const browseRes = await fetch(
+      `${MUSICBRAINZ_API}/release?release-group=${encodeURIComponent(rgId)}&inc=url-rels&fmt=json&limit=50`,
+      {
+        headers: { 'User-Agent': USER_AGENT },
+        next: { revalidate: 86400 },
+      }
+    );
+    if (!browseRes.ok) return {};
+
+    const browseData = await browseRes.json();
+    const releases: any[] = browseData.releases || [];
+
+    const links: StreamingLinks = {};
+    for (const release of releases) {
+      const found = extractStreamingLinks(release.relations || []);
+      if (found.spotify && !links.spotify) links.spotify = found.spotify;
+      if (found.appleMusic && !links.appleMusic) links.appleMusic = found.appleMusic;
+      if (found.deezer && !links.deezer) links.deezer = found.deezer;
+      if (found.tidal && !links.tidal) links.tidal = found.tidal;
+      if (links.spotify && links.appleMusic && links.deezer && links.tidal) break;
+    }
+    return links;
+  } catch {
+    return {};
   }
 }
 
