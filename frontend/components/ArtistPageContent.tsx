@@ -110,7 +110,7 @@ export function ArtistPageContent({
         setImportingMbid(mbid);
         try {
             const result = await importAlbumFromMusicBrainz(mbid);
-            if (result.success && result.albumId) {
+            if (result.success && 'albumId' in result && result.albumId) {
                 router.push(`/albums/${result.albumId}`);
             } else {
                 showToast("Erreur lors de l'import", 'error');

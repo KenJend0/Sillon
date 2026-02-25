@@ -306,7 +306,7 @@ export default function SearchOverlay() {
         setImportingId(item.id);
         try {
           const result = await importAlbumFromMusicBrainz(item.id);
-          if (result.success && result.albumId) {
+          if (result.success && 'albumId' in result && result.albumId) {
             setIsOpen(false);
             setResults([]);
             setQ("");

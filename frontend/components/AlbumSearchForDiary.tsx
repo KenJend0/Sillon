@@ -114,7 +114,7 @@ export default function AlbumSearchForDiary({ onSelectAlbum }: AlbumSearchForDia
         setImportingMbid(mb.mbid);
         try {
             const result = await importAlbumFromMusicBrainz(mb.mbid);
-            if (result.success && result.albumId) {
+            if (result.success && 'albumId' in result && result.albumId) {
                 onSelectAlbum({
                     id: result.albumId,
                     title: mb.title,
