@@ -47,10 +47,18 @@ export default function AlbumSearchForDiary({ onSelectAlbum }: AlbumSearchForDia
         const t = setTimeout(async () => {
             try {
                 setLoading(true);
+                setLoadingMB(true);
                 setMbSuggestions([]);
-                const results = await searchInternal(q, "albums");
 
-                const albums = results
+                // Run both searches in parallel
+                const [internalResults, mbResult] = await Promise.all([
+                    searchInternal(q, "albums"),
+                    q.trim().length >= 2
+                        ? searchMusicBrainzAlbums(q, 5).catch(() => null)
+                        : Promise.resolve(null),
+                ]);
+
+                const albums = internalResults
                     .filter(r => r.kind === "album")
                     .map((item) => ({
                         id: item.id,
@@ -65,29 +73,18 @@ export default function AlbumSearchForDiary({ onSelectAlbum }: AlbumSearchForDia
                 setSuggestions(albums);
                 setIsOpen(true);
 
-                // Recherche MusicBrainz si peu de résultats internes
-                if (albums.length < 3 && q.trim().length >= 2) {
-                    setLoadingMB(true);
-                    try {
-                        const mbResult = await searchMusicBrainzAlbums(q, 5);
-                        if (mbResult.success && mbResult.results) {
-                            const internalTitles = new Set(albums.map(a => a.title.toLowerCase()));
-                            const mbAlbums: MbAlbumUI[] = mbResult.results
-                                .filter(r => !internalTitles.has(r.title.toLowerCase()))
-                                .slice(0, 5)
-                                .map(r => ({
-                                    mbid: r.id,
-                                    title: r.title,
-                                    artist_name: r.artistName || "Unknown Artist",
-                                    coverUrl: r.coverUrl || null,
-                                }));
-                            setMbSuggestions(mbAlbums);
-                        }
-                    } catch {
-                        // MB search failure is silent — internal results are still shown
-                    } finally {
-                        setLoadingMB(false);
-                    }
+                if (mbResult?.success && mbResult.results) {
+                    const internalTitles = new Set(albums.map(a => a.title.toLowerCase()));
+                    const mbAlbums: MbAlbumUI[] = mbResult.results
+                        .filter(r => !internalTitles.has(r.title.toLowerCase()))
+                        .slice(0, 5)
+                        .map(r => ({
+                            mbid: r.id,
+                            title: r.title,
+                            artist_name: r.artistName || "Unknown Artist",
+                            coverUrl: r.coverUrl || null,
+                        }));
+                    setMbSuggestions(mbAlbums);
                 }
             } catch (error) {
                 console.error("Search error:", error);
@@ -96,6 +93,7 @@ export default function AlbumSearchForDiary({ onSelectAlbum }: AlbumSearchForDia
                 setIsOpen(false);
             } finally {
                 setLoading(false);
+                setLoadingMB(false);
             }
         }, 300);
 

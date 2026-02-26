@@ -84,10 +84,12 @@ interface MBReleaseDetail {
   date?: string;
   'artist-credit': Array<{ artist: { id: string; name: string } }>;
   media: Array<{
+    position: number;
     tracks: Array<{
       id: string;
       title: string;
       position: number;
+      length?: number;
       'track_or_recording_length'?: number;
     }>;
   }>;
@@ -322,35 +324,59 @@ export async function searchMusicBrainzAlbums(query: string, limit = 30): Promis
 }
 
 /**
- * Search MusicBrainz for artists - direct implementation
- * Ported from backend for single source of truth
+ * Search MusicBrainz for artists via release-group search.
+ * Using release-groups with type:Album ensures we only return artists
+ * who have at least one studio album (not artists with only singles/EPs).
  */
 export async function searchMusicBrainzArtists(query: string, limit = 30): Promise<{ success: boolean; results?: ArtistSearchResult[]; error?: string }> {
   const authUser = await getAuthUser();
   if (!authUser) return { success: false, error: 'not_authenticated' };
 
   try {
+    // Search release groups of type Album where the artist name matches.
+    // This guarantees returned artists have at least one album.
+    const luceneQuery = `artist:"${query.replace(/"/g, '\\"')}" AND type:Album`;
     const response = await fetchWithRetry(
-      `${MUSICBRAINZ_API}/artist?query=${encodeURIComponent(query)}&fmt=json&limit=${limit}`,
-      {
-        headers: { 'User-Agent': USER_AGENT },
-      }
+      `${MUSICBRAINZ_API}/release-group?query=${encodeURIComponent(luceneQuery)}&fmt=json&limit=50`,
+      { headers: { 'User-Agent': USER_AGENT } }
     );
 
     if (!response.ok) {
       return { success: false, error: 'MusicBrainz artist search failed' };
     }
 
-    const data: MBArtistSearchResult = await response.json();
-    const results: ArtistSearchResult[] = (data.artists || [])
-      .slice(0, limit)
-      .map((a) => ({
-        id: a.id,
-        name: a.name,
-        type: a.type,
-        country: a.country,
-        score: a.score || 0,
-      }));
+    const data = await response.json();
+    const releaseGroups: any[] = data['release-groups'] || [];
+
+    // Exclude compilations, live albums, remixes, etc.
+    const studioAlbums = releaseGroups.filter((rg) => {
+      const secondaries: string[] = rg['secondary-types'] || [];
+      return !secondaries.some((t) => EXCLUDED_SECONDARY_TYPES.has(t));
+    });
+
+    // Extract unique artists, keeping the best score per artist
+    const artistMap = new Map<string, ArtistSearchResult>();
+    studioAlbums.forEach((rg) => {
+      const score = rg.score || 0;
+      (rg['artist-credit'] || []).forEach((credit: any) => {
+        const artist = credit.artist;
+        if (!artist?.id) return;
+        const existing = artistMap.get(artist.id);
+        if (!existing || score > existing.score) {
+          artistMap.set(artist.id, {
+            id: artist.id,
+            name: artist.name,
+            type: artist.type || undefined,
+            country: undefined,
+            score,
+          });
+        }
+      });
+    });
+
+    const results = Array.from(artistMap.values())
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit);
 
     return { success: true, results };
   } catch (err) {
@@ -390,7 +416,9 @@ export async function previewAlbumFromMusicBrainz(mbid: string) {
     const artistCredit = data['artist-credit']?.[0];
     const artist = artistCredit?.artist || { id: '', name: 'Unknown' };
 
-    const tracks = data.media?.[0]?.tracks || [];
+    const tracks = (data.media || []).flatMap((m) =>
+      (m.tracks || []).map((t) => ({ ...t, _discNo: m.position }))
+    );
 
     // Get release-group ID for consistent cover lookup
     const releaseGroupId = (data as any)['release-group']?.id || mbid;
@@ -454,7 +482,8 @@ export async function previewAlbumFromMusicBrainz(mbid: string) {
           mbid: t.id,
           title: t.title,
           position: t.position,
-          duration: t.track_or_recording_length || null,
+          discNo: t._discNo ?? 1,
+          duration: t.length ?? t['track_or_recording_length'] ?? null,
         })),
       },
     };
@@ -554,6 +583,7 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
       artist_id: artistId,
       title: track.title,
       track_no: track.position,
+      disc_no: (track as any).discNo ?? null,
       duration_ms: track.duration,
       mbid: track.mbid,
     }));
