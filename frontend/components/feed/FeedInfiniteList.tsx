@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FeedEvent, getMyFeed } from '@/app/actions/feed';
 import FeedCardReviewCreated from './cards/FeedCardReviewCreated';
 import FeedCardAlbumSaved from './cards/FeedCardAlbumSaved';
@@ -110,15 +110,31 @@ function renderEvent(event: FeedEvent, currentUserId?: string) {
   return null;
 }
 
+const FEED_SCROLL_KEY = 'feed_scroll_state';
+
+function getSavedFeedState() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const saved = sessionStorage.getItem(FEED_SCROLL_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function FeedInfiniteList({ initialEvents, initialCursor, currentUserId }: FeedInfiniteListProps) {
-  const [events, setEvents] = useState<FeedEvent[]>(initialEvents);
-  const [cursor, setCursor] = useState<string | null>(initialCursor);
+  // Lazy init: restore from sessionStorage on back-navigation, else use server props
+  const [restoredState] = useState(() => getSavedFeedState());
+
+  const [events, setEvents] = useState<FeedEvent[]>(restoredState?.events ?? initialEvents);
+  const [cursor, setCursor] = useState<string | null>(restoredState?.cursor ?? initialCursor);
   const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(initialEvents.length >= 20);
+  const [hasMore, setHasMore] = useState<boolean>(restoredState?.hasMore ?? initialEvents.length >= 20);
   const observerTarget = useRef<HTMLDivElement>(null);
   const mountedRef = useRef(false);
-  const eventsRef = useRef<FeedEvent[]>(initialEvents);
-  const cursorRef = useRef<string | null>(initialCursor);
+  const eventsRef = useRef<FeedEvent[]>(restoredState?.events ?? initialEvents);
+  const cursorRef = useRef<string | null>(restoredState?.cursor ?? initialCursor);
+  const hasMoreRef = useRef<boolean>(restoredState?.hasMore ?? initialEvents.length >= 20);
 
   // Keep refs in sync to avoid stale closures in the callback
   useEffect(() => {
@@ -128,6 +144,43 @@ export default function FeedInfiniteList({ initialEvents, initialCursor, current
   useEffect(() => {
     cursorRef.current = cursor;
   }, [cursor]);
+
+  useEffect(() => {
+    hasMoreRef.current = hasMore;
+  }, [hasMore]);
+
+  // Restore scroll position after back-navigation and clear saved state
+  useEffect(() => {
+    if (restoredState) {
+      sessionStorage.removeItem(FEED_SCROLL_KEY);
+      const target = restoredState.scrollY ?? 0;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: target, behavior: 'instant' });
+        });
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Save feed state when navigating to a diary entry
+  const handleContainerClick = useCallback((e: React.MouseEvent) => {
+    const anchor = (e.target as HTMLElement).closest('a');
+    if (!anchor) return;
+    try {
+      const url = new URL(anchor.href, window.location.origin);
+      if (url.pathname.startsWith('/diary/')) {
+        sessionStorage.setItem(FEED_SCROLL_KEY, JSON.stringify({
+          scrollY: window.scrollY,
+          events: eventsRef.current,
+          cursor: cursorRef.current,
+          hasMore: hasMoreRef.current,
+        }));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const loadMore = useCallback(async () => {
     if (loading || !hasMore) return;
@@ -192,7 +245,7 @@ export default function FeedInfiniteList({ initialEvents, initialCursor, current
   }, [loadMore, hasMore, loading]);
 
   return (
-    <div className="pb-20">
+    <div className="pb-20" onClick={handleContainerClick}>
       <div>
         {events.map((event, index) => {
           const dateLabel = getDateLabel(event.created_at);

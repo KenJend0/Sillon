@@ -60,15 +60,6 @@ const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[
                     </>
                 ),
             },
-            {
-                q: "Comment recommander un album à quelqu'un ?",
-                a: (
-                    <>
-                        Depuis la page d'un album, appuie sur <em>Recommander</em> et choisis
-                        un utilisateur. Il recevra une notification avec ta recommandation.
-                    </>
-                ),
-            },
         ],
     },
     {
