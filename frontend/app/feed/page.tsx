@@ -102,7 +102,7 @@ export default async function FeedPage() {
       href="/add"
       className="flex items-center justify-between px-4 py-4 bg-background-secondary border border-border rounded-[12px] hover:bg-background-tertiary transition-colors duration-150"
     >
-      <p className="text-[14px] text-text-primary font-medium">Logger un album</p>
+      <p className="text-[14px] text-text-primary font-medium">Noter un album</p>
       <span className="text-[18px] leading-none ml-4 text-text-tertiary">→</span>
     </Link>
   );

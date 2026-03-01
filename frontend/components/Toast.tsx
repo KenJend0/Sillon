@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { CheckCircle, AlertCircle, X } from "lucide-react";
 
 type ToastType = "success" | "error" | "info";
@@ -44,10 +44,12 @@ export default function Toast() {
     }
   };
 
-  // Register this component as a listener
-  if (typeof window !== "undefined" && !toastListeners.includes(addToast)) {
+  useEffect(() => {
     toastListeners.push(addToast);
-  }
+    return () => {
+      toastListeners = toastListeners.filter(l => l !== addToast);
+    };
+  }, [addToast]);
 
   return (
     <div className="fixed bottom-20 left-4 right-4 md:bottom-4 md:left-auto md:right-4 md:max-w-sm z-50 space-y-2 pointer-events-none">
