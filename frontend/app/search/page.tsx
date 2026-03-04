@@ -10,6 +10,7 @@ import { searchInternal, type SearchResultUI } from "@/app/actions/search";
 import { getArtistImagesByMbids } from "@/app/actions/artists";
 import type { AlbumSearchResult, ArtistSearchResult } from "@/app/actions/musicbrainz";
 import { Disc3, User, Search, Clock, X } from "lucide-react";
+import { CoverImage } from "@/components/CoverImage";
 import BackButton from "@/components/BackButton";
 import { showToast } from "@/components/Toast";
 
@@ -75,7 +76,7 @@ function AlbumRow({
 }) {
   return (
     <button
-      onClick={() => onImport(album.id)}
+      onClick={() => onImport(album.releaseId || album.id)}
       disabled={disabled}
       className={`group w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-[10px] transition-colors duration-150 hover:bg-background-secondary ${
         disabled && !importing ? "opacity-40" : ""
@@ -83,13 +84,18 @@ function AlbumRow({
     >
       <div className="w-11 h-11 rounded-[6px] bg-background-tertiary overflow-hidden flex-shrink-0 flex items-center justify-center">
         {album.coverUrl ? (
-          <Image
+          <CoverImage
             src={album.coverUrl}
+            fallback={
+              album.releaseId
+                ? `https://coverartarchive.org/release/${album.releaseId}/front`
+                : undefined
+            }
             alt={album.title}
             width={44}
             height={44}
             className="w-full h-full object-cover"
-            unoptimized
+            placeholder={<Disc3 size={16} className="text-text-disabled" />}
           />
         ) : (
           <Disc3 size={16} className="text-text-disabled" />

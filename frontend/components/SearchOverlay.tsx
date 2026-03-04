@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { searchInternal, type SearchResultUI } from "@/app/actions/search";
 import { searchMusicBrainzAlbums, searchMusicBrainzArtists, importAlbumFromMusicBrainz } from "@/app/actions/musicbrainz";
 import { getArtistImagesByMbids } from "@/app/actions/artists";
 import { showToast } from "@/components/Toast";
 import { Clock, X, Disc3, User, Search, ArrowRight } from "lucide-react";
+import { CoverImage } from "@/components/CoverImage";
 import {
   getRecentSearches,
   saveRecentSearch,
@@ -20,22 +20,44 @@ type SearchTab = "all" | "albums" | "artists" | "users";
 // Ranking helpers
 // ---------------------------------------------------------------------------
 
+/** Strip accents, punctuation, extra spaces for resilient comparison */
+function normalize(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")  // accents
+    .replace(/[^\w\s]/g, "")           // punctuation (apostrophes, hyphens…)
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Remove leading articles so "The Dark Side…" matches query "dark side…" */
+function stripArticle(s: string): string {
+  return s.replace(/^(the|a|an) /, "");
+}
+
 /** Score a result for ordering — higher = more relevant */
 function computeRank(item: SearchResultUI, query: string): number {
-  const t = item.title.toLowerCase().trim();
-  const q = query.toLowerCase().trim();
+  const t = stripArticle(normalize(item.title));
+  const q = stripArticle(normalize(query));
   let rank = 0;
 
-  // MB score contribution (0–100 → 0–50)
-  if (item.score !== undefined) rank += item.score * 0.5;
+  // MB score (0–100 → 0–80) — dominant signal for external results
+  if (item.score !== undefined) rank += item.score * 0.8;
 
-  // Internal results are already-imported, boost them
-  if (item.source === "internal") rank += 100;
+  // Small bonus for internal (already imported), not enough to bury a perfect MB match
+  if (item.source === "internal") rank += 40;
 
-  // Text similarity
+  // Popularity signal: log-scale bonus for release-count.
+  // Iconic albums (Thriller ~100 releases) score ~100 pts; obscure ones (~2) score ~24 pts.
+  // Separates MJ's Thriller from a no-name "Thriller" album that also exact-matches.
+  if (item.releaseCount) rank += Math.log2(item.releaseCount + 1) * 15;
+
+  // Text similarity on normalised + article-stripped strings.
+  // Bidirectional includes catches "Thriller" when query is "michael jackson thriller".
   if (t === q) rank += 500;
   else if (t.startsWith(q)) rank += 200;
-  else if (t.includes(q)) rank += 30;
+  else if (t.includes(q) || q.includes(t)) rank += 30;
 
   return rank;
 }
@@ -93,6 +115,9 @@ function ResultRow({
 }) {
   const isRound = item.kind === "artist" || item.kind === "user";
   const hasImage = !!item.coverUrl;
+  const placeholderIcon = item.kind === "album"
+    ? <Disc3 size={16} className="text-text-disabled" />
+    : <User size={16} className="text-text-disabled" />;
 
   return (
     <button
@@ -110,19 +135,20 @@ function ResultRow({
         }`}
       >
         {hasImage ? (
-          <Image
+          <CoverImage
             src={item.coverUrl!}
+            fallback={
+              item.source === "musicbrainz" && item.kind === "album" && item.releaseId
+                ? `https://coverartarchive.org/release/${item.releaseId}/front`
+                : undefined
+            }
             alt={item.title}
             width={40}
             height={40}
             className="w-full h-full object-cover"
-            unoptimized
+            placeholder={placeholderIcon}
           />
-        ) : item.kind === "album" ? (
-          <Disc3 size={16} className="text-text-disabled" />
-        ) : (
-          <User size={16} className="text-text-disabled" />
-        )}
+        ) : placeholderIcon}
       </div>
 
       {/* Text */}
@@ -208,25 +234,36 @@ export default function SearchOverlay() {
       setLoading(true);
       setResults([]);
 
-      // 1. Internal search (fast)
-      const internal = await searchInternal(q, activeTab);
-      if (aborted) return;
-
-      setResults(mergeAndRank(internal, [], q, limit));
-      setLoading(false);
-
-      // 2. MB search (always, runs in parallel)
-      if (activeTab !== "users") {
-        setLoadingExtended(true);
-        try {
-          const [mbAlbumsRes, mbArtistsRes] = await Promise.all([
+      // Launch MB immediately — runs in parallel with internal search
+      const mbPromise = activeTab !== "users"
+        ? Promise.all([
             activeTab === "all" || activeTab === "albums"
               ? searchMusicBrainzAlbums(q, 8)
               : Promise.resolve(null),
             activeTab === "all" || activeTab === "artists"
               ? searchMusicBrainzArtists(q, 5)
               : Promise.resolve(null),
-          ]);
+          ])
+        : null;
+
+      if (activeTab !== "users") setLoadingExtended(true);
+
+      // 1. Internal search (fast) — first paint
+      let internal: SearchResultUI[] = [];
+      try {
+        internal = await searchInternal(q, activeTab);
+      } catch {
+        // Internal failed — continue with MB only
+      }
+      if (aborted) return;
+
+      setResults(mergeAndRank(internal, [], q, limit));
+      setLoading(false);
+
+      // 2. Await MB (already running)
+      if (mbPromise) {
+        try {
+          const [mbAlbumsRes, mbArtistsRes] = await mbPromise;
           if (aborted) return;
 
           const mbList: SearchResultUI[] = [];
@@ -235,6 +272,7 @@ export default function SearchOverlay() {
             mbAlbumsRes.results.forEach((album) =>
               mbList.push({
                 id: album.id,
+                releaseId: album.releaseId,
                 title: album.title,
                 subtitle: album.artistName,
                 kind: "album",
@@ -242,6 +280,7 @@ export default function SearchOverlay() {
                 releaseDate: album.releaseDate,
                 source: "musicbrainz",
                 score: album.score,
+                releaseCount: album.releaseCount,
               })
             );
           }
@@ -262,7 +301,7 @@ export default function SearchOverlay() {
           const merged = mergeAndRank(internal, mbList, q, limit);
           setResults(merged);
 
-          // Load images for MB artists (Wikidata lookup, runs after results are shown)
+          // Load images for MB artists (Wikidata lookup, runs after results shown)
           const mbArtistMbids = mbList
             .filter((r) => r.kind === "artist")
             .map((r) => r.id);
@@ -305,7 +344,8 @@ export default function SearchOverlay() {
       if (item.kind === "album" && item.source === "musicbrainz") {
         setImportingId(item.id);
         try {
-          const result = await importAlbumFromMusicBrainz(item.id);
+          // Use the release MBID for import — falls back to release-group MBID if unavailable
+          const result = await importAlbumFromMusicBrainz(item.releaseId || item.id);
           if (result.success && 'albumId' in result && result.albumId) {
             setIsOpen(false);
             setResults([]);

@@ -4,14 +4,16 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 
 export type SearchResultUI = {
   id: string;
+  releaseId?: string;    // MB release MBID when source=musicbrainz+kind=album (for import & cover fallback)
   title: string;
   subtitle?: string;
-  slug?: string; // for users: actual username used in URLs (≠ display_name)
+  slug?: string;         // for users: actual username used in URLs (≠ display_name)
   kind: "album" | "artist" | "user";
   coverUrl?: string | null;
   releaseDate?: string | null;
   source: "internal" | "musicbrainz";
-  score?: number; // used for client-side re-ranking
+  score?: number;        // MB relevance score 0-100 — used for client-side re-ranking
+  releaseCount?: number; // number of MB releases — proxy for album popularity
 };
 
 /**
@@ -29,76 +31,105 @@ export async function searchInternal(
   if (!q.trim()) return [];
 
   const supabase = await createSupabaseServer();
-  const results: SearchResultUI[] = [];
-  
-  // Escape special characters to prevent SQL injection
-  const escapedQuery = escapeILike(q.trim());
+  const trimmed = q.trim();
+  const escapedQuery = escapeILike(trimmed);
 
-  // Albums
-  if (kind === "all" || kind === "albums") {
-    const { data: albums } = await supabase
+  // Use full-text search for 3+ character queries (handles accents, apostrophes, multi-word)
+  // Fall back to ILIKE for very short queries where tokenization is unreliable
+  const useTextSearch = trimmed.length >= 3;
+
+  // Albums: textSearch with ILIKE fallback if column doesn't exist yet (migration pending)
+  const albumsQuery = async () => {
+    if (kind !== "all" && kind !== "albums") return { data: null };
+    if (useTextSearch) {
+      const r = await supabase
+        .from("albums")
+        .select("id, title, cover_url, release_date, artists(name)")
+        .textSearch("search_vector", trimmed, { type: "websearch", config: "english" })
+        .limit(5);
+      if (!r.error) return r;
+      // search_vector column doesn't exist yet — fall back to ILIKE
+    }
+    return supabase
       .from("albums")
       .select("id, title, cover_url, release_date, artists(name)")
       .ilike("title", `%${escapedQuery}%`)
       .limit(5);
+  };
 
-    albums?.forEach((a) =>
-      results.push({
-        id: a.id,
-        title: a.title,
-        subtitle: a.artists?.name || "Unknown Artist",
-        kind: "album",
-        coverUrl: a.cover_url,
-        releaseDate: a.release_date,
-        source: "internal",
-      })
-    );
-  }
-
-  // Artists — only those with at least one album (!inner join filters out empty artists)
-  if (kind === "all" || kind === "artists") {
-    const { data: artists } = await (supabase
+  // Artists: textSearch with ILIKE fallback if column doesn't exist yet (migration pending)
+  const artistsQuery = async () => {
+    if (kind !== "all" && kind !== "artists") return { data: null };
+    if (useTextSearch) {
+      const r = await (supabase
+        .from("artists")
+        .select("id, name, image_url, albums(id)") as any)
+        .textSearch("search_vector", trimmed, { type: "websearch", config: "english" })
+        .limit(5);
+      if (!r.error) return r;
+      // search_vector column doesn't exist yet — fall back to ILIKE
+    }
+    return (supabase
       .from("artists")
-      .select("id, name, image_url, albums!inner(id)") as any)
+      .select("id, name, image_url, albums(id)") as any)
       .ilike("name", `%${escapedQuery}%`)
       .limit(5);
+  };
 
-    (artists || []).forEach((a: any) =>
+  // Run all needed queries in parallel
+  const [albumsData, artistsData, usersData] = await Promise.all([
+    albumsQuery(),
+    artistsQuery(),
+    // Users — always ILIKE (no tsvector on profiles yet, username rarely has accents)
+    (kind === "all" || kind === "users")
+      ? supabase
+          .from("profiles")
+          .select("id, username, display_name, avatar_url")
+          .or(`username.ilike.%${escapedQuery}%,display_name.ilike.%${escapedQuery}%`)
+          .limit(5)
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const results: SearchResultUI[] = [];
+
+  albumsData.data?.forEach((a: any) =>
+    results.push({
+      id: a.id,
+      title: a.title,
+      subtitle: a.artists?.name || "Unknown Artist",
+      kind: "album",
+      coverUrl: a.cover_url,
+      releaseDate: a.release_date,
+      source: "internal",
+    })
+  );
+
+  (artistsData.data || []).forEach((a: any) =>
+    results.push({
+      id: a.id,
+      title: a.name,
+      kind: "artist",
+      coverUrl: a.image_url || null,
+      source: "internal",
+    })
+  );
+
+  usersData.data?.forEach((u: any) => {
+    if (u.username) {
       results.push({
-        id: a.id,
-        title: a.name,
-        kind: "artist",
-        coverUrl: a.image_url || null,
+        id: u.id,
+        title: u.display_name || u.username,
+        subtitle: `@${u.username}`,
+        slug: u.username,
+        kind: "user",
+        coverUrl: u.avatar_url,
         source: "internal",
-      })
-    );
-  }
-
-  // Users
-  if (kind === "all" || kind === "users") {
-    const { data: users } = await supabase
-      .from("profiles")
-      .select("id, username, display_name, avatar_url")
-      .or(`username.ilike.%${escapedQuery}%,display_name.ilike.%${escapedQuery}%`)
-      .limit(5);
-
-    users?.forEach((u) => {
-      if (u.username) {
-        results.push({
-          id: u.id,
-          title: u.display_name || u.username,
-          subtitle: `@${u.username}`,
-          slug: u.username,
-          kind: "user",
-          coverUrl: u.avatar_url,
-          source: "internal",
-        });
-      }
-    });
-  }
+      });
+    }
+  });
 
   // Client-side similarity ranking: exact > starts-with > contains
-  const qLower = q.trim().toLowerCase();
+  const qLower = trimmed.toLowerCase();
   results.sort((a, b) => {
     const aT = a.title.toLowerCase();
     const bT = b.title.toLowerCase();
