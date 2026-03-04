@@ -9,11 +9,14 @@ export default async function ArtistPreviewPage({
 }) {
     const { mbid } = await params;
 
+    console.log(`[ArtistPreviewPage] mbid="${mbid}"`);
     // Fetch artist metadata and releases in parallel (no cover fetching = fast)
     const [meta, relResult] = await Promise.all([
         fetchArtistMetadata(mbid),
         getArtistReleases(mbid),
     ]);
+
+    console.log(`[ArtistPreviewPage] meta.name="${meta.name}" relResult=${JSON.stringify({ success: relResult.success, count: relResult.releases?.length ?? 0, error: relResult.error })}`);
 
     if (!meta.name) {
         throw new Error("Failed to preview artist");

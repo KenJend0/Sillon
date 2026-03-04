@@ -5,6 +5,7 @@ import type { SearchResultUI } from './search';
 
 const MUSICBRAINZ_API = 'https://musicbrainz.org/ws/2';
 const USER_AGENT = 'Waveform/1.0 (https://waveform.app)';
+const CACHE_TTL_SECONDS = 6 * 60 * 60; // 6 heures
 
 // Secondary types that indicate non-studio releases (live, compilation, etc.)
 const EXCLUDED_SECONDARY_TYPES = new Set([
@@ -96,13 +97,15 @@ interface MBReleaseDetail {
 }
 
 export type AlbumSearchResult = {
-  id: string; // MBID
+  id: string;          // release-group MBID (canonical identifier for dedup & covers)
+  releaseId?: string;  // first release MBID (for import & cover fallback)
   title: string;
   artistName: string;
   releaseDate?: string;
-  coverUrl?: string;
+  coverUrl?: string;   // CoverArt Archive URL — browser follows the 307 redirect
   hasCover: boolean;
-  score: number; // MB relevance score 0-100
+  score: number;        // MB relevance score 0-100
+  releaseCount: number; // number of physical/digital releases — proxy for popularity
 };
 
 export type ArtistSearchResult = {
@@ -114,6 +117,58 @@ export type ArtistSearchResult = {
 };
 
 export type SearchFilter = 'all' | 'albums' | 'artists';
+
+// ---------------------------------------------------------------------------
+// Search cache helpers (shared across all users, stored in Supabase)
+// ---------------------------------------------------------------------------
+
+/** Simple non-cryptographic hash for cache keys — avoids storing raw queries */
+function hashCacheKey(query: string, type: string): string {
+  const str = `${query.toLowerCase().trim()}:${type}`;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit int
+  }
+  return `mb_${type}_${Math.abs(hash).toString(36)}`;
+}
+
+async function getCachedResults<T>(key: string): Promise<T | null> {
+  try {
+    const supabase = await createSupabaseServer();
+    // Cast to any: search_cache table exists only after migration — TS types lag behind
+    const { data } = await (supabase as any)
+      .from('search_cache')
+      .select('data')
+      .eq('key', key)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+    if (!data) return null;
+    const result = data.data as T;
+    // Don't treat empty arrays as cache hits — re-query MB to get fresh results
+    if (Array.isArray(result) && result.length === 0) return null;
+    return result;
+  } catch {
+    return null; // Cache miss on error — degrade gracefully
+  }
+}
+
+async function setCachedResults<T>(key: string, results: T): Promise<void> {
+  try {
+    const supabase = await createSupabaseServer();
+    const expiresAt = new Date(Date.now() + CACHE_TTL_SECONDS * 1000).toISOString();
+    // Cast to any: search_cache table exists only after migration — TS types lag behind
+    const db = supabase as any;
+    // Purge expired entries while we're here (keep the table lean)
+    await db.from('search_cache').delete().lt('expires_at', new Date().toISOString());
+    await db
+      .from('search_cache')
+      .upsert({ key, data: results, expires_at: expiresAt }, { onConflict: 'key' });
+  } catch {
+    // Cache write failure is non-fatal — the search result was already returned
+  }
+}
 
 /**
  * Fetch cover URL from CoverArt Archive with retry
@@ -193,29 +248,53 @@ async function limitConcurrency<T>(
 }
 
 /**
- * Fetch with retry logic and exponential backoff
+ * Fetch with retry logic and exponential backoff.
+ * @param timeoutMs - Per-attempt timeout in ms (default 8000). Reduce for SSR calls.
+ * @param maxRetries - Max attempts (default 3). Use 2 for SSR to limit page blocking time.
+ *
+ * Also retries on HTTP 503 (Service Unavailable) and 429 (Too Many Requests),
+ * which MusicBrainz returns when the 1 req/sec rate limit is hit.
+ * Backoff is at least 1100ms for rate-limit responses to clear the MB window.
  */
 async function fetchWithRetry(
   url: string,
   options?: RequestInit,
-  maxRetries = 3
+  maxRetries = 3,
+  timeoutMs = 8000
 ): Promise<Response> {
+  const shortUrl = url.split('?')[0];
+  console.log(`[fetchWithRetry] → ${shortUrl} (maxRetries=${maxRetries}, timeout=${timeoutMs}ms)`);
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const t0 = Date.now();
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-      
-      const response = await fetch(url, { 
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      const response = await fetch(url, {
         ...options,
-        signal: controller.signal 
+        signal: controller.signal
       });
-      
+
       clearTimeout(timeoutId);
+      const elapsed = Date.now() - t0;
+      console.log(`[fetchWithRetry] ← ${shortUrl} — HTTP ${response.status} (attempt ${attempt + 1}/${maxRetries}, ${elapsed}ms)`);
+
+      // Retry on rate-limit (429) or service unavailable (503) — MB returns these
+      // when the 1 req/sec limit is exceeded. Wait at least 1.1s before retrying.
+      if ((response.status === 503 || response.status === 429) && attempt < maxRetries - 1) {
+        const backoff = Math.max(1100, 100 * Math.pow(2, attempt));
+        console.warn(`[fetchWithRetry] ⚠ ${response.status} rate-limit — waiting ${backoff}ms before retry`);
+        await new Promise((resolve) => setTimeout(resolve, backoff));
+        continue;
+      }
+
       return response;
     } catch (err) {
+      const elapsed = Date.now() - t0;
       const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[fetchWithRetry] ✗ ${shortUrl} — ${errorMsg} (attempt ${attempt + 1}/${maxRetries}, ${elapsed}ms)`);
       if (attempt === maxRetries - 1) {
-        console.error(`[fetchWithRetry] Failed after ${maxRetries} attempts for ${url.split('?')[0]}: ${errorMsg}`);
         throw err;
       }
       // Exponential backoff: 100ms, 200ms, 400ms
@@ -227,23 +306,70 @@ async function fetchWithRetry(
 }
 
 /**
- * Search MusicBrainz for albums - direct implementation
- * Ported from backend for single source of truth
- * 
- * Cover strategy:
- * - Only test covers for top 6 results (avoid rate limiting)
- * - Use release-group ID (more consistent than release)
- * - Frontend handles fallback gracefully
+ * Search MusicBrainz for albums using the release-group endpoint.
+ *
+ * Why release-group instead of release:
+ * - Each result IS already a unique album (no manual deduplication needed)
+ * - primary-type / secondary-types are first-class fields (no nesting)
+ * - first-release-date is the canonical date
+ * - Up to 100 unique albums per query (was 50 releases, often the same album many times)
+ *
+ * Cover strategy: the CoverArt Archive URL is passed directly to the client.
+ * The browser follows the 307 redirect; no server-side fetching or rate-limiting.
  */
-export async function searchMusicBrainzAlbums(query: string, limit = 30): Promise<{ success: boolean; results?: AlbumSearchResult[]; error?: string }> {
+export async function searchMusicBrainzAlbums(query: string, _limit = 30): Promise<{ success: boolean; results?: AlbumSearchResult[]; error?: string }> {
   const authUser = await getAuthUser();
   if (!authUser) return { success: false, error: 'not_authenticated' };
 
+  // Check cache first — shared across all users
+  const cacheKey = hashCacheKey(query, 'albums');
+  const cached = await getCachedResults<AlbumSearchResult[]>(cacheKey);
+  if (cached) {
+    return { success: true, results: cached }; // already sorted by releaseCount
+  }
+
   try {
-    // Direct query to MusicBrainz - single source, no double calls
-    const mbUrl = new URL('https://musicbrainz.org/ws/2/release');
-    mbUrl.searchParams.set('query', query);
-    mbUrl.searchParams.set('limit', Math.min(limit * 2, 50).toString()); // Fetch more to account for filtering
+    // Preserve original terms to detect apostrophes before stripping them.
+    const preEscape = query.replace(/[+\-&|!(){}\[\]^"~*?:\\\/]/g, ' ').trim();
+    const originalTerms = preEscape.split(/\s+/);
+    // Strip apostrophes for the Lucene query (apostrophes aren't in the special set but
+    // cause token mismatches: MB tokenises "What's" as "what", so we need to strip them).
+    const escapedQuery = preEscape.replace(/'/g, '').trim();
+    const terms = escapedQuery.split(/\s+/);
+
+    // Contraction-normalised phrase: only strip the apostrophe + suffix when the user
+    // explicitly typed an apostrophe. "what's" → "what" ✓. "blues", "james" unchanged ✓.
+    // (For queries without apostrophe like "whats going on", the lower score threshold for
+    // multi-word queries ensures MB still surfaces "What's Going On" via the terms clause.)
+    const decontractedTerms = originalTerms.map((orig, i) =>
+      orig.includes("'") ? orig.replace(/'\w*$/, '') : terms[i]
+    );
+    const decontractedPhrase = decontractedTerms.join(' ');
+
+    // Two-clause (or three-clause) Lucene query combined with OR:
+    //
+    //   Clause A — exact phrase: releasegroup:"whats going on"~2
+    //     → matches titles literally close to the query (e.g. "Whats Going On?")
+    //
+    //   Clause A' — decontracted phrase: releasegroup:"what going on"~2
+    //     → matches "What's Going On" when user typed "what's going on"
+    //     → omitted when identical to Clause A (no apostrophes in query)
+    //
+    //   Clause B — per-term cross-field AND: each word in title OR artist name
+    //     → matches "michael jackson thriller" (words in artist + album title)
+    //
+    // Single-word fallback: just releasegroup:term.
+    // Always limit=100 (MB max) — no popularity ranking from MB.
+    const phraseA = `releasegroup:"${escapedQuery}"~2`;
+    const phraseB = decontractedPhrase !== escapedQuery ? ` OR releasegroup:"${decontractedPhrase}"~2` : '';
+    const termsClause = `(${terms.map((t) => `(releasegroup:${t} OR artistname:${t})`).join(' AND ')})`;
+    const luceneQuery = terms.length === 1
+      ? `releasegroup:${terms[0]}`
+      : `${phraseA}${phraseB} OR ${termsClause}`;
+
+    const mbUrl = new URL(`${MUSICBRAINZ_API}/release-group`);
+    mbUrl.searchParams.set('query', luceneQuery);
+    mbUrl.searchParams.set('limit', '100'); // Always max — popularity-agnostic API
     mbUrl.searchParams.set('fmt', 'json');
 
     const response = await fetchWithRetry(mbUrl.toString(), {
@@ -257,70 +383,60 @@ export async function searchMusicBrainzAlbums(query: string, limit = 30): Promis
     }
 
     const data = await response.json();
-    const releases = data.releases || [];
+    const releaseGroups: any[] = data['release-groups'] || [];
 
-    if (releases.length === 0) {
+    if (releaseGroups.length === 0) {
       return { success: true, results: [] };
     }
 
-    // Group by release-group to deduplicate (same album in different formats)
-    const releaseGroupMap = new Map<string, any>();
-
-    for (const release of releases) {
-      const rgId = release['release-group']?.id;
-      if (!rgId) continue;
-
-      const existing = releaseGroupMap.get(rgId);
-      if (!existing) {
-        releaseGroupMap.set(rgId, release);
-      } else {
-        // Prefer the most complete release (highest track count)
-        const existingCount = existing['track-count'] ?? 0;
-        const newCount = release['track-count'] ?? 0;
-        if (newCount > existingCount) {
-          releaseGroupMap.set(rgId, release);
-        }
-      }
-    }
-
-    // Get deduplicated list — keep only studio Albums and EPs, exclude Live/Compilation/etc.
-    const uniqueAlbums = Array.from(releaseGroupMap.values())
-      .filter((release) => {
-        const rg = release['release-group'];
-        const primaryType = rg?.['primary-type'];
-        const secondaryTypes: string[] = rg?.['secondary-types'] || [];
-        return (primaryType === 'Album' || primaryType === 'EP')
-          && !secondaryTypes.some((t: string) => EXCLUDED_SECONDARY_TYPES.has(t));
-      })
-      // Sort by MB relevance score descending before slicing
-      .sort((a: any, b: any) => (b.score || 0) - (a.score || 0))
-      .slice(0, limit);
-
-    // Fetch covers for top 12 results only to avoid rate limiting
-    const coverLimit = Math.min(12, uniqueAlbums.length);
-    const coverPromises = uniqueAlbums.slice(0, coverLimit).map(release =>
-      fetchCoverUrl(release['release-group'].id)
-    );
-    const coverUrls = await Promise.all(coverPromises);
-
-    // Transform to our format
-    const results: AlbumSearchResult[] = uniqueAlbums.map((release: any, index: number) => {
-      const artists = release['artist-credit'] || [];
-      const artistName = artists.map((a: any) => a.name || a.artist?.name).join(', ');
-      const rgId = release['release-group'].id;
-      // Only first 8 have covers fetched
-      const coverUrl = index < coverLimit ? coverUrls[index] : null;
-      
-      return {
-        id: release.id,
-        title: release.title,
-        artistName: artistName || 'Unknown',
-        releaseDate: release.date,
-        coverUrl: coverUrl || undefined,
-        hasCover: !!coverUrl,
-        score: release.score || 0,
-      };
+    // Filter results client-side:
+    // 1. Minimum relevance score (avoids noise from low-confidence MB matches).
+    //    Multi-word queries use a lower threshold (30) because the OR combination of
+    //    phrase + term clauses dilutes individual scores — "What's Going On" by Marvin
+    //    Gaye gets score 39 in a combined query despite being the canonical match.
+    //    computeRank (releaseCount + title similarity) handles quality sorting.
+    // 2. Primary type must be Album or EP (was previously in Lucene — moved here for recall)
+    // 3. No excluded secondary types (Live, Compilation, Remix, etc.)
+    const scoreThreshold = terms.length === 1 ? 60 : 30;
+    const studioAlbums = releaseGroups.filter((rg) => {
+      if ((rg.score || 0) < scoreThreshold) return false;
+      const primaryType: string = rg['primary-type'] || '';
+      if (!['Album', 'EP'].includes(primaryType)) return false;
+      const secondaryTypes: string[] = rg['secondary-types'] || [];
+      return !secondaryTypes.some((t) => EXCLUDED_SECONDARY_TYPES.has(t));
     });
+
+    // Sort by release-count DESC — more releases = more iconic/widely-distributed album.
+    // MB doesn't rank by popularity; this re-sorts its arbitrary ordering so canonical
+    // albums (MJ's Thriller, Pink Floyd's DSOTM…) surface before obscure homonyms.
+    // MB search returns `count` (not `release-count` which is the browse endpoint field name)
+    studioAlbums.sort((a, b) => ((b['count'] || b['release-count'] || 0) - (a['count'] || a['release-count'] || 0)));
+
+    // Results are already unique release-groups — no deduplication needed.
+    // No slice here: return all filtered results so mergeAndRank can re-rank
+    // client-side with the full set (text similarity + releaseCount bonus).
+    const results: AlbumSearchResult[] = studioAlbums.map((rg) => {
+        const artists = rg['artist-credit'] || [];
+        const artistName = artists.map((a: any) => a.name || a.artist?.name).join(', ');
+        // releases[0] gives us a release MBID for import & cover fallback
+        const releaseId = (rg.releases as Array<{ id: string }> | undefined)?.[0]?.id;
+
+        return {
+          id: rg.id,        // release-group MBID — canonical identifier
+          releaseId,        // first release MBID — for import & fallback cover
+          title: rg.title,
+          artistName: artistName || 'Unknown',
+          releaseDate: rg['first-release-date'],
+          // CoverArt Archive URL — browser follows the 307 redirect automatically
+          coverUrl: `https://coverartarchive.org/release-group/${rg.id}/front`,
+          hasCover: true,   // assume true; AlbumCoverImage handles 404s gracefully
+          score: rg.score || 0,
+          releaseCount: rg['count'] || rg['release-count'] || 0,
+        };
+      });
+
+    // Store in cache before returning (fire-and-forget)
+    setCachedResults(cacheKey, results);
 
     return { success: true, results };
   } catch (err) {
@@ -331,20 +447,35 @@ export async function searchMusicBrainzAlbums(query: string, limit = 30): Promis
 }
 
 /**
- * Search MusicBrainz for artists via release-group search.
- * Using release-groups with type:Album ensures we only return artists
- * who have at least one studio album (not artists with only singles/EPs).
+ * Search MusicBrainz for artists via the /artist endpoint.
+ *
+ * Uses the dedicated /artist endpoint — MB ranks artists by entity-level
+ * relevance (name, aliases, tags) which correctly surfaces Michael Jackson
+ * for "jackson" (score 100) ahead of obscure homonyms.
+ *
+ * Wildcard on the last term enables prefix matching: "marvin ga" → finds Marvin Gaye.
  */
 export async function searchMusicBrainzArtists(query: string, limit = 30): Promise<{ success: boolean; results?: ArtistSearchResult[]; error?: string }> {
   const authUser = await getAuthUser();
   if (!authUser) return { success: false, error: 'not_authenticated' };
 
+  // Check cache first — shared across all users
+  const cacheKey = hashCacheKey(query, 'artists');
+  const cached = await getCachedResults<ArtistSearchResult[]>(cacheKey);
+  if (cached) {
+    return { success: true, results: cached.slice(0, limit) };
+  }
+
   try {
-    // Search release groups of type Album where the artist name matches.
-    // This guarantees returned artists have at least one album.
-    const luceneQuery = `artist:"${query.replace(/"/g, '\\"')}" AND type:Album`;
+    // Build term-by-term with wildcard on the last word: "marvin ga" → artist:marvin AND artist:ga*
+    const terms = query.trim().split(/\s+/).filter(Boolean);
+    const luceneParts = terms.map((t, i) => {
+      const esc = t.replace(/[+\-&|!(){}\[\]^"~?:\\\/]/g, '\\$&');
+      return i === terms.length - 1 ? `artist:${esc}*` : `artist:${esc}`;
+    });
+    const luceneQuery = luceneParts.join(' AND ');
     const response = await fetchWithRetry(
-      `${MUSICBRAINZ_API}/release-group?query=${encodeURIComponent(luceneQuery)}&fmt=json&limit=50`,
+      `${MUSICBRAINZ_API}/artist?query=${encodeURIComponent(luceneQuery)}&fmt=json&limit=${limit}`,
       { headers: { 'User-Agent': USER_AGENT } }
     );
 
@@ -353,37 +484,20 @@ export async function searchMusicBrainzArtists(query: string, limit = 30): Promi
     }
 
     const data = await response.json();
-    const releaseGroups: any[] = data['release-groups'] || [];
+    const artists: any[] = data['artists'] || [];
 
-    // Exclude compilations, live albums, remixes, etc.
-    const studioAlbums = releaseGroups.filter((rg) => {
-      const secondaries: string[] = rg['secondary-types'] || [];
-      return !secondaries.some((t) => EXCLUDED_SECONDARY_TYPES.has(t));
-    });
+    const results: ArtistSearchResult[] = artists
+      .filter((a) => (a.score || 0) >= 60)
+      .map((a) => ({
+        id: a.id,
+        name: a.name,
+        type: a.type || undefined,
+        country: a.country || undefined,
+        score: a.score || 0,
+      }));
 
-    // Extract unique artists, keeping the best score per artist
-    const artistMap = new Map<string, ArtistSearchResult>();
-    studioAlbums.forEach((rg) => {
-      const score = rg.score || 0;
-      (rg['artist-credit'] || []).forEach((credit: any) => {
-        const artist = credit.artist;
-        if (!artist?.id) return;
-        const existing = artistMap.get(artist.id);
-        if (!existing || score > existing.score) {
-          artistMap.set(artist.id, {
-            id: artist.id,
-            name: artist.name,
-            type: artist.type || undefined,
-            country: undefined,
-            score,
-          });
-        }
-      });
-    });
-
-    const results = Array.from(artistMap.values())
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
+    // Store in cache before returning (fire-and-forget)
+    setCachedResults(cacheKey, results);
 
     return { success: true, results };
   } catch (err) {
@@ -405,20 +519,38 @@ export async function searchMusicBrainz(query: string, limit = 10): Promise<{ su
  */
 export async function previewAlbumFromMusicBrainz(mbid: string) {
   try {
-    const response = await fetch(
+    let releaseResponse = await fetch(
       `${MUSICBRAINZ_API}/release/${encodeURIComponent(mbid)}?inc=artist-credits+recordings+release-groups&fmt=json`,
-      {
-        headers: {
-          'User-Agent': USER_AGENT,
-        },
-      }
+      { headers: { 'User-Agent': USER_AGENT } }
     );
 
-    if (!response.ok) {
+    // mbid may be a release-group MBID (from getArtistReleases which uses browse endpoint).
+    // The browse endpoint doesn't support inc=releases, so we store the release-group MBID.
+    // In that case, /release/{rgMbid} returns 404 — resolve it via the release-group lookup.
+    if (releaseResponse.status === 404) {
+      const rgResponse = await fetch(
+        `${MUSICBRAINZ_API}/release-group/${encodeURIComponent(mbid)}?inc=releases&fmt=json`,
+        { headers: { 'User-Agent': USER_AGENT } }
+      );
+      if (!rgResponse.ok) {
+        return { success: false, error: 'Album not found' };
+      }
+      const rgData: any = await rgResponse.json();
+      const firstReleaseId: string | undefined = rgData.releases?.[0]?.id;
+      if (!firstReleaseId) {
+        return { success: false, error: 'No releases found for this release group' };
+      }
+      releaseResponse = await fetch(
+        `${MUSICBRAINZ_API}/release/${encodeURIComponent(firstReleaseId)}?inc=artist-credits+recordings+release-groups&fmt=json`,
+        { headers: { 'User-Agent': USER_AGENT } }
+      );
+    }
+
+    if (!releaseResponse.ok) {
       return { success: false, error: 'Album not found' };
     }
 
-    const data: MBReleaseDetail = await response.json();
+    const data: MBReleaseDetail = await releaseResponse.json();
 
     const artistCredit = data['artist-credit']?.[0];
     const artist = artistCredit?.artist || { id: '', name: 'Unknown' };
@@ -797,67 +929,93 @@ export async function previewArtistFromMusicBrainz(mbid: string) {
 }
 
 /**
- * Lightweight: fetch artist releases from MusicBrainz WITHOUT covers.
- * Returns just the release list (1 API call, no CoverArt Archive).
- * Covers are handled client-side via direct CoverArt Archive URLs.
+ * Fetch all studio albums & EPs for an artist from MusicBrainz.
+ *
+ * Uses the browse endpoint (/release-group?artist=MBID) instead of the search
+ * endpoint (/release?query=arid:MBID) because:
+ * - Browse is exhaustive — it returns ALL release-groups for the artist
+ * - Search ranks by relevance score — recent albums can be pushed out of the top 100
+ * - Results are already release-groups — no manual deduplication needed
+ * - Primary type filtering is done client-side (pipe-separated syntax rejected by MB API with 400)
+ *
+ * inc=releases is NOT supported by the browse endpoint — previewAlbumFromMusicBrainz
+ * handles the release-group MBID by doing a release-group lookup on 404.
  */
 export async function getArtistReleases(mbid: string): Promise<{
   success: boolean;
   releases?: Array<{ mbid: string; releaseGroupMbid: string; title: string; date: string | null; type: string | null }>;
   error?: string;
 }> {
+  console.log(`[getArtistReleases] called with mbid="${mbid}"`);
+  if (!mbid) {
+    console.error('[getArtistReleases] ✗ mbid is empty/null — skipping MB fetch');
+    return { success: false, error: 'mbid is empty' };
+  }
+
   try {
+    // 2 retries × 5s timeout = 10.1s max, runs in parallel with getOrFetchArtistMeta
+    // NOTE: inc=releases is NOT supported by the browse endpoint — only by the lookup endpoint.
+    // NOTE: type filter omitted — pipe-separated (Album|EP) and repeated params both cause 400.
+    //       Primary type filtering is done client-side below.
+    const browseUrl = `${MUSICBRAINZ_API}/release-group?artist=${encodeURIComponent(mbid)}&fmt=json&limit=100`;
+    console.log(`[getArtistReleases] URL: ${browseUrl}`);
     const response = await fetchWithRetry(
-      `${MUSICBRAINZ_API}/release?query=arid:${encodeURIComponent(mbid)}&limit=100&fmt=json`,
-      { headers: { 'User-Agent': USER_AGENT } }
+      browseUrl,
+      { headers: { 'User-Agent': USER_AGENT } },
+      2,
+      5000
     );
 
     if (!response.ok) {
+      const body = await response.text().catch(() => '(unreadable)');
+      console.error(`[getArtistReleases] ✗ HTTP ${response.status} — body: ${body}`);
       return { success: true, releases: [] };
     }
 
     const data: any = await response.json();
-    const releases = data.releases || [];
+    const releaseGroups: any[] = data['release-groups'] || [];
+    console.log(`[getArtistReleases] MB returned ${releaseGroups.length} release-groups for mbid="${mbid}"`);
 
-    // Deduplicate by release-group, preferring the most complete release (highest track count)
-    const rgMap = new Map<string, any>();
-    for (const r of releases) {
-      const rgId = r['release-group']?.id;
-      if (!rgId) continue;
-
-      const existing = rgMap.get(rgId);
-      if (!existing) {
-        rgMap.set(rgId, r);
-      } else {
-        const existingCount = existing['track-count'] ?? 0;
-        const newCount = r['track-count'] ?? 0;
-        if (newCount > existingCount) {
-          rgMap.set(rgId, r);
-        }
+    const ALLOWED_PRIMARY_TYPES = new Set(['Album', 'EP']);
+    const filtered = releaseGroups.filter(rg => {
+      const primary: string | null = rg['primary-type'] || null;
+      if (primary && !ALLOWED_PRIMARY_TYPES.has(primary)) {
+        console.log(`[getArtistReleases]   skip "${rg.title}" (primary-type: ${primary})`);
+        return false;
       }
-    }
+      const secondaries: string[] = rg['secondary-types'] || [];
+      const excluded = secondaries.some(t => EXCLUDED_SECONDARY_TYPES.has(t));
+      if (excluded) {
+        console.log(`[getArtistReleases]   skip "${rg.title}" (secondary-types: ${secondaries.join(', ')})`);
+      }
+      return !excluded;
+    });
 
-    const result = Array.from(rgMap.values())
-      .filter(r => {
-        const type = r['release-group']?.['primary-type'];
-        return type === 'Album' || type === 'EP';
+    console.log(`[getArtistReleases] ${filtered.length} release-groups after secondary-type filter`);
+
+    const result = filtered
+      .map(rg => {
+        console.log(`[getArtistReleases]   "${rg.title}" (${rg['primary-type']}, ${rg['first-release-date'] || 'no date'}) — rgId=${rg.id}`);
+        return {
+          mbid: rg.id,             // release-group MBID (browse endpoint doesn't support inc=releases)
+          releaseGroupMbid: rg.id,
+          title: rg.title,
+          date: rg['first-release-date'] || null,
+          type: rg['primary-type'] || null,
+        };
       })
-      .map(r => ({
-        mbid: r.id,
-        releaseGroupMbid: r['release-group']?.id || r.id,
-        title: r.title,
-        date: r.date || null,
-        type: r['release-group']?.['primary-type'] || null,
-      }))
       .sort((a, b) => {
         if (!a.date) return 1;
         if (!b.date) return -1;
         return b.date.localeCompare(a.date);
       });
 
+    console.log(`[getArtistReleases] ✓ returning ${result.length} releases for mbid="${mbid}"`);
     return { success: true, releases: result };
   } catch (err) {
-    return { success: false, error: 'An error occurred' };
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[getArtistReleases] ✗ exception: ${errorMsg}`);
+    return { success: false, error: errorMsg };
   }
 }
 
@@ -873,9 +1031,12 @@ export async function fetchArtistMetadata(mbid: string): Promise<{
   name: string;
 }> {
   try {
+    // 2 retries × 3s = one-time cost (result cached in DB after first call)
     const response = await fetchWithRetry(
       `${MUSICBRAINZ_API}/artist/${encodeURIComponent(mbid)}?fmt=json&inc=url-rels`,
-      { headers: { 'User-Agent': USER_AGENT } }
+      { headers: { 'User-Agent': USER_AGENT } },
+      2,
+      3000
     );
 
     if (!response.ok) {
@@ -898,7 +1059,10 @@ export async function fetchArtistMetadata(mbid: string): Promise<{
         const pageName = urlObj.pathname.split('/wiki/').pop();
         if (pageName) {
           const wikiResp = await fetchWithRetry(
-            `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(decodeURIComponent(pageName))}`
+            `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(decodeURIComponent(pageName))}`,
+            undefined,
+            2,
+            3000
           );
           if (wikiResp.ok) {
             const wikiData = await wikiResp.json();
@@ -922,7 +1086,10 @@ export async function fetchArtistMetadata(mbid: string): Promise<{
         const wikidataId = wikidataUrl.split('/').pop();
         if (wikidataId) {
           const wdResp = await fetchWithRetry(
-            `https://www.wikidata.org/wiki/Special:EntityData/${encodeURIComponent(wikidataId)}.json`
+            `https://www.wikidata.org/wiki/Special:EntityData/${encodeURIComponent(wikidataId)}.json`,
+            undefined,
+            2,
+            3000
           );
           if (wdResp.ok) {
             const wdData = await wdResp.json();

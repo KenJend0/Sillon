@@ -211,7 +211,7 @@ export function ArtistPageContent({
                         if (album.inDatabase) {
                             return (
                                 <Link
-                                    key={`db-${album.title}`}
+                                    key={`db-${album.href}`}
                                     href={album.href}
                                     className={cardClass}
                                 >
@@ -222,7 +222,7 @@ export function ArtistPageContent({
 
                         return (
                             <button
-                                key={`mb-${album.title}`}
+                                key={`mb-${album.mbid}`}
                                 onClick={() => album.mbid && !importingMbid && handleImportAlbum(album.mbid)}
                                 disabled={!!importingMbid}
                                 className={cardClass}
@@ -271,7 +271,7 @@ function AlbumCover({ album }: { album: DiscographyItem }) {
         return (
             <div className="aspect-square overflow-hidden relative">
                 <Image
-                    src={`https://coverartarchive.org/release-group/${album.releaseGroupMbid}/front-250`}
+                    src={`https://coverartarchive.org/release-group/${album.releaseGroupMbid}/front-500`}
                     alt={album.title}
                     fill
                     className="object-cover"

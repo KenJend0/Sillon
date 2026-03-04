@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import { searchInternal } from "@/app/actions/search";
 import { searchMusicBrainzAlbums, importAlbumFromMusicBrainz } from "@/app/actions/musicbrainz";
 import { showToast } from "@/components/Toast";
+import { CoverImage } from "@/components/CoverImage";
 
 type AlbumUI = {
     id: string;
@@ -15,7 +15,8 @@ type AlbumUI = {
 };
 
 type MbAlbumUI = {
-    mbid: string;
+    mbid: string;      // release MBID (for import)
+    rgMbid: string;    // release-group MBID (for cover + dedup)
     title: string;
     artist_name: string;
     coverUrl?: string | null;
@@ -79,7 +80,8 @@ export default function AlbumSearchForDiary({ onSelectAlbum }: AlbumSearchForDia
                         .filter(r => !internalTitles.has(r.title.toLowerCase()))
                         .slice(0, 5)
                         .map(r => ({
-                            mbid: r.id,
+                            mbid: r.releaseId || r.id, // release MBID for import (fallback to rg MBID)
+                            rgMbid: r.id,              // release-group MBID for cover
                             title: r.title,
                             artist_name: r.artistName || "Unknown Artist",
                             coverUrl: r.coverUrl || null,
@@ -166,11 +168,17 @@ export default function AlbumSearchForDiary({ onSelectAlbum }: AlbumSearchForDia
                                     onClick={() => handleSelectAlbum(album)}
                                     className="w-full flex items-center gap-3 p-3 hover:bg-background-secondary transition-colors duration-150 border-b border-border-divider last:border-b-0 text-left"
                                 >
-                                    {album.coverUrl && (
-                                        <div className="w-12 h-12 rounded-[8px] overflow-hidden relative flex-shrink-0">
-                                            <Image src={album.coverUrl} alt={album.title} fill className="object-cover" />
-                                        </div>
-                                    )}
+                                    <div className="w-12 h-12 rounded-[8px] overflow-hidden relative flex-shrink-0 bg-background-tertiary flex items-center justify-center">
+                                        {album.coverUrl && (
+                                            <CoverImage
+                                                src={album.coverUrl}
+                                                alt={album.title}
+                                                fill
+                                                className="object-cover"
+                                                placeholder={<span className="text-[10px] text-text-disabled">♪</span>}
+                                            />
+                                        )}
+                                    </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="font-medium text-[14px] text-text-primary truncate">{album.title}</div>
                                         <div className="text-[12px] text-text-secondary truncate">{album.artist_name}</div>
@@ -211,11 +219,18 @@ export default function AlbumSearchForDiary({ onSelectAlbum }: AlbumSearchForDia
                                         </div>
                                     ) : (
                                         <>
-                                            {mb.coverUrl && (
-                                                <div className="w-12 h-12 rounded-[8px] overflow-hidden relative flex-shrink-0">
-                                                    <Image src={mb.coverUrl} alt={mb.title} fill className="object-cover" />
-                                                </div>
-                                            )}
+                                            <div className="w-12 h-12 rounded-[8px] overflow-hidden relative flex-shrink-0 bg-background-tertiary flex items-center justify-center">
+                                                {mb.coverUrl && (
+                                                    <CoverImage
+                                                        src={mb.coverUrl}
+                                                        fallback={`https://coverartarchive.org/release/${mb.mbid}/front`}
+                                                        alt={mb.title}
+                                                        fill
+                                                        className="object-cover"
+                                                        placeholder={<span className="text-[10px] text-text-disabled">♪</span>}
+                                                    />
+                                                )}
+                                            </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="font-medium text-[14px] text-text-primary truncate">{mb.title}</div>
                                                 <div className="text-[12px] text-text-secondary truncate">{mb.artist_name}</div>

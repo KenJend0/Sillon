@@ -99,17 +99,20 @@ export default async function ArtistPage({ params }: PageProps) {
         reviews_count: statsMap[album.id]?.reviews_count ?? 0,
     })) || [];
 
-    // 5. Fetch bio/image from DB cache (or fetch + cache if first time)
-    const meta = await cachedGetOrFetchArtistMeta(artist.id, artist.mbid);
+    // 5 & 6: Fetch artist meta + MB releases in parallel
+    console.log(`[ArtistPage] id="${artist.id}" name="${artist.name}" mbid="${artist.mbid}"`);
+    const [meta, relResult] = await Promise.all([
+        cachedGetOrFetchArtistMeta(artist.id, artist.mbid),
+        artist.mbid ? getArtistReleases(artist.mbid) : Promise.resolve(null),
+    ]);
 
-    // 6. Fetch MB releases WITHOUT covers (lightweight, 1 API call)
+    console.log(`[ArtistPage] relResult=${JSON.stringify(relResult ? { success: relResult.success, count: relResult.releases?.length ?? 0, error: relResult.error } : 'null (no mbid)')}`);
+
     let mbReleases: Array<{ mbid: string; releaseGroupMbid: string; title: string; date: string | null; type: string | null }> = [];
-    if (artist.mbid) {
-        const relResult = await getArtistReleases(artist.mbid);
-        if (relResult.success && relResult.releases) {
-            mbReleases = relResult.releases;
-        }
+    if (relResult?.success && relResult.releases) {
+        mbReleases = relResult.releases;
     }
+    console.log(`[ArtistPage] final: mbReleases=${mbReleases.length}, dbAlbums=${albums?.length ?? 0}`);
 
     return (
         <main className="max-w-page mx-auto px-4 py-8 pb-24">
