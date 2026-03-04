@@ -43,29 +43,46 @@ export async function upsertDiaryEntry(input: UpsertDiaryEntryInput) {
       return { success: false, error: 'Review body too long — max 5000 characters' };
     }
 
-    // Upsert entry
-    const { data, error } = await supabase
-      .from('diary_entries')
-      .upsert(
-        {
-          user_id: user.id,
-          album_id: input.albumId,
-          listened_at: input.listenedAt,
-          review_title: input.reviewTitle || null,
-          review_body: input.reviewBody || null,
-          rating: input.rating ?? null,
-          re_listen: input.relisten || false,
-          is_public: input.isPublic ?? true,
-        },
-        {
-          onConflict: 'user_id,album_id,listened_at',
-        }
-      )
-      .select()
-      .single();
+    const entryPayload = {
+      user_id: user.id,
+      album_id: input.albumId,
+      listened_at: input.listenedAt,
+      review_title: input.reviewTitle || null,
+      review_body: input.reviewBody || null,
+      rating: input.rating ?? null,
+      re_listen: input.relisten || false,
+      is_public: input.isPublic ?? true,
+    };
 
-    if (error) {
-      return { success: false, error: 'An error occurred' };
+    let data: any;
+
+    if (input.relisten) {
+      // Re-listen: always INSERT a new entry (never overwrite an existing one)
+      const { data: inserted, error } = await supabase
+        .from('diary_entries')
+        .insert(entryPayload)
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          return { success: false, error: 'Vous avez déjà une écoute à cette date. Choisissez une autre date.' };
+        }
+        return { success: false, error: 'An error occurred' };
+      }
+      data = inserted;
+    } else {
+      // First listen: upsert (update if same date, create otherwise)
+      const { data: upserted, error } = await supabase
+        .from('diary_entries')
+        .upsert(entryPayload, { onConflict: 'user_id,album_id,listened_at' })
+        .select()
+        .single();
+
+      if (error) {
+        return { success: false, error: 'An error occurred' };
+      }
+      data = upserted;
     }
 
     // Fanout to followers
@@ -369,6 +386,44 @@ export async function toggleDiaryLike(entryId: string): Promise<void> {
       // Don't throw, like was successful even if fanout failed
     }
   }
+}
+
+/**
+ * Get users who liked a diary entry
+ */
+export async function getEntryLikes(entryId: string): Promise<Array<{ id: string; username: string; display_name: string | null; avatar_url: string | null }>> {
+  const supabase = await createSupabaseServer();
+
+  // Step 1: get user_ids from diary_likes (no FK to profiles in schema)
+  const { data: likes, error: likesError } = await supabase
+    .from('diary_likes')
+    .select('user_id')
+    .eq('entry_id', entryId)
+    .order('created_at', { ascending: false });
+
+  if (likesError) {
+    console.error('getEntryLikes error:', likesError);
+    return [];
+  }
+
+  if (!likes || likes.length === 0) return [];
+
+  const userIds = likes.map((l: any) => l.user_id);
+
+  // Step 2: fetch profiles for those user_ids
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, username, display_name, avatar_url')
+    .in('id', userIds);
+
+  if (profilesError) {
+    console.error('getEntryLikes profiles error:', profilesError);
+    return [];
+  }
+
+  // Preserve order from likes query
+  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+  return userIds.map((id: string) => profileMap.get(id)).filter(Boolean);
 }
 
 /**

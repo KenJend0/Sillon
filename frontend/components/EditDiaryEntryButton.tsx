@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateDiaryEntry, deleteDiaryEntry } from "@/app/actions/diary";
 import { Edit2, Trash2 } from "lucide-react";
-import StarIcon from "@/components/icons/StarIcon";
+import StarRating from "@/components/StarRating";
 
 type EditDiaryEntryButtonProps = {
   entryId: string;
@@ -90,7 +90,12 @@ export default function EditDiaryEntryButton({
         setTimeout(() => {
           setIsDeleteConfirm(false);
           setStatus(null);
-          router.refresh();
+          // Navigate back to previous page if possible, otherwise go to profile
+          if (window.history.length > 1) {
+            router.back();
+          } else {
+            router.push("/me");
+          }
           onUpdated?.();
         }, 1000);
       } else {
@@ -133,21 +138,11 @@ export default function EditDiaryEntryButton({
 
               <form onSubmit={handleUpdate} className="mt-3 space-y-3">
                 {/* Stars Rating */}
-                <div className="flex items-center gap-2">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setRating(star)}
-                      className={`transition-opacity duration-150 ${
-                        rating && rating >= star
-                          ? "opacity-100"
-                          : "opacity-30 hover:opacity-60"
-                      }`}
-                    >
-                      <StarIcon filled={!!(rating && rating >= star)} />
-                    </button>
-                  ))}
+                <div className="flex items-center gap-3">
+                  <StarRating value={rating} onChange={setRating} />
+                  <span className="text-text-primary font-medium text-[14px] whitespace-nowrap">
+                    {rating ?? 0} / 10
+                  </span>
                 </div>
 
                 {/* Date */}
