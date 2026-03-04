@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState } from "react";
-import ReviewsModal from "@/components/ReviewsModal";
+import ReviewsBottomSheet from "@/components/ReviewsBottomSheet";
 import Reviews from "@/components/Reviews";
 
 type AlbumReviewSectionProps = {
@@ -11,7 +11,7 @@ type AlbumReviewSectionProps = {
 
 export default function AlbumReviewSection({ albumId, reviewsCount = 0 }: AlbumReviewSectionProps) {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
-    const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
+    const [isReviewsSheetOpen, setIsReviewsSheetOpen] = useState(false);
 
     return (
         <>
@@ -21,7 +21,7 @@ export default function AlbumReviewSection({ albumId, reviewsCount = 0 }: AlbumR
                 </h2>
                 {reviewsCount > 0 && (
                     <button
-                        onClick={() => setIsReviewsModalOpen(true)}
+                        onClick={() => setIsReviewsSheetOpen(true)}
                         className="text-[12px] text-text-secondary hover:text-[#8E6F5E] transition-colors duration-150"
                     >
                         voir toutes
@@ -31,10 +31,10 @@ export default function AlbumReviewSection({ albumId, reviewsCount = 0 }: AlbumR
             <Reviews key={refreshTrigger} albumId={albumId} />
 
             {reviewsCount > 0 && (
-                <ReviewsModal
+                <ReviewsBottomSheet
                     albumId={albumId}
-                    isOpen={isReviewsModalOpen}
-                    onClose={() => setIsReviewsModalOpen(false)}
+                    isOpen={isReviewsSheetOpen}
+                    onClose={() => setIsReviewsSheetOpen(false)}
                 />
             )}
         </>

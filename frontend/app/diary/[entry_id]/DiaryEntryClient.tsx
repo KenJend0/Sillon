@@ -9,6 +9,7 @@ import { toggleDiaryLike, addComment, deleteComment, getEntryComments } from '@/
 import { UserAvatar } from '@/components/avatars/DefaultAvatar';
 import BackButton from '@/components/BackButton';
 import EditDiaryEntryButton from '@/components/EditDiaryEntryButton';
+import LikesBottomSheet from '@/components/LikesBottomSheet';
 import type { DiaryEntryDetail, DiaryEntryComment } from '@/app/actions/diary';
 
 interface DiaryEntryClientProps {
@@ -25,6 +26,7 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
   const [liking, setLiking] = useState(false);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLikesSheet, setShowLikesSheet] = useState(false);
 
   const isAuthor = currentUser?.id === entry.author.id;
 
@@ -34,14 +36,22 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
       return;
     }
     if (liking) return;
+
+    // Optimistic update
+    const prevLiked = hasLiked;
+    const prevCount = likesCount;
+    const newLiked = !prevLiked;
+    setHasLiked(newLiked);
+    setLikesCount(newLiked ? prevCount + 1 : Math.max(0, prevCount - 1));
     setLiking(true);
     setError(null);
+
     try {
       await toggleDiaryLike(entry.id);
-      const newLiked = !hasLiked;
-      setHasLiked(newLiked);
-      setLikesCount((prev) => (newLiked ? prev + 1 : prev - 1));
     } catch (err) {
+      // Revert on error
+      setHasLiked(prevLiked);
+      setLikesCount(prevCount);
       console.error('Like error:', err);
       setError('Impossible d\'aimer cette entrée. Veuillez réessayer.');
     } finally {
@@ -189,29 +199,46 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
 
         {/* Like button */}
         <div className="flex items-center gap-6 mt-8">
-          {currentUser ? (
-            <button
-              onClick={handleLike}
-              disabled={liking}
-              className="flex items-center gap-2 text-text-tertiary hover:text-[#C86C6C] transition-colors duration-150 disabled:opacity-50"
-            >
-              <Heart
-                size={18}
-                className={hasLiked ? 'fill-[#C86C6C] text-[#C86C6C]' : ''}
-              />
-              <span className="text-label">{likesCount}</span>
-            </button>
-          ) : (
-            <div className="flex items-center gap-2 text-text-tertiary">
-              <Heart size={18} />
-              <span className="text-label">{likesCount}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {currentUser ? (
+              <button
+                onClick={handleLike}
+                disabled={liking}
+                className="text-text-tertiary hover:text-[#C86C6C] transition-colors duration-150 disabled:opacity-50 focus:outline-none"
+              >
+                <Heart
+                  size={18}
+                  fill={hasLiked ? 'currentColor' : 'none'}
+                  className={hasLiked ? 'text-[#C86C6C]' : ''}
+                />
+              </button>
+            ) : (
+              <Heart size={18} className="text-text-tertiary" />
+            )}
+            <span className="text-label text-text-tertiary">{likesCount}</span>
+            {likesCount > 0 ? (
+              <button
+                onClick={() => setShowLikesSheet(true)}
+                className="text-label text-text-tertiary hover:text-text-primary transition-colors duration-150 focus:outline-none"
+              >
+                j'aime{likesCount > 1 ? 's' : ''}
+              </button>
+            ) : (
+              <span className="text-label text-text-disabled">j'aime</span>
+            )}
+          </div>
           <div className="flex items-center gap-2 text-text-tertiary">
             <MessageCircle size={18} />
             <span className="text-label">{comments.length}</span>
           </div>
         </div>
+
+        <LikesBottomSheet
+          entryId={entry.id}
+          isOpen={showLikesSheet}
+          onClose={() => setShowLikesSheet(false)}
+          count={likesCount}
+        />
 
         {/* Link to all album reviews */}
         <div className="mt-6">
