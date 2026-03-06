@@ -50,6 +50,42 @@ export type Database = {
           },
         ]
       }
+      album_genre_votes: {
+        Row: {
+          album_id: string
+          created_at: string
+          genre_id: string
+          user_id: string
+        }
+        Insert: {
+          album_id: string
+          created_at?: string
+          genre_id: string
+          user_id: string
+        }
+        Update: {
+          album_id?: string
+          created_at?: string
+          genre_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "album_genre_votes_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "album_genre_votes_genre_id_fkey"
+            columns: ["genre_id"]
+            isOneToOne: false
+            referencedRelation: "genres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       album_metadata: {
         Row: {
           album_id: string
