@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { upsertDiaryEntry } from "@/app/actions/diary";
 import { toggleSaveAlbum } from "@/app/actions/saved-albums";
+import { voteAlbumGenre } from "@/app/actions/metadata";
+import { GENRE_FAMILIES } from "@/lib/genre-families";
 import StarRating from "@/components/StarRating";
 import BottomSheet from "@/components/BottomSheet";
 import { showToast } from "@/components/Toast";
@@ -14,6 +16,7 @@ type AddToDiaryButtonProps = {
   initialSaved?: boolean;
   existingEntriesCount?: number;
   autoOpen?: boolean;
+  albumHasGenres?: boolean;
   onSuccess?: () => void;
 };
 
@@ -23,12 +26,16 @@ export default function AddToDiaryButton({
   initialSaved = false,
   existingEntriesCount = 0,
   autoOpen = false,
+  albumHasGenres = true,
   onSuccess,
 }: AddToDiaryButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [autoOpened, setAutoOpened] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [step, setStep] = useState<"form" | "genre-nudge">("form");
+  const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
+  const [genreVoting, setGenreVoting] = useState(false);
   const router = useRouter();
   const today = new Date().toISOString().split("T")[0];
 
@@ -85,19 +92,29 @@ export default function AddToDiaryButton({
           }
         }
 
-        setStatus("Enregistré !");
-        setTimeout(() => {
-          setBody("");
-          setRating(null);
+        const entryId = result.data?.id ?? null;
+        setSavedEntryId(entryId);
+
+        if (!albumHasGenres) {
+          // Montrer le nudge genre avant de naviguer
           setStatus(null);
-          setIsOpen(false);
-          if (result.data?.id) {
-            router.replace(`/diary/${result.data.id}`);
-          } else {
-            router.refresh();
-          }
-          onSuccess?.();
-        }, 1000);
+          setStep("genre-nudge");
+        } else {
+          setStatus("Enregistré !");
+          setTimeout(() => {
+            setBody("");
+            setRating(null);
+            setStatus(null);
+            setIsOpen(false);
+            setStep("form");
+            if (entryId) {
+              router.replace(`/diary/${entryId}`);
+            } else {
+              router.refresh();
+            }
+            onSuccess?.();
+          }, 1000);
+        }
       } else {
         setStatus(`Erreur : ${result.error}`);
       }
@@ -107,6 +124,31 @@ export default function AddToDiaryButton({
     } finally {
       setLoading(false);
       setIsSubmitting(false);
+    }
+  }
+
+  function navigateAfterNudge() {
+    setIsOpen(false);
+    setStep("form");
+    setBody("");
+    setRating(null);
+    if (savedEntryId) {
+      router.replace(`/diary/${savedEntryId}`);
+    } else {
+      router.refresh();
+    }
+    onSuccess?.();
+  }
+
+  async function handleGenreVote(slug: string) {
+    setGenreVoting(true);
+    try {
+      await voteAlbumGenre(albumId, slug);
+    } catch {
+      // best-effort
+    } finally {
+      setGenreVoting(false);
+      navigateAfterNudge();
     }
   }
 
@@ -132,10 +174,39 @@ export default function AddToDiaryButton({
 
       <BottomSheet
         isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        title={hasExistingEntry ? "Enregistrer une ré-écoute" : "Évaluer cet album"}
+        onClose={() => {
+          if (step === "genre-nudge") { navigateAfterNudge(); return; }
+          setIsOpen(false);
+        }}
+        title={step === "genre-nudge" ? "Un dernier truc" : (hasExistingEntry ? "Enregistrer une ré-écoute" : "Évaluer cet album")}
         maxHeight="h-[70vh]"
       >
+        {step === "genre-nudge" && (
+          <div className="px-6 py-4">
+            <p className="text-[14px] text-text-secondary mb-6">
+              Cet album n&apos;a pas encore de genre. Tu peux en suggérer un pour aider la communauté.
+            </p>
+            <div className="flex flex-wrap gap-2 mb-8">
+              {GENRE_FAMILIES.map((f) => (
+                <button
+                  key={f.slug}
+                  onClick={() => handleGenreVote(f.slug)}
+                  disabled={genreVoting}
+                  className="px-3 py-1.5 rounded-full border border-border text-[13px] text-text-primary hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150 disabled:opacity-50"
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={navigateAfterNudge}
+              className="w-full text-[13px] text-text-tertiary hover:text-text-secondary transition-colors duration-150"
+            >
+              Passer
+            </button>
+          </div>
+        )}
+        {step === "form" && (
         <form onSubmit={submit} className="px-6 py-4 space-y-section-sm">
           {/* Rating */}
           <div>
@@ -218,6 +289,7 @@ export default function AddToDiaryButton({
             </button>
           </div>
         </form>
+        )}
       </BottomSheet>
     </>
   );
