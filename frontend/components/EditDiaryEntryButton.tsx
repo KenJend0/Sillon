@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { updateDiaryEntry, deleteDiaryEntry } from "@/app/actions/diary";
 import { Edit2, Trash2 } from "lucide-react";
 import StarRating from "@/components/StarRating";
+import { showToast } from "@/components/Toast";
 
 type EditDiaryEntryButtonProps = {
   entryId: string;
@@ -30,7 +31,6 @@ export default function EditDiaryEntryButton({
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteConfirm, setIsDeleteConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
   const router = useRouter();
   const today = new Date().toISOString().split("T")[0];
 
@@ -44,10 +44,9 @@ export default function EditDiaryEntryButton({
   async function handleUpdate(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setStatus(null);
 
     if (!listenedAt) {
-      setStatus("Date requise");
+      showToast("Date requise", "error");
       setLoading(false);
       return;
     }
@@ -61,18 +60,15 @@ export default function EditDiaryEntryButton({
       });
 
       if (result.success) {
-        setStatus("Mis à jour !");
-        setTimeout(() => {
-          setIsEditOpen(false);
-          setStatus(null);
-          router.refresh();
-          onUpdated?.();
-        }, 1000);
+        showToast("Mis à jour !", "success");
+        setIsEditOpen(false);
+        router.refresh();
+        onUpdated?.();
       } else {
-        setStatus(`Erreur : ${result.error}`);
+        showToast(result.error || "Erreur lors de la mise à jour", "error");
       }
     } catch (err) {
-      setStatus(`Erreur : ${String(err)}`);
+      showToast(String(err) || "Erreur lors de la mise à jour", "error");
     } finally {
       setLoading(false);
     }
@@ -80,29 +76,24 @@ export default function EditDiaryEntryButton({
 
   async function handleDelete() {
     setLoading(true);
-    setStatus(null);
 
     try {
       const result = await deleteDiaryEntry(entryId);
 
       if (result.success) {
-        setStatus("Supprimé !");
-        setTimeout(() => {
-          setIsDeleteConfirm(false);
-          setStatus(null);
-          // Navigate back to previous page if possible, otherwise go to profile
-          if (window.history.length > 1) {
-            router.back();
-          } else {
-            router.push("/me");
-          }
-          onUpdated?.();
-        }, 1000);
+        showToast("Écoute supprimée", "success");
+        setIsDeleteConfirm(false);
+        if (window.history.length > 1) {
+          router.back();
+        } else {
+          router.push("/me");
+        }
+        onUpdated?.();
       } else {
-        setStatus(`Erreur : ${result.error}`);
+        showToast(result.error || "Erreur lors de la suppression", "error");
       }
     } catch (err) {
-      setStatus(`Erreur : ${String(err)}`);
+      showToast(String(err) || "Erreur lors de la suppression", "error");
     } finally {
       setLoading(false);
     }
@@ -177,12 +168,6 @@ export default function EditDiaryEntryButton({
                   className="w-full border border-border rounded-[10px] p-3 text-[14px] bg-background-secondary text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] transition-colors duration-150"
                 />
 
-                {status && (
-                  <p className="text-[12px] font-medium text-text-primary bg-background-secondary rounded-[8px] px-3 py-2">
-                    {status}
-                  </p>
-                )}
-
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
@@ -210,12 +195,6 @@ export default function EditDiaryEntryButton({
             <div className="bg-background rounded-[12px] p-6 max-w-md w-full border border-border">
               <h2 className="text-[14px] font-medium text-text-primary mb-2">Supprimer ?</h2>
               <p className="text-[12px] text-text-secondary mb-section-sm">Cette action ne peut pas être annulée.</p>
-
-              {status && (
-                <p className="text-[12px] font-medium text-text-primary bg-background-secondary rounded-[8px] px-3 py-2 mb-4">
-                  {status}
-                </p>
-              )}
 
               <div className="flex gap-2">
                 <button

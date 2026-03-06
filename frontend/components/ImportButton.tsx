@@ -12,7 +12,6 @@ type ImportButtonProps = {
 
 export default function ImportButton({ albumId }: ImportButtonProps) {
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
     const handleImport = async () => {
@@ -33,7 +32,7 @@ export default function ImportButton({ albumId }: ImportButtonProps) {
             const target = wasImported ? `/albums/${importedAlbumId}?addToDiary=1` : `/albums/${importedAlbumId}`;
             router.push(target);
         } catch (e) {
-            setError((e as Error).message);
+            showToast((e as Error).message || "Erreur lors de l'import", "error");
         } finally {
             setLoading(false);
         }
@@ -48,7 +47,6 @@ export default function ImportButton({ albumId }: ImportButtonProps) {
             >
                 {loading ? "Import en cours..." : "Ajouter a la bibliotheque"}
             </button>
-            {error && <p className="mt-2 text-[14px] text-[#C86C6C]">{error}</p>}
         </>
     );
 }

@@ -52,7 +52,6 @@ export default function AddToDiaryButton({
   // Form state
   const [rating, setRating] = useState<number | null>(null);
   const [body, setBody] = useState("");
-  const [status, setStatus] = useState<string | null>(null);
   const [listenedAt, setListenedAt] = useState<string>(today);
   const [removeFromSaved, setRemoveFromSaved] = useState<boolean>(initialSaved);
 
@@ -60,18 +59,17 @@ export default function AddToDiaryButton({
     e.preventDefault();
     if (isSubmitting) return;
     if (!userId) {
-      setStatus("Vous devez être connecté pour ajouter une écoute");
+      showToast("Vous devez être connecté pour ajouter une écoute", "error");
       return;
     }
 
     if (!listenedAt) {
-      setStatus("Date requise");
+      showToast("Date requise", "error");
       return;
     }
 
     setLoading(true);
     setIsSubmitting(true);
-    setStatus(null);
 
     try {
       const result = await upsertDiaryEntry({
@@ -96,30 +94,24 @@ export default function AddToDiaryButton({
         setSavedEntryId(entryId);
 
         if (!albumHasGenres) {
-          // Montrer le nudge genre avant de naviguer
-          setStatus(null);
           setStep("genre-nudge");
         } else {
-          setStatus("Enregistré !");
-          setTimeout(() => {
-            setBody("");
-            setRating(null);
-            setStatus(null);
-            setIsOpen(false);
-            setStep("form");
-            if (entryId) {
-              router.replace(`/diary/${entryId}`);
-            } else {
-              router.refresh();
-            }
-            onSuccess?.();
-          }, 1000);
+          showToast("Enregistré !", "success");
+          setBody("");
+          setRating(null);
+          setIsOpen(false);
+          setStep("form");
+          if (entryId) {
+            router.replace(`/diary/${entryId}`);
+          } else {
+            router.refresh();
+          }
+          onSuccess?.();
         }
       } else {
-        setStatus(`Erreur : ${result.error}`);
+        showToast(result.error || "Erreur lors de l'enregistrement", "error");
       }
     } catch (err) {
-      setStatus(`Erreur : ${String(err)}`);
       showToast("Erreur lors de l'enregistrement", "error");
     } finally {
       setLoading(false);
@@ -253,12 +245,6 @@ export default function AddToDiaryButton({
               className="w-full px-4 py-3 bg-background-secondary border border-border rounded-[10px] text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] resize-none h-24 text-[14px] transition-colors duration-150"
             />
           </div>
-
-          {status && (
-            <p className="text-[12px] font-medium text-text-primary bg-background-secondary rounded-[8px] px-3 py-2">
-              {status}
-            </p>
-          )}
 
           {initialSaved && (
             <label className="flex items-center gap-2 text-[12px] text-text-secondary">

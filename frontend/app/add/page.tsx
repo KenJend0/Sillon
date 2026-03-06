@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import BackButton from "@/components/BackButton";
 import AlbumSearchForDiary from "@/components/AlbumSearchForDiary";
 import StarRating from "@/components/StarRating";
 import { useAuth } from "@/lib/AuthContext";
@@ -106,10 +105,12 @@ export default function AddPage() {
         <>
             <div className="p-6 pb-0">
                 <div className="max-w-page mx-auto">
-                    <div className="mb-section-md">
-                        <BackButton />
-                    </div>
-                    <h1 className="text-h1 text-text-primary mb-6">Ajouter</h1>
+                    <h1 className="text-h1 text-text-primary mb-2">Ajouter</h1>
+                    <p className="text-[14px] text-text-secondary mb-6">
+                        {mode === "diary"
+                            ? "Cherche un album que tu as écouté pour l'ajouter à ton journal."
+                            : "Garde un album de côté pour l'écouter plus tard."}
+                    </p>
 
                     {/* Toggle */}
                     <div className="flex bg-background-secondary rounded-[10px] p-1 mb-8">

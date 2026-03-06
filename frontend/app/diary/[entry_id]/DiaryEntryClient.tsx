@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Heart, MessageCircle, Trash2 } from 'lucide-react';
 import { toggleDiaryLike, addComment, deleteComment, getEntryComments } from '@/app/actions/diary';
+import { showToast } from '@/components/Toast';
 import { UserAvatar } from '@/components/avatars/DefaultAvatar';
 import BackButton from '@/components/BackButton';
 import EditDiaryEntryButton from '@/components/EditDiaryEntryButton';
@@ -25,14 +26,13 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
   const [newComment, setNewComment] = useState('');
   const [liking, setLiking] = useState(false);
   const [posting, setPosting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showLikesSheet, setShowLikesSheet] = useState(false);
 
   const isAuthor = currentUser?.id === entry.author.id;
 
   const handleLike = async () => {
     if (!currentUser) {
-      setError('Veuillez vous connecter pour aimer cette entrée');
+      showToast('Connecte-toi pour aimer cette entrée', 'error');
       return;
     }
     if (liking) return;
@@ -44,7 +44,6 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
     setHasLiked(newLiked);
     setLikesCount(newLiked ? prevCount + 1 : Math.max(0, prevCount - 1));
     setLiking(true);
-    setError(null);
 
     try {
       await toggleDiaryLike(entry.id);
@@ -53,7 +52,7 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
       setHasLiked(prevLiked);
       setLikesCount(prevCount);
       console.error('Like error:', err);
-      setError('Impossible d\'aimer cette entrée. Veuillez réessayer.');
+      showToast('Impossible d\'aimer cette entrée', 'error');
     } finally {
       setLiking(false);
     }
@@ -61,12 +60,11 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
 
   const handleAddComment = async () => {
     if (!currentUser) {
-      setError('Veuillez vous connecter pour commenter');
+      showToast('Connecte-toi pour commenter', 'error');
       return;
     }
     if (posting || !newComment.trim()) return;
     setPosting(true);
-    setError(null);
     try {
       await addComment(entry.id, newComment.trim());
       setNewComment('');
@@ -74,7 +72,7 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
       setComments(freshComments);
     } catch (err) {
       console.error('Add comment error:', err);
-      setError('Impossible d\'ajouter le commentaire. Veuillez réessayer.');
+      showToast('Impossible d\'ajouter le commentaire', 'error');
     } finally {
       setPosting(false);
     }
@@ -86,7 +84,7 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
       setComments((prev) => prev.filter((c) => c.id !== commentId));
     } catch (err) {
       console.error('Delete comment error:', err);
-      setError('Impossible de supprimer le commentaire. Veuillez réessayer.');
+      showToast('Impossible de supprimer le commentaire', 'error');
     }
   };
 
@@ -249,13 +247,6 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
             Voir toutes les critiques de cet album →
           </Link>
         </div>
-
-        {/* Error message */}
-        {error && (
-          <div className="mt-6 p-4 bg-[#C86C6C]/10 border border-[#C86C6C]/20 rounded-[10px]">
-            <p className="text-[14px] text-[#C86C6C]">{error}</p>
-          </div>
-        )}
 
         {/* Comments section */}
         <section className="border-t border-border pt-8 mt-8 mb-20">
