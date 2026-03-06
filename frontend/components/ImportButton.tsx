@@ -16,7 +16,6 @@ export default function ImportButton({ albumId }: ImportButtonProps) {
 
     const handleImport = async () => {
         setLoading(true);
-        setError(null);
         try {
             const response = await importAlbumFromMusicBrainz(albumId);
             if (!response.success) {
