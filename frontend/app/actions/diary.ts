@@ -11,6 +11,7 @@ export interface UpsertDiaryEntryInput {
   rating?: number;
   relisten?: boolean;
   isPublic?: boolean;
+  avatarUrl?: string | null;
 }
 
 /**
