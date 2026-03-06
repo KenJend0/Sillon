@@ -8,7 +8,6 @@ import MyActivitiesModal from "@/components/MyActivitiesModal";
 import SaveAlbumButton from "@/components/SaveAlbumButton";
 import AddToDiaryButton from "@/components/AddToDiaryButton";
 import EditDiaryEntryButton from "@/components/EditDiaryEntryButton";
-import type { StreamingLinks } from "@/app/actions/musicbrainz";
 
 type AlbumHeroProps = {
     album: {
@@ -36,7 +35,8 @@ type AlbumHeroProps = {
     };
     myEntriesCount?: number;
     autoOpenDiary?: boolean;
-    streamingLinks?: StreamingLinks;
+    albumHasGenres?: boolean;
+    networkListeners?: Array<{ userId: string; username: string; displayName: string | null; avatarUrl: string | null }>;
 };
 
 export default function AlbumHero({
@@ -48,7 +48,8 @@ export default function AlbumHero({
     myLatestEntry,
     myEntriesCount = 0,
     autoOpenDiary = false,
-    streamingLinks,
+    albumHasGenres = true,
+    networkListeners = [],
 }: AlbumHeroProps) {
     const [coverError, setCoverError] = useState(false);
     const [isMyActivitiesOpen, setIsMyActivitiesOpen] = useState(false);
@@ -92,34 +93,6 @@ export default function AlbumHero({
                         {album.year && ` · ${album.year}`}
                     </div>
 
-                    {/* Streaming links */}
-                    {streamingLinks && Object.keys(streamingLinks).length > 0 && (
-                        <div className="flex items-center gap-2 mt-3 flex-wrap">
-                            {[
-                                { key: 'spotify', label: 'Spotify', href: streamingLinks.spotify },
-                                { key: 'appleMusic', label: 'Apple Music', href: streamingLinks.appleMusic },
-                                { key: 'deezer', label: 'Deezer', href: streamingLinks.deezer },
-                                { key: 'tidal', label: 'Tidal', href: streamingLinks.tidal },
-                            ]
-                                .filter((s) => s.href)
-                                .map((s, i, arr) => (
-                                    <span key={s.key} className="flex items-center gap-2">
-                                        <a
-                                            href={s.href}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-[12px] text-text-tertiary hover:text-text-secondary transition-colors duration-150"
-                                        >
-                                            {s.label}
-                                        </a>
-                                        {i < arr.length - 1 && (
-                                            <span className="text-[12px] text-text-disabled">·</span>
-                                        )}
-                                    </span>
-                                ))}
-                        </div>
-                    )}
-
                     {/* Stats */}
                     {stats && (stats.avg_rating !== null || stats.listeners_count > 0 || stats.reviews_count > 0) && (
                         <div className="flex items-baseline gap-5 mt-2">
@@ -143,14 +116,15 @@ export default function AlbumHero({
                             )}
                         </div>
                     )}
+
                 </div>
             </div>
 
             {/* ========== TA NOTE ========== */}
             {myLatestEntry && (
-                <div className="border-t border-border-divider mt-14 pt-10 mb-16">
+                <div className="border-t border-border-divider mt-8 pt-8 mb-10">
                     {/* Section title */}
-                    <div className="flex items-center gap-3 mb-8">
+                    <div className="flex items-center gap-3 mb-6">
                         <h2 className="text-h2 text-text-primary">
                             Mon écoute
                         </h2>
@@ -202,36 +176,53 @@ export default function AlbumHero({
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
 
-                    {/* Actions */}
-                    <div className="flex gap-2 mt-6">
-                        <AddToDiaryButton
-                            albumId={albumId || album.id}
-                            userId={userId}
-                            initialSaved={isSaved}
-                            existingEntriesCount={myEntriesCount}
-                            autoOpen={autoOpenDiary}
-                            onSuccess={() => setIsMyActivitiesOpen(true)}
-                        />
-                        <SaveAlbumButton albumId={albumId || album.id} initialSaved={isSaved} />
+            {/* Network listeners */}
+            {networkListeners.length > 0 && (() => {
+                const shown = networkListeners.slice(0, 3);
+                const rest = networkListeners.length - shown.length;
+                const names = shown.map((l) => l.displayName || l.username);
+                let label: string;
+                if (names.length === 1) {
+                    label = `${names[0]} a écouté cet album`;
+                } else if (rest === 0) {
+                    label = `${names.slice(0, -1).join(", ")} et ${names[names.length - 1]} ont écouté cet album`;
+                } else {
+                    label = `${names.join(", ")} et ${rest} autre${rest > 1 ? "s" : ""} ont écouté cet album`;
+                }
+                return (
+                    <div className="flex items-center gap-2 mt-5">
+                        <div className="flex -space-x-1.5">
+                            {shown.map((l) => (
+                                <div key={l.userId} className="w-5 h-5 rounded-full overflow-hidden bg-background-secondary border border-background-primary flex-shrink-0">
+                                    {l.avatarUrl ? (
+                                        <Image src={l.avatarUrl} alt={l.displayName || l.username} width={20} height={20} className="object-cover w-full h-full" />
+                                    ) : (
+                                        <div className="w-full h-full bg-background-tertiary" />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        <span className="text-[12px] text-text-tertiary leading-snug">{label}</span>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
-            {/* If no My Activity, show buttons separately */}
-            {!myLatestEntry && (
-                <div className="mt-6 flex gap-2">
-                    <AddToDiaryButton
-                        albumId={albumId || album.id}
-                        userId={userId}
-                        initialSaved={isSaved}
-                        existingEntriesCount={myEntriesCount}
-                        autoOpen={autoOpenDiary}
-                        onSuccess={() => setIsMyActivitiesOpen(myEntriesCount > 0)}
-                    />
-                    <SaveAlbumButton albumId={albumId || album.id} initialSaved={isSaved} />
-                </div>
-            )}
+            {/* Actions — always visible */}
+            <div className="flex gap-2 mt-4">
+                <AddToDiaryButton
+                    albumId={albumId || album.id}
+                    userId={userId}
+                    initialSaved={isSaved}
+                    existingEntriesCount={myEntriesCount}
+                    autoOpen={autoOpenDiary}
+                    albumHasGenres={albumHasGenres}
+                    onSuccess={() => setIsMyActivitiesOpen(myEntriesCount > 0)}
+                />
+                <SaveAlbumButton albumId={albumId || album.id} initialSaved={isSaved} />
+            </div>
 
             {/* My Activities Modal */}
             {userId && (
