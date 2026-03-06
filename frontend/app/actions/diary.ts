@@ -780,7 +780,7 @@ export async function getAlbumReviewsPage(input: {
   const userIds = [...new Set(sliced.map((row: any) => row.user_id))];
   const { data: profilesData } = await supabase
     .from('profiles')
-    .select('id, display_name, username')
+    .select('id, display_name, username, avatar_url')
     .in('id', userIds);
 
   const profilesMap = new Map(
@@ -796,6 +796,7 @@ export async function getAlbumReviewsPage(input: {
       created_at: row.created_at,
       display_name: profilesMap.get(row.user_id)?.display_name || null,
       username: profilesMap.get(row.user_id)?.username || null,
+      avatar_url: profilesMap.get(row.user_id)?.avatar_url || null,
     })),
     hasMore,
     userId: currentUser?.id || null,
