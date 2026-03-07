@@ -52,7 +52,10 @@ async function fetchMBTags(
   releaseMbid: string
 ): Promise<Array<{ name: string; count: number }>> {
   try {
-    // Étape 1 : résoudre le release-group MBID depuis le release MBID
+    // Étape 1 : résoudre le release-group MBID depuis le release MBID.
+    // Si le MBID stocké est déjà un release-group (import via browse endpoint),
+    // le lookup /release/ renvoie 404 — on le réutilise directement comme rgMbid.
+    let rgMbid: string | undefined;
     const releaseRes = await fetch(
       `${MB_API}/release/${encodeURIComponent(releaseMbid)}?fmt=json&inc=release-groups`,
       {
@@ -60,9 +63,15 @@ async function fetchMBTags(
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       }
     );
-    if (!releaseRes.ok) return [];
-    const releaseData = await releaseRes.json();
-    const rgMbid: string | undefined = releaseData['release-group']?.id;
+    if (releaseRes.ok) {
+      const releaseData = await releaseRes.json();
+      rgMbid = releaseData['release-group']?.id;
+    } else if (releaseRes.status === 404) {
+      // Probablement un release-group MBID — on l'utilise directement
+      rgMbid = releaseMbid;
+    } else {
+      return [];
+    }
     if (!rgMbid) return [];
 
     // Respect MB rate limit entre les deux appels
@@ -207,6 +216,9 @@ export async function enrichAlbumMetadata(
         }
       }
     }
+
+    // Vérification clé Last.fm avant fetch
+    if (!process.env.LASTFM_API_KEY) errors.push('LASTFM_API_KEY manquante');
 
     // Fetch en parallèle
     const [mbTags, lfm] = await Promise.allSettled([
