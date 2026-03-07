@@ -1,7 +1,7 @@
 'use server';
 
 import { createSupabaseAdmin, createSupabaseServer, getAuthUser } from '@/lib/supabase/server';
-import { GENRE_FAMILIES } from '@/lib/genre-families';
+import { findGenreBySlug } from '@/lib/genre-families';
 
 const MB_API = 'https://musicbrainz.org/ws/2';
 const MB_USER_AGENT = 'Waveform/1.0 (https://waveform.app)';
@@ -387,8 +387,8 @@ export async function voteAlbumGenre(albumId: string, genreSlug: string): Promis
   const user = await getAuthUser();
   if (!user) throw new Error('Not authenticated');
 
-  const family = GENRE_FAMILIES.find((f) => f.slug === genreSlug);
-  if (!family) throw new Error('Invalid genre');
+  const entry = findGenreBySlug(genreSlug);
+  if (!entry) throw new Error('Invalid genre');
 
   // Admin client : genres + album_genres en écriture sont restreints au service role
   const supabase = createSupabaseAdmin();
@@ -396,7 +396,7 @@ export async function voteAlbumGenre(albumId: string, genreSlug: string): Promis
   // Upsert genre (crée si n'existe pas encore)
   const { data: genre } = await supabase
     .from('genres')
-    .upsert({ name: family.label, slug: family.slug }, { onConflict: 'slug' })
+    .upsert({ name: entry.label, slug: entry.slug }, { onConflict: 'slug' })
     .select('id')
     .single();
 

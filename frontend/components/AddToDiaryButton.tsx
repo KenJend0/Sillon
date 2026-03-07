@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { upsertDiaryEntry } from "@/app/actions/diary";
 import { toggleSaveAlbum } from "@/app/actions/saved-albums";
 import { voteAlbumGenre } from "@/app/actions/metadata";
-import { GENRE_FAMILIES } from "@/lib/genre-families";
+import { GENRE_FAMILIES, type GenreFamily } from "@/lib/genre-families";
 import StarRating from "@/components/StarRating";
 import BottomSheet from "@/components/BottomSheet";
 import { showToast } from "@/components/Toast";
@@ -36,6 +36,7 @@ export default function AddToDiaryButton({
   const [step, setStep] = useState<"form" | "genre-nudge">("form");
   const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
   const [genreVoting, setGenreVoting] = useState(false);
+  const [selectedFamily, setSelectedFamily] = useState<GenreFamily | null>(null);
   const router = useRouter();
   const today = new Date().toISOString().split("T")[0];
 
@@ -140,7 +141,16 @@ export default function AddToDiaryButton({
       // best-effort
     } finally {
       setGenreVoting(false);
+      setSelectedFamily(null);
       navigateAfterNudge();
+    }
+  }
+
+  function handleFamilyClick(family: GenreFamily) {
+    if (family.subgenres.length === 0) {
+      handleGenreVote(family.slug);
+    } else {
+      setSelectedFamily(family);
     }
   }
 
@@ -175,27 +185,63 @@ export default function AddToDiaryButton({
       >
         {step === "genre-nudge" && (
           <div className="px-6 py-4">
-            <p className="text-[14px] text-text-secondary mb-6">
-              Cet album n&apos;a pas encore de genre. Tu peux en suggérer un pour aider la communauté.
-            </p>
-            <div className="flex flex-wrap gap-2 mb-8">
-              {GENRE_FAMILIES.map((f) => (
+            {!selectedFamily ? (
+              <>
+                <p className="text-[14px] text-text-secondary mb-6">
+                  Cet album n&apos;a pas encore de genre. Tu peux en suggérer un pour aider la communauté.
+                </p>
+                <div className="flex flex-wrap gap-2 mb-8">
+                  {GENRE_FAMILIES.map((f) => (
+                    <button
+                      key={f.slug}
+                      onClick={() => handleFamilyClick(f)}
+                      disabled={genreVoting}
+                      className="px-3 py-1.5 rounded-full border border-border text-[13px] text-text-primary hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150 disabled:opacity-50"
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
                 <button
-                  key={f.slug}
-                  onClick={() => handleGenreVote(f.slug)}
-                  disabled={genreVoting}
-                  className="px-3 py-1.5 rounded-full border border-border text-[13px] text-text-primary hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150 disabled:opacity-50"
+                  onClick={navigateAfterNudge}
+                  className="w-full text-[13px] text-text-tertiary hover:text-text-secondary transition-colors duration-150"
                 >
-                  {f.label}
+                  Passer
                 </button>
-              ))}
-            </div>
-            <button
-              onClick={navigateAfterNudge}
-              className="w-full text-[13px] text-text-tertiary hover:text-text-secondary transition-colors duration-150"
-            >
-              Passer
-            </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setSelectedFamily(null)}
+                  className="flex items-center gap-1.5 text-[13px] text-text-tertiary hover:text-text-secondary transition-colors duration-150 mb-5"
+                >
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                  {selectedFamily.label}
+                </button>
+                <p className="text-[14px] text-text-secondary mb-4">Un sous-genre plus précis ?</p>
+                <div className="flex flex-wrap gap-2 mb-8">
+                  {selectedFamily.subgenres.map((sub) => (
+                    <button
+                      key={sub.slug}
+                      onClick={() => handleGenreVote(sub.slug)}
+                      disabled={genreVoting}
+                      className="px-3 py-1.5 rounded-full border border-border text-[13px] text-text-primary hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150 disabled:opacity-50"
+                    >
+                      {sub.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => handleGenreVote(selectedFamily.slug)}
+                  disabled={genreVoting}
+                  className="w-full text-[13px] text-text-tertiary hover:text-text-secondary transition-colors duration-150"
+                >
+                  Voter pour {selectedFamily.label} sans préciser
+                </button>
+              </>
+            )}
           </div>
         )}
         {step === "form" && (
