@@ -22,11 +22,21 @@ export default function ImportButton({ albumId }: ImportButtonProps) {
                 throw new Error("error" in response ? response.error : "Import failed");
             }
 
-            const importedAlbumId = (response as { albumId: string }).albumId;
-            const wasImported = (response as { imported?: boolean }).imported ?? true;
+            const res = response as { albumId: string; imported?: boolean; title?: string; artist?: string; mbid?: string };
+            const importedAlbumId = res.albumId;
+            const wasImported = res.imported ?? true;
 
             await saveAlbumOnce(importedAlbumId);
             showToast("Album importé", "success");
+
+            // Enrichissement en arrière-plan (route API séparée pour éviter le timeout Vercel)
+            if (wasImported && res.mbid && res.title && res.artist) {
+                fetch('/api/enrich', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ albumId: importedAlbumId, mbid: res.mbid, title: res.title, artist: res.artist }),
+                }).catch(() => {/* best-effort */});
+            }
 
             const target = wasImported ? `/albums/${importedAlbumId}?addToDiary=1` : `/albums/${importedAlbumId}`;
             router.push(target);
