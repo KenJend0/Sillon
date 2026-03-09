@@ -9,6 +9,122 @@ const LASTFM_API = 'https://ws.audioscrobbler.com/2.0';
 const FETCH_TIMEOUT_MS = 10_000;
 const ENRICHMENT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 jours
 
+// ── Streaming search helpers ──────────────────────────────────────────────────
+
+/** Cherche un album sur Apple Music via l'iTunes Search API (gratuit, sans auth). */
+async function searchAppleMusic(artist: string, title: string): Promise<string | null> {
+  try {
+    const q = encodeURIComponent(`${artist} ${title}`);
+    const res = await fetch(
+      `https://itunes.apple.com/search?term=${q}&entity=album&limit=10`,
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const results: Array<{ collectionType: string; artistName: string; collectionName: string; collectionViewUrl: string }> =
+      data.results ?? [];
+    // Cherche le meilleur match : artiste + titre similaires
+    const titleLow = title.toLowerCase();
+    const artistLow = artist.toLowerCase();
+    const match = results.find(
+      (r) =>
+        r.collectionType === 'Album' &&
+        r.collectionName.toLowerCase().includes(titleLow.slice(0, 6)) &&
+        r.artistName.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase())
+    ) ?? results.find((r) => r.collectionType === 'Album');
+    return match?.collectionViewUrl ?? null;
+  } catch { return null; }
+}
+
+/** Cherche un album sur Deezer via leur API publique (gratuit, sans auth). */
+async function searchDeezer(artist: string, title: string): Promise<string | null> {
+  try {
+    const q = encodeURIComponent(`artist:"${artist}" album:"${title}"`);
+    const res = await fetch(
+      `https://api.deezer.com/search/album?q=${q}&limit=5`,
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const results: Array<{ title: string; artist: { name: string }; link: string }> =
+      data.data ?? [];
+    const titleLow = title.toLowerCase();
+    const artistLow = artist.toLowerCase();
+    const match = results.find(
+      (r) =>
+        r.title.toLowerCase().includes(titleLow.slice(0, 6)) &&
+        r.artist.name.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase())
+    ) ?? results[0];
+    return match?.link ?? null;
+  } catch { return null; }
+}
+
+/** Obtient un token Spotify via Client Credentials (nécessite SPOTIFY_CLIENT_ID + SECRET). */
+let _spotifyToken: { token: string; expiresAt: number } | null = null;
+async function getSpotifyToken(): Promise<string | null> {
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+  if (_spotifyToken && _spotifyToken.expiresAt > Date.now() + 60_000) return _spotifyToken.token;
+  try {
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+      },
+      body: 'grant_type=client_credentials',
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    _spotifyToken = { token: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 };
+    return _spotifyToken.token;
+  } catch { return null; }
+}
+
+/** Cherche un album sur Spotify (nécessite SPOTIFY_CLIENT_ID + SPOTIFY_CLIENT_SECRET). */
+async function searchSpotify(artist: string, title: string): Promise<string | null> {
+  const token = await getSpotifyToken();
+  if (!token) return null;
+  try {
+    const q = encodeURIComponent(`album:${title} artist:${artist}`);
+    const res = await fetch(
+      `https://api.spotify.com/v1/search?q=${q}&type=album&limit=5`,
+      { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const items: Array<{ name: string; artists: Array<{ name: string }>; external_urls: { spotify: string } }> =
+      data.albums?.items ?? [];
+    const titleLow = title.toLowerCase();
+    const artistLow = artist.toLowerCase();
+    const match = items.find(
+      (r) =>
+        r.name.toLowerCase().includes(titleLow.slice(0, 6)) &&
+        r.artists.some((a) => a.name.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase()))
+    ) ?? items[0];
+    return match?.external_urls?.spotify ?? null;
+  } catch { return null; }
+}
+
+/**
+ * Recherche les liens streaming manquants via les APIs natives des plateformes.
+ * Utilisé en fallback quand MusicBrainz url-rels ne retourne rien.
+ */
+async function searchStreamingLinks(
+  artist: string,
+  title: string,
+  existing: StreamingLinks
+): Promise<StreamingLinks> {
+  const [spotify, appleMusic, deezer] = await Promise.all([
+    existing.spotify ? Promise.resolve(existing.spotify) : searchSpotify(artist, title),
+    existing.appleMusic ? Promise.resolve(existing.appleMusic) : searchAppleMusic(artist, title),
+    existing.deezer ? Promise.resolve(existing.deezer) : searchDeezer(artist, title),
+  ]);
+  return { spotify, appleMusic, deezer };
+}
+
 // Tags parasites — non pertinents pour la découverte musicale
 const NOISE_TAGS = new Set([
   // Opinions / méta
@@ -43,87 +159,167 @@ function toSlug(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
+type StreamingLinks = { spotify: string | null; appleMusic: string | null; deezer: string | null };
+
+type MBDataResult = {
+  tags: Array<{ name: string; count: number }>;
+  rgMbid: string | null;
+  wikipediaUrl: string | null;
+  annotation: string | null;
+  streamingLinks: StreamingLinks;
+};
+
+function extractStreamingLinks(relations: Array<{ url?: { resource: string } }>): StreamingLinks {
+  const links: StreamingLinks = { spotify: null, appleMusic: null, deezer: null };
+  for (const rel of relations) {
+    const url = rel.url?.resource;
+    if (!url) continue;
+    if (!links.spotify && url.includes('spotify.com')) links.spotify = url;
+    if (!links.appleMusic && url.includes('music.apple.com')) links.appleMusic = url;
+    if (!links.deezer && url.includes('deezer.com')) links.deezer = url;
+  }
+  return links;
+}
+
 /**
- * Récupère les genres + tags depuis MusicBrainz.
- * albums.mbid stocke le release MBID — les genres sont sur le release-group.
- * Lookup en 2 étapes : release → release-group MBID → genres + tags.
+ * Récupère genres, tags, URL Wikipedia et annotation depuis MusicBrainz.
+ * Lookup en 2 étapes : release → release-group MBID (ou direct si release-group MBID).
  */
-async function fetchMBTags(
-  releaseMbid: string
-): Promise<Array<{ name: string; count: number }>> {
+async function fetchMBData(releaseMbid: string): Promise<MBDataResult> {
+  const noLinks: StreamingLinks = { spotify: null, appleMusic: null, deezer: null };
+  const empty: MBDataResult = { tags: [], rgMbid: null, wikipediaUrl: null, annotation: null, streamingLinks: noLinks };
   try {
-    // Étape 1 : résoudre le release-group MBID depuis le release MBID.
-    // Si le MBID stocké est déjà un release-group (import via browse endpoint),
-    // le lookup /release/ renvoie 404 — on le réutilise directement comme rgMbid.
+    // Étape 1 : résoudre le release-group MBID + streaming links sur la release.
+    // Si le MBID est déjà un release-group (import via browse), /release/ renvoie 404.
     let rgMbid: string | undefined;
+    let streamingLinks: StreamingLinks = noLinks;
     const releaseRes = await fetch(
-      `${MB_API}/release/${encodeURIComponent(releaseMbid)}?fmt=json&inc=release-groups`,
-      {
-        headers: { 'User-Agent': MB_USER_AGENT },
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      }
+      `${MB_API}/release/${encodeURIComponent(releaseMbid)}?fmt=json&inc=release-groups+url-rels`,
+      { headers: { 'User-Agent': MB_USER_AGENT }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }
     );
     if (releaseRes.ok) {
       const releaseData = await releaseRes.json();
       rgMbid = releaseData['release-group']?.id;
+      streamingLinks = extractStreamingLinks(releaseData.relations ?? []);
     } else if (releaseRes.status === 404) {
-      // Probablement un release-group MBID — on l'utilise directement
-      rgMbid = releaseMbid;
+      rgMbid = releaseMbid; // c'est déjà un release-group MBID
     } else {
-      return [];
+      return empty;
     }
-    if (!rgMbid) return [];
+    if (!rgMbid) return empty;
 
     // Respect MB rate limit entre les deux appels
     await new Promise((r) => setTimeout(r, 1100));
 
-    // Étape 2 : genres + tags sur le release-group
+    // Étape 2 : release-group avec genres, tags, url-rels, annotation
     const res = await fetch(
-      `${MB_API}/release-group/${encodeURIComponent(rgMbid)}?fmt=json&inc=genres+tags`,
-      {
-        headers: { 'User-Agent': MB_USER_AGENT },
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      }
+      `${MB_API}/release-group/${encodeURIComponent(rgMbid)}?fmt=json&inc=genres+tags+url-rels+annotation`,
+      { headers: { 'User-Agent': MB_USER_AGENT }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }
     );
-    if (!res.ok) return [];
+    if (!res.ok) return { ...empty, rgMbid, streamingLinks };
     const data = await res.json();
 
     const genres: Array<{ name: string; count: number }> = (data.genres ?? []).map(
-      (g: { name: string; count?: number }) => ({
-        name: g.name.toLowerCase().trim(),
-        count: g.count ?? 1,
-      })
+      (g: { name: string; count?: number }) => ({ name: g.name.toLowerCase().trim(), count: g.count ?? 1 })
     );
-
     const tags: Array<{ name: string; count: number }> = (data.tags ?? [])
       .filter((t: { count?: number }) => (t.count ?? 0) >= 3)
-      .map((t: { name: string; count: number }) => ({
-        name: t.name.toLowerCase().trim(),
-        count: t.count,
-      }));
+      .map((t: { name: string; count: number }) => ({ name: t.name.toLowerCase().trim(), count: t.count }));
 
-    // Merge : genres curatés en premier, puis tags non-dupliqués
     const seen = new Set(genres.map((g) => g.name));
     const combined = [...genres];
     for (const tag of tags) {
-      if (!seen.has(tag.name)) {
-        combined.push(tag);
-        seen.add(tag.name);
+      if (!seen.has(tag.name)) { combined.push(tag); seen.add(tag.name); }
+    }
+
+    // URL relations du release-group : Wikipedia + streaming links (fallback si pas trouvé sur la release)
+    const relations: Array<{ type: string; url?: { resource: string } }> = data.relations ?? [];
+    let wikipediaUrl = relations.find((r) => r.type === 'wikipedia')?.url?.resource ?? null;
+
+    // Si pas de lien Wikipedia direct, essaie via Wikidata (même pattern que les artistes)
+    if (!wikipediaUrl) {
+      const wikidataUrl = relations.find((r) => r.type === 'wikidata')?.url?.resource ?? null;
+      if (wikidataUrl) {
+        try {
+          const wikidataId = wikidataUrl.split('/').pop();
+          if (wikidataId) {
+            const wdRes = await fetch(
+              `https://www.wikidata.org/wiki/Special:EntityData/${encodeURIComponent(wikidataId)}.json`,
+              { headers: { 'User-Agent': MB_USER_AGENT }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }
+            );
+            if (wdRes.ok) {
+              const wdData = await wdRes.json();
+              const entity = wdData.entities?.[wikidataId];
+              // Préfère la langue anglaise, sinon prend la première disponible
+              const sitelinks = entity?.sitelinks ?? {};
+              const wikiLink = sitelinks['enwiki'] ?? sitelinks['frwiki'] ?? Object.values(sitelinks).find((s: any) => s.site?.endsWith('wiki') && !s.site?.endsWith('wikiquote'));
+              if (wikiLink) {
+                const sl = wikiLink as { site: string; title: string };
+                const lang = sl.site.replace('wiki', '');
+                wikipediaUrl = `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(sl.title.replace(/ /g, '_'))}`;
+              }
+            }
+          }
+        } catch { /* best-effort */ }
       }
     }
-    return combined.slice(0, 12);
+
+    // Streaming links : release-group url-rels en fallback si la release n'en avait pas
+    const rgLinks = extractStreamingLinks(relations);
+    let mergedLinks: StreamingLinks = {
+      spotify: streamingLinks.spotify ?? rgLinks.spotify,
+      appleMusic: streamingLinks.appleMusic ?? rgLinks.appleMusic,
+      deezer: streamingLinks.deezer ?? rgLinks.deezer,
+    };
+
+    // Si on n'a toujours pas de liens streaming, on browse les releases du release-group.
+    // Les liens Spotify/Apple Music/Deezer sont attachés aux releases numériques individuelles,
+    // pas au release-group lui-même.
+    const needsReleaseBrowse = !mergedLinks.spotify && !mergedLinks.appleMusic && !mergedLinks.deezer;
+    if (needsReleaseBrowse) {
+      try {
+        await new Promise((r) => setTimeout(r, 1100));
+        const releasesRes = await fetch(
+          `${MB_API}/release?release-group=${encodeURIComponent(rgMbid)}&fmt=json&inc=url-rels&limit=25`,
+          { headers: { 'User-Agent': MB_USER_AGENT }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }
+        );
+        if (releasesRes.ok) {
+          const releasesData = await releasesRes.json();
+          const releases: Array<{ relations?: Array<{ url?: { resource: string } }> }> = releasesData.releases ?? [];
+          for (const release of releases) {
+            const releaseLinks = extractStreamingLinks(release.relations ?? []);
+            mergedLinks = {
+              spotify: mergedLinks.spotify ?? releaseLinks.spotify,
+              appleMusic: mergedLinks.appleMusic ?? releaseLinks.appleMusic,
+              deezer: mergedLinks.deezer ?? releaseLinks.deezer,
+            };
+            // Arrête dès qu'on a les 3
+            if (mergedLinks.spotify && mergedLinks.appleMusic && mergedLinks.deezer) break;
+          }
+        }
+      } catch { /* best-effort */ }
+    }
+
+    // Annotation MB (texte libre, parfois une description)
+    const annotation: string | null = typeof data.annotation === 'string' && data.annotation.trim().length > 30
+      ? data.annotation.trim()
+      : null;
+
+    return { tags: combined.slice(0, 12), rgMbid, wikipediaUrl, annotation, streamingLinks: mergedLinks };
   } catch {
-    return [];
+    return empty;
   }
 }
 
 /**
  * Récupère tags + description depuis Last.fm.
+ * Essaie d'abord avec le release-group MBID (plus fiable), puis artist+title en fallback.
  * Nécessite LASTFM_API_KEY — retourne vide si absente (graceful degradation).
  */
 async function fetchLastFmData(
   artistName: string,
-  title: string
+  title: string,
+  rgMbid?: string | null
 ): Promise<{
   tags: Array<{ name: string; count: number }>;
   description: string | null;
@@ -135,17 +331,30 @@ async function fetchLastFmData(
   const apiKey = process.env.LASTFM_API_KEY;
   if (!apiKey) return empty;
 
-  try {
-    const res = await fetch(
-      `${LASTFM_API}/?method=album.getinfo` +
-        `&artist=${encodeURIComponent(artistName)}` +
-        `&album=${encodeURIComponent(title)}` +
-        `&api_key=${encodeURIComponent(apiKey)}&format=json&autocorrect=1`,
-      { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }
-    );
-    if (!res.ok) return empty;
-    const data = await res.json();
-    if (!data.album) return empty;
+  const base = `${LASTFM_API}/?method=album.getinfo&api_key=${encodeURIComponent(apiKey)}&format=json`;
+
+  // Essaie avec le MBID MB (release-group) en priorité, puis artist+title
+  const urls = [
+    ...(rgMbid ? [`${base}&mbid=${encodeURIComponent(rgMbid)}`] : []),
+    `${base}&artist=${encodeURIComponent(artistName)}&album=${encodeURIComponent(title)}&autocorrect=1`,
+  ];
+
+  let data: any = null;
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+      if (!res.ok) continue;
+      const json = await res.json();
+      if (json.album && (Array.isArray(json.album.tags?.tag) || typeof json.album.tags?.tag === 'object')) {
+        data = json;
+        break;
+      }
+      // album trouvé mais tags vides — garde en fallback si rien de mieux
+      if (json.album && !data) data = json;
+    } catch { continue; }
+  }
+
+  if (!data?.album) return empty;
 
     // Last.fm retourne les tags triés par poids (sans score numérique)
     // On inverse le rang pour avoir un poids relatif (1er tag = poids 10)
@@ -169,13 +378,50 @@ async function fetchLastFmData(
       if (description && description.length < 30) description = null;
     }
 
-    const listeners = data.album.listeners ? parseInt(data.album.listeners, 10) : null;
-    const playcount = data.album.playcount ? parseInt(data.album.playcount, 10) : null;
+  const listeners = data.album.listeners ? parseInt(data.album.listeners, 10) : null;
+  const playcount = data.album.playcount ? parseInt(data.album.playcount, 10) : null;
 
-    return { tags, description, url: data.album.url ?? null, listeners, playcount };
-  } catch {
-    return empty;
+  return { tags, description, url: data.album.url ?? null, listeners, playcount };
+}
+
+/**
+ * Récupère et sauvegarde uniquement les liens de streaming d'un album depuis MusicBrainz.
+ * N'efface pas les genres/description existants — upsert partiel sur les colonnes URL seulement.
+ */
+export async function fetchAlbumStreamingLinks(
+  albumId: string,
+  mbid: string,
+  artistName?: string,
+  title?: string
+): Promise<{ spotify: string | null; appleMusic: string | null; deezer: string | null }> {
+  let links: StreamingLinks = { spotify: null, appleMusic: null, deezer: null };
+
+  // Essaie MB uniquement si on a un mbid valide
+  if (mbid) {
+    const mbData = await fetchMBData(mbid);
+    links = mbData.streamingLinks;
   }
+
+  // Fallback/complément : cherche via APIs streaming si liens manquants
+  if (artistName && title && (!links.spotify || !links.appleMusic || !links.deezer)) {
+    links = await searchStreamingLinks(artistName, title, links);
+  }
+
+  // Sauvegarde uniquement si au moins un lien trouvé
+  if (links.spotify || links.appleMusic || links.deezer) {
+    const supabase = createSupabaseAdmin();
+    await supabase.from('album_metadata').upsert(
+      {
+        album_id: albumId,
+        spotify_url: links.spotify,
+        apple_music_url: links.appleMusic,
+        deezer_url: links.deezer,
+      },
+      { onConflict: 'album_id' }
+    );
+  }
+
+  return links;
 }
 
 export type EnrichResult = {
@@ -219,22 +465,40 @@ export async function enrichAlbumMetadata(
       }
     }
 
-    // Vérification clé Last.fm avant fetch
     if (!process.env.LASTFM_API_KEY) errors.push('LASTFM_API_KEY manquante');
 
-    // Fetch en parallèle
-    const [mbTags, lfm] = await Promise.allSettled([
-      fetchMBTags(releaseMbid),
-      fetchLastFmData(artistName, title),
-    ]);
+    // Étape 1 : MB (genres + tags + URLs)
+    const mbData = await fetchMBData(releaseMbid);
+    const mbTagsResult = mbData.tags;
 
-    const mbTagsResult = mbTags.status === 'fulfilled' ? mbTags.value : [];
-    const lfmResult = lfm.status === 'fulfilled' ? lfm.value : { tags: [], description: null, url: null, listeners: null, playcount: null };
+    // Étape 2 : Last.fm avec rgMbid en priorité (plus fiable que artist+title)
+    const lfmResult = await fetchLastFmData(artistName, title, mbData.rgMbid).catch(() => ({
+      tags: [], description: null, url: null, listeners: null, playcount: null,
+    }));
 
-    if (mbTags.status === 'rejected') errors.push(`MB error: ${String(mbTags.reason).slice(0, 120)}`);
-    if (lfm.status === 'rejected') errors.push(`LFM error: ${String(lfm.reason).slice(0, 120)}`);
+    // Étape 3 : bio Wikipedia si LFM n'en a pas (même pattern que les artistes)
+    let description = lfmResult.description;
+    if (!description && mbData.wikipediaUrl) {
+      try {
+        const urlObj = new URL(mbData.wikipediaUrl);
+        const lang = urlObj.hostname.split('.')[0];
+        const pageName = urlObj.pathname.split('/wiki/').pop();
+        if (pageName) {
+          const wikiRes = await fetch(
+            `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(decodeURIComponent(pageName))}`,
+            { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }
+          );
+          if (wikiRes.ok) {
+            const wikiData = await wikiRes.json();
+            const extract: string | undefined = wikiData.extract;
+            if (extract && extract.length > 30) description = extract;
+          }
+        }
+      } catch { /* best-effort */ }
+    }
 
-    console.log(`[enrichAlbumMetadata] albumId=${albumId} mbTags=${mbTagsResult.length} lfmTags=${lfmResult.tags.length} lfmDesc=${!!lfmResult.description}`);
+    // Fallback final : annotation MB
+    if (!description && mbData.annotation) description = mbData.annotation;
 
     // Merge : Last.fm en primaire (meilleure classification), MB en secondaire
     const tagMap = new Map<string, { count: number; source: 'lastfm' | 'musicbrainz' }>();
@@ -280,17 +544,23 @@ export async function enrichAlbumMetadata(
       }
     }
 
-    const hasDescription = !!lfmResult.description;
+    const hasDescription = !!description;
 
     // Upsert album_metadata — fetched_at uniquement si on a trouvé quelque chose
     const hasData = validTags.length > 0 || hasDescription;
+    const descSrc = description
+      ? (lfmResult.description ? 'lastfm' : mbData.wikipediaUrl ? 'wikipedia' : 'musicbrainz')
+      : null;
     const metaRow: Record<string, unknown> = {
       album_id: albumId,
-      description: lfmResult.description ?? null,
-      description_src: lfmResult.description ? 'lastfm' : null,
+      description: description ?? null,
+      description_src: descSrc,
       lastfm_url: lfmResult.url ?? null,
       lastfm_listeners: lfmResult.listeners ?? null,
       lastfm_playcount: lfmResult.playcount ?? null,
+      spotify_url: mbData.streamingLinks.spotify ?? null,
+      apple_music_url: mbData.streamingLinks.appleMusic ?? null,
+      deezer_url: mbData.streamingLinks.deezer ?? null,
     };
     if (hasData) metaRow.fetched_at = new Date().toISOString();
 
@@ -298,7 +568,6 @@ export async function enrichAlbumMetadata(
       .from('album_metadata')
       .upsert(metaRow as any, { onConflict: 'album_id' });
 
-    console.log(`[enrichAlbumMetadata] ✓ albumId=${albumId} — ${tagMap.size} genres, desc=${hasDescription}`);
     return { genres: validTags.length, hasDescription, mbTagsRaw: mbTagsResult.length, lfmTagsRaw: lfmResult.tags.length, errors };
   } catch (err) {
     // Enrichissement best-effort — ne jamais bloquer l'import

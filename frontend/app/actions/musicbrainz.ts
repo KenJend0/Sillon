@@ -773,8 +773,17 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
       ...trackExternalRows,
     ];
 
-    const { error: externalError } = await supabaseAdmin.from('external_ids').insert(externalRows);
+    // Supprimer les lignes orphelines (album supprimé sans CASCADE sur external_ids)
+    await supabaseAdmin
+      .from('external_ids')
+      .delete()
+      .in('value', externalRows.map((r) => r.value));
+
+    const { error: externalError } = await supabaseAdmin
+      .from('external_ids')
+      .insert(externalRows);
     if (externalError) {
+      console.error('[importAlbumFromMusicBrainz] external_ids error:', externalError);
       await rollbackImport();
       return { success: false, error: externalError.message };
     }
@@ -782,7 +791,8 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
     // Enrichissement découplé — déclenché côté client via /api/enrich pour éviter le timeout Vercel
     return { success: true, albumId: newAlbumId, imported: true, title: preview.title, artist: preview.artist, mbid };
   } catch (err) {
-    return { success: false, error: 'An error occurred' };
+    console.error('[importAlbumFromMusicBrainz] catch:', err);
+    return { success: false, error: String(err) };
   }
 }
 

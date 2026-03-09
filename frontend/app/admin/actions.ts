@@ -35,3 +35,29 @@ export async function setAlbumSpotifyUrl(albumId: string, spotifyUrl: string): P
   revalidatePath('/admin');
   return true;
 }
+
+/** Enregistre manuellement les liens de streaming (Spotify, Apple Music, Deezer). */
+export async function setAlbumStreamingUrls(
+  albumId: string,
+  urls: { spotify: string | null; appleMusic: string | null; deezer: string | null }
+): Promise<boolean> {
+  const user = await getAuthUser();
+  if (!user || !ADMIN_IDS.includes(user.id)) return false;
+
+  const supabase = createSupabaseAdmin();
+  await supabase
+    .from('album_metadata')
+    .upsert(
+      {
+        album_id: albumId,
+        spotify_url: urls.spotify ?? null,
+        apple_music_url: urls.appleMusic ?? null,
+        deezer_url: urls.deezer ?? null,
+        fetched_at: new Date().toISOString(),
+      },
+      { onConflict: 'album_id' }
+    );
+
+  revalidatePath('/admin');
+  return true;
+}

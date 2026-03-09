@@ -2,7 +2,9 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getAuthUser, createSupabaseAdmin } from '@/lib/supabase/server';
 import ReEnrichButton from './ReEnrichButton';
-import SpotifyUrlInput from './SpotifyUrlInput';
+import EnrichAllButton from './EnrichAllButton';
+import StreamingLinksEditor from './StreamingLinksEditor';
+import FetchStreamingAllButton from './FetchStreamingAllButton';
 
 const ADMIN_IDS = (process.env.ADMIN_USER_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 
@@ -20,6 +22,8 @@ type AlbumMeta = {
   description: string | null;
   fetched_at: string | null;
   spotify_url: string | null;
+  apple_music_url: string | null;
+  deezer_url: string | null;
 };
 
 export default async function AdminPage() {
@@ -44,7 +48,7 @@ export default async function AdminPage() {
     supabase.from('diary_entries').select('*', { count: 'exact', head: true }),
     supabase.from('albums').select('id, title, mbid, cover_url, release_date, artists(name)').order('title'),
     supabase.from('album_genres').select('album_id'),
-    supabase.from('album_metadata').select('album_id, description, fetched_at, spotify_url').order('fetched_at', { ascending: false }),
+    supabase.from('album_metadata').select('album_id, description, fetched_at, spotify_url, apple_music_url, deezer_url').order('fetched_at', { ascending: false }),
     supabase.from('diary_entries').select('*', { count: 'exact', head: true }).not('review_body', 'is', null),
   ]);
 
@@ -71,11 +75,10 @@ export default async function AdminPage() {
   const noGenreSet = new Set(noGenre.map((a) => a.id));
   const noDescSet = new Set(noDesc.map((a) => a.id));
   const notEnriched = albums.filter((a) => noGenreSet.has(a.id) || noDescSet.has(a.id));
-  // Saisie manuelle utile seulement si pas de MBID (sinon MusicBrainz peut trouver dynamiquement)
-  const noSpotify = albums.filter((a) => {
-    if (a.mbid) return false; // MusicBrainz peut récupérer le lien auto
+  // Albums sans aucun lien de streaming (Spotify, Apple Music, Deezer)
+  const noStreaming = albums.filter((a) => {
     const m = metaMap.get(a.id);
-    return !m?.spotify_url;
+    return !m?.spotify_url && !m?.apple_music_url && !m?.deezer_url;
   });
   const noCover = albums.filter((a) => !a.cover_url);
   const noMbid = albums.filter((a) => !a.mbid);
@@ -108,7 +111,7 @@ export default async function AdminPage() {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-12">
         {[
           { label: 'Non enrichi', value: notEnriched.length },
-          { label: 'Sans Spotify', value: noSpotify.length },
+          { label: 'Sans streaming', value: noStreaming.length },
           { label: 'Sans cover', value: noCover.length },
           { label: 'Sans MBID', value: noMbid.length },
         ].map((s) => (
@@ -125,7 +128,7 @@ export default async function AdminPage() {
       </div>
 
       {/* Albums non enrichis (genres et/ou description manquants) */}
-      <Section title="Non enrichi" count={notEnriched.length}>
+      <Section title="Non enrichi" count={notEnriched.length} action={<EnrichAllButton albums={notEnriched} />}>
         {notEnriched.map((a) => (
           <AlbumRow key={a.id} album={a}>
             <span className="flex items-center gap-1.5 mr-2 flex-shrink-0">
@@ -141,11 +144,11 @@ export default async function AdminPage() {
         ))}
       </Section>
 
-      {/* Albums sans lien Spotify */}
-      <Section title="Sans lien Spotify" count={noSpotify.length}>
-        {noSpotify.map((a) => (
+      {/* Albums sans lien de streaming */}
+      <Section title="Sans lien streaming" count={noStreaming.length} action={<FetchStreamingAllButton albums={noStreaming} />}>
+        {noStreaming.map((a) => (
           <AlbumRow key={a.id} album={a}>
-            <SpotifyUrlInput albumId={a.id} />
+            <StreamingLinksEditor albumId={a.id} mbid={a.mbid} artistName={a.artist_name} title={a.title} />
           </AlbumRow>
         ))}
       </Section>
@@ -212,7 +215,7 @@ export default async function AdminPage() {
   );
 }
 
-function Section({ title, count, children }: { title: string; count: number; children?: React.ReactNode }) {
+function Section({ title, count, action, children }: { title: string; count: number; action?: React.ReactNode; children?: React.ReactNode }) {
   return (
     <div className="border-t border-border-divider pt-6 mb-8">
       <div className="flex items-center gap-2 mb-4">
@@ -220,6 +223,7 @@ function Section({ title, count, children }: { title: string; count: number; chi
         <span className={`text-[11px] rounded-full px-2 py-0.5 ${count > 0 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
           {count > 0 ? count : '✓ OK'}
         </span>
+        {count > 0 && action && <span className="ml-auto">{action}</span>}
       </div>
       {count > 0 && <div className="space-y-0">{children}</div>}
     </div>

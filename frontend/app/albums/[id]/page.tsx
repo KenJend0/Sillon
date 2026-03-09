@@ -3,8 +3,8 @@ import BackButton from "@/components/BackButton";
 import { msToMMSS } from "@/lib/time";
 import { createSupabaseServer, getAuthUser } from "@/lib/supabase/server";
 import { isAlbumSaved } from "@/app/actions/saved-albums";
-import { getAlbumStreamingLinks, getArtistReleases } from "@/app/actions/musicbrainz";
-import { getSimilarAlbums } from "@/app/actions/metadata";
+import { getArtistReleases } from "@/app/actions/musicbrainz";
+import { getSimilarAlbums, fetchAlbumStreamingLinks } from "@/app/actions/metadata";
 import Link from "next/link";
 import Image from "next/image";
 import AlbumHero from "@/components/AlbumHero";
@@ -80,11 +80,10 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
         .order("disc_no", { ascending: true, nullsFirst: true })
         .order("track_no", { ascending: true, nullsFirst: true });
 
-    // Get current user and album saved status + streaming links + metadata in parallel
+    // Get current user and album saved status + metadata in parallel
     const user = await getAuthUser();
-    const [albumSaved, streamingLinks, genresData, albumMeta, similarAlbums, artistAlbumsData] = await Promise.all([
+    const [albumSaved, genresData, albumMeta, similarAlbums, artistAlbumsData] = await Promise.all([
         user ? isAlbumSaved(album.id) : Promise.resolve(false),
-        album.mbid ? getAlbumStreamingLinks(album.mbid) : Promise.resolve({} as import("@/app/actions/musicbrainz").StreamingLinks),
         supabase
             .from("album_genres")
             .select("weight, genres(name)")
@@ -93,7 +92,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
             .limit(3),
         supabase
             .from("album_metadata")
-            .select("description, spotify_url")
+            .select("description, spotify_url, apple_music_url, deezer_url")
             .eq("album_id", id)
             .maybeSingle(),
         getSimilarAlbums(album.id),
@@ -111,9 +110,24 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
     const genres: string[] = (genresData.data ?? [])
         .flatMap((row) => (row.genres && typeof row.genres === "object" && "name" in row.genres ? [row.genres.name as string] : []));
     const description: string | null = albumMeta.data?.description ?? null;
-    // Lien Spotify manuel (admin) prend la priorité sur MusicBrainz
-    if (albumMeta.data?.spotify_url) {
-        streamingLinks.spotify = albumMeta.data.spotify_url;
+
+    // Liens DB en priorité — fetch automatique si aucun lien en base
+    const dbSpotify = albumMeta.data?.spotify_url ?? null;
+    const dbApple = albumMeta.data?.apple_music_url ?? null;
+    const dbDeezer = albumMeta.data?.deezer_url ?? null;
+    let streamingLinks: { spotify?: string; appleMusic?: string; deezer?: string; tidal?: string } = {
+        ...(dbSpotify ? { spotify: dbSpotify } : {}),
+        ...(dbApple ? { appleMusic: dbApple } : {}),
+        ...(dbDeezer ? { deezer: dbDeezer } : {}),
+    };
+    const hasAnyLink = dbSpotify || dbApple || dbDeezer;
+    if (!hasAnyLink && album.mbid && artist?.name) {
+        try {
+            const fetched = await fetchAlbumStreamingLinks(album.id, album.mbid, artist.name, album.title);
+            if (fetched.spotify) streamingLinks.spotify = fetched.spotify;
+            if (fetched.appleMusic) streamingLinks.appleMusic = fetched.appleMusic;
+            if (fetched.deezer) streamingLinks.deezer = fetched.deezer;
+        } catch { /* best-effort */ }
     }
     const artistAlbums = artistAlbumsData.data ?? [];
     const isAdmin = user
@@ -216,6 +230,15 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
         year,
     };
 
+    // Display logic: if only 1 metadata present (genres/streaming/bio) and it's NOT bio → inline in hero
+    // If 2+ present OR bio is present → show in dedicated section below
+    const hasGenres = genres.length > 0;
+    const hasDescription = !!description;
+    const hasStreamingLinks = !!(streamingLinks.spotify || streamingLinks.appleMusic || streamingLinks.deezer || streamingLinks.tidal);
+    const metadataCount = [hasGenres, hasDescription, hasStreamingLinks].filter(Boolean).length;
+    const showInHero = metadataCount === 1 && !hasDescription;
+    const showInSection = metadataCount >= 2 || hasDescription;
+
     return (
         <main className="max-w-page mx-auto px-4 py-8 pb-24 overflow-x-hidden">
             <BackButton />
@@ -231,19 +254,19 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                     myLatestEntry={myLatestEntry}
                     myEntriesCount={myEntries.length}
                     autoOpenDiary={autoOpenDiary}
-                    albumHasGenres={genres.length > 0}
-                    genres={genres.length > 0 && !description && Object.keys(streamingLinks).length === 0 ? genres : undefined}
+                    albumHasGenres={hasGenres}
+                    genres={showInHero && hasGenres ? genres : undefined}
+                    streamingLinks={showInHero && hasStreamingLinks ? streamingLinks : undefined}
                     networkListeners={networkListeners}
                 />
             </div>
 
             {/* ========== 1B. ALBUM INFO + DESCRIPTION ========== */}
-            {/* 1B only renders when there's streaming links or description (genres-only → go to hero) */}
-            {(Object.keys(streamingLinks).length > 0 || !!description || (isAdmin && !streamingLinks.spotify)) && (
+            {(showInSection || (isAdmin && !streamingLinks.spotify)) && (
                 <div className="border-t border-border-divider pt-8 mb-20">
-                    {(genres.length > 0 || Object.keys(streamingLinks).length > 0) && (
+                    {showInSection && (hasGenres || hasStreamingLinks) && (
                         <div className="mb-6">
-                            {genres.length > 0 && (
+                            {hasGenres && (
                                 <div className="flex items-center gap-2 flex-wrap mb-4">
                                     <span className="text-[12px] text-text-tertiary">Genres</span>
                                     {genres.map((g) => (
@@ -257,7 +280,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                                 </div>
                             )}
 
-                            {Object.keys(streamingLinks).length > 0 && (
+                            {hasStreamingLinks && (
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-[12px] text-text-tertiary">Écouter sur</span>
                                     {[
