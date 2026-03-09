@@ -3,14 +3,15 @@
 import { useState } from "react";
 import ReviewsBottomSheet from "@/components/ReviewsBottomSheet";
 import Reviews from "@/components/Reviews";
+import type { AlbumReview } from "@/app/actions/diary";
 
 type AlbumReviewSectionProps = {
     albumId: string;
     reviewsCount?: number;
+    initialReviews?: AlbumReview[];
 };
 
-export default function AlbumReviewSection({ albumId, reviewsCount = 0 }: AlbumReviewSectionProps) {
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
+export default function AlbumReviewSection({ albumId, reviewsCount = 0, initialReviews }: AlbumReviewSectionProps) {
     const [isReviewsSheetOpen, setIsReviewsSheetOpen] = useState(false);
 
     return (
@@ -28,7 +29,7 @@ export default function AlbumReviewSection({ albumId, reviewsCount = 0 }: AlbumR
                     </button>
                 )}
             </div>
-            <Reviews key={refreshTrigger} albumId={albumId} />
+            <Reviews albumId={albumId} initialReviews={initialReviews} />
 
             {reviewsCount > 0 && (
                 <ReviewsBottomSheet

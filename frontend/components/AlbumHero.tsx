@@ -1,4 +1,4 @@
-﻿// frontend/components/AlbumHero.tsx
+// frontend/components/AlbumHero.tsx
 "use client";
 
 import Link from "next/link";
@@ -8,6 +8,20 @@ import MyActivitiesModal from "@/components/MyActivitiesModal";
 import SaveAlbumButton from "@/components/SaveAlbumButton";
 import AddToDiaryButton from "@/components/AddToDiaryButton";
 import EditDiaryEntryButton from "@/components/EditDiaryEntryButton";
+import GenrePills from "@/components/GenrePills";
+import NetworkListenersBottomSheet from "@/components/NetworkListenersBottomSheet";
+import { msToDuration } from "@/lib/time";
+
+type NetworkListener = {
+    userId: string;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    rating: number | null;
+    listenedAt: string | null;
+    entryId: string | null;
+    hasReview: boolean;
+};
 
 type AlbumHeroProps = {
     album: {
@@ -17,6 +31,8 @@ type AlbumHeroProps = {
         artistId?: string;
         coverUrl?: string | null;
         year?: number | null;
+        trackCount?: number;
+        totalDurationMs?: number;
     };
     albumId?: string;
     isSaved?: boolean;
@@ -37,8 +53,9 @@ type AlbumHeroProps = {
     autoOpenDiary?: boolean;
     albumHasGenres?: boolean;
     genres?: string[];
+    genreWeights?: Record<string, number>;
     streamingLinks?: { spotify?: string; appleMusic?: string; deezer?: string; tidal?: string };
-    networkListeners?: Array<{ userId: string; username: string; displayName: string | null; avatarUrl: string | null }>;
+    networkListeners?: NetworkListener[];
 };
 
 export default function AlbumHero({
@@ -52,11 +69,13 @@ export default function AlbumHero({
     autoOpenDiary = false,
     albumHasGenres = true,
     genres,
+    genreWeights,
     streamingLinks,
     networkListeners = [],
 }: AlbumHeroProps) {
     const [coverError, setCoverError] = useState(false);
     const [isMyActivitiesOpen, setIsMyActivitiesOpen] = useState(false);
+    const [isNetworkOpen, setIsNetworkOpen] = useState(false);
 
     return (
         <>
@@ -86,7 +105,9 @@ export default function AlbumHero({
                     <h1 className="text-[32px] font-medium text-text-primary tracking-[-0.02em] leading-[1.2] mb-2">
                         {album.title}
                     </h1>
-                    <div className="text-[14px] text-text-secondary mb-4">
+
+                    {/* Ligne 1 : artiste · année */}
+                    <div className="text-[14px] text-text-secondary">
                         {album.artistId ? (
                             <Link href={`/artists/${album.artistId}`} className="hover:text-[#8E6F5E] transition-colors duration-150">
                                 {album.artist}
@@ -96,6 +117,15 @@ export default function AlbumHero({
                         )}
                         {album.year && ` · ${album.year}`}
                     </div>
+
+                    {/* Ligne 2 : X morceaux · durée */}
+                    {(album.trackCount != null || album.totalDurationMs != null) && (
+                        <div className="text-[13px] text-text-tertiary mt-0.5 mb-4">
+                            {album.trackCount != null && `${album.trackCount} morceau${album.trackCount > 1 ? "x" : ""}`}
+                            {album.trackCount != null && album.totalDurationMs != null && " · "}
+                            {album.totalDurationMs != null && msToDuration(album.totalDurationMs)}
+                        </div>
+                    )}
 
                     {/* Stats */}
                     {stats && (stats.avg_rating !== null || stats.listeners_count > 0 || stats.reviews_count > 0) && (
@@ -120,25 +150,29 @@ export default function AlbumHero({
                             )}
                         </div>
                     )}
-
                 </div>
             </div>
 
-            {/* Network listeners */}
+            {/* Network listeners — cliquable, ouvre le bottom sheet */}
             {networkListeners.length > 0 && (() => {
                 const shown = networkListeners.slice(0, 3);
                 const rest = networkListeners.length - shown.length;
-                const names = shown.map((l) => l.displayName || l.username);
+
+                const tokens = shown.map((l) => l.displayName || l.username);
                 let label: string;
-                if (names.length === 1) {
-                    label = `${names[0]} a écouté cet album`;
+                if (tokens.length === 1) {
+                    label = `${tokens[0]} a écouté cet album`;
                 } else if (rest === 0) {
-                    label = `${names.slice(0, -1).join(", ")} et ${names[names.length - 1]} ont écouté cet album`;
+                    label = `${tokens.slice(0, -1).join(", ")} et ${tokens[tokens.length - 1]} ont écouté cet album`;
                 } else {
-                    label = `${names.join(", ")} et ${rest} autre${rest > 1 ? "s" : ""} ont écouté cet album`;
+                    label = `${tokens.join(", ")} et ${rest} autre${rest > 1 ? "s" : ""} ont écouté cet album`;
                 }
+
                 return (
-                    <div className="flex items-center gap-2 mt-5">
+                    <button
+                        onClick={() => setIsNetworkOpen(true)}
+                        className="flex items-center gap-2 mt-5 hover:opacity-75 transition-opacity duration-150"
+                    >
                         <div className="flex -space-x-1.5">
                             {shown.map((l) => (
                                 <div key={l.userId} className="w-5 h-5 rounded-full overflow-hidden bg-background-secondary border border-background-primary flex-shrink-0">
@@ -151,21 +185,22 @@ export default function AlbumHero({
                             ))}
                         </div>
                         <span className="text-[12px] text-text-tertiary leading-snug">{label}</span>
-                    </div>
+                    </button>
                 );
             })()}
 
-            {/* Inline metadata (when only one of genres/streaming is present, no bio) */}
-            {genres && genres.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-4">
-                    {genres.map((g) => (
-                        <span key={g} className="text-[11px] text-text-tertiary bg-background-secondary rounded-full px-2.5 py-0.5 capitalize">
-                            {g}
-                        </span>
-                    ))}
-                </div>
+            {/* Genres */}
+            {genres !== undefined && (genres.length > 0 || userId) && (
+                <GenrePills
+                    genres={genres}
+                    albumId={albumId || album.id}
+                    userId={genres.length < 3 ? userId : undefined}
+                    genreWeights={genreWeights}
+                    className="mt-4"
+                />
             )}
 
+            {/* Streaming links */}
             {streamingLinks && Object.values(streamingLinks).some(Boolean) && (
                 <div className="flex items-center gap-2 flex-wrap mt-4">
                     <span className="text-[12px] text-text-tertiary">Écouter sur</span>
@@ -197,7 +232,6 @@ export default function AlbumHero({
             {/* ========== TA NOTE ========== */}
             {myLatestEntry && (
                 <div className="border-t border-border-divider mt-8 pt-8 mb-10">
-                    {/* Section title */}
                     <div className="flex items-center gap-3 mb-6">
                         <h2 className="text-h2 text-text-primary">
                             Mon écoute
@@ -212,7 +246,6 @@ export default function AlbumHero({
                         )}
                     </div>
 
-                    {/* Card */}
                     <div className="bg-background-secondary rounded-[12px] p-4">
                         <div className="flex items-start justify-between">
                             <div>
@@ -275,7 +308,13 @@ export default function AlbumHero({
                     onClose={() => setIsMyActivitiesOpen(false)}
                 />
             )}
+
+            {/* Network Listeners Bottom Sheet */}
+            <NetworkListenersBottomSheet
+                listeners={networkListeners}
+                isOpen={isNetworkOpen}
+                onClose={() => setIsNetworkOpen(false)}
+            />
         </>
     );
 }
-

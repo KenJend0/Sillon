@@ -1,0 +1,67 @@
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+import BottomSheet from "@/components/BottomSheet";
+
+type Listener = {
+    userId: string;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    rating: number | null;
+    listenedAt: string | null;
+    entryId: string | null;
+    hasReview: boolean;
+};
+
+type Props = {
+    listeners: Listener[];
+    isOpen: boolean;
+    onClose: () => void;
+};
+
+export default function NetworkListenersBottomSheet({ listeners, isOpen, onClose }: Props) {
+    return (
+        <BottomSheet isOpen={isOpen} onClose={onClose} title="Ont écouté cet album" maxHeight="h-[50vh]">
+            <div className="px-6 py-2">
+                {listeners.map((l) => {
+                    const name = l.displayName || l.username;
+                    const href = l.entryId ? `/diary/${l.entryId}` : `/u/${l.username}`;
+                    return (
+                        <Link
+                            key={l.userId}
+                            href={href}
+                            onClick={onClose}
+                            className="flex items-center gap-3 py-3 border-b border-border-divider last:border-0 hover:opacity-75 transition-opacity duration-150"
+                        >
+                            {/* Avatar */}
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-background-secondary flex-shrink-0">
+                                {l.avatarUrl ? (
+                                    <Image src={l.avatarUrl} alt={name} width={32} height={32} className="object-cover w-full h-full" />
+                                ) : (
+                                    <div className="w-full h-full bg-background-tertiary" />
+                                )}
+                            </div>
+
+                            {/* Name */}
+                            <span className="flex-1 text-[14px] text-text-primary font-medium">{name}</span>
+
+                            {/* Rating + review indicator */}
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                {l.rating && l.rating > 0 ? (
+                                    <span className="text-[14px] text-text-primary font-medium">{l.rating}<span className="text-[11px] text-text-tertiary">/10</span></span>
+                                ) : (
+                                    <span className="text-[12px] text-text-tertiary">—</span>
+                                )}
+                                {l.hasReview && (
+                                    <span className="text-[10px] text-text-tertiary border border-border-divider rounded px-1 py-0.5 leading-none">critique</span>
+                                )}
+                            </div>
+                        </Link>
+                    );
+                })}
+            </div>
+        </BottomSheet>
+    );
+}

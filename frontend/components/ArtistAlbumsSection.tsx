@@ -104,6 +104,15 @@ export default function ArtistAlbumsSection({ dbAlbums, mbAlbums }: Props) {
             }
             const albumId = (res as { albumId: string }).albumId;
             showToast("Album importé", "success");
+            // Fire-and-forget enrichment
+            if ('mbid' in res && res.mbid && 'title' in res && 'artist' in res) {
+                fetch('/api/enrich', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ albumId, mbid: res.mbid, title: res.title, artist: res.artist }),
+                }).catch(() => {});
+            }
+            router.refresh();
             router.push(`/albums/${albumId}`);
         } catch {
             showToast("Erreur lors de l'import", "error");

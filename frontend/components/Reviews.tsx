@@ -2,26 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getAlbumReviewsPreview } from "@/app/actions/diary";
+import { getAlbumReviewsPreview, type AlbumReview } from "@/app/actions/diary";
 import { showToast } from "@/components/Toast";
 import { UserAvatar } from "@/components/avatars/DefaultAvatar";
 
-type Review = {
-    id: string;
-    user_id: string;
-    rating: number | null;
-    review_body: string | null;
-    created_at: string;
-    display_name?: string | null;
-    username?: string | null;
-    avatar_url?: string | null;
-};
+type Review = AlbumReview;
 
-export default function Reviews({ albumId }: { albumId: string }) {
-    const [items, setItems] = useState<Review[]>([]);
-    const [loading, setLoading] = useState(true);
+export default function Reviews({ albumId, initialReviews }: { albumId: string; initialReviews?: AlbumReview[] }) {
+    const [items, setItems] = useState<Review[]>(initialReviews ?? []);
+    const [loading, setLoading] = useState(!initialReviews);
 
     useEffect(() => {
+        // Skip fetch si les données ont été pré-chargées côté serveur
+        if (initialReviews) return;
+
         (async () => {
             setLoading(true);
             try {

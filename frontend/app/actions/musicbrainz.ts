@@ -952,6 +952,9 @@ export async function previewArtistFromMusicBrainz(mbid: string) {
  * inc=releases is NOT supported by the browse endpoint — previewAlbumFromMusicBrainz
  * handles the release-group MBID by doing a release-group lookup on 404.
  */
+const _artistReleasesCache = new Map<string, { result: any; expiresAt: number }>();
+const ARTIST_RELEASES_TTL_MS = 5 * 60 * 1000; // 5 min
+
 export async function getArtistReleases(mbid: string): Promise<{
   success: boolean;
   releases?: Array<{ mbid: string; releaseGroupMbid: string; title: string; date: string | null; type: string | null }>;
@@ -961,6 +964,12 @@ export async function getArtistReleases(mbid: string): Promise<{
   if (!mbid) {
     console.error('[getArtistReleases] ✗ mbid is empty/null — skipping MB fetch');
     return { success: false, error: 'mbid is empty' };
+  }
+
+  const cached = _artistReleasesCache.get(mbid);
+  if (cached && Date.now() < cached.expiresAt) {
+    console.log(`[getArtistReleases] cache hit for mbid="${mbid}"`);
+    return cached.result;
   }
 
   try {
@@ -1022,7 +1031,9 @@ export async function getArtistReleases(mbid: string): Promise<{
       });
 
     console.log(`[getArtistReleases] ✓ returning ${result.length} releases for mbid="${mbid}"`);
-    return { success: true, releases: result };
+    const finalResult = { success: true, releases: result };
+    _artistReleasesCache.set(mbid, { result: finalResult, expiresAt: Date.now() + ARTIST_RELEASES_TTL_MS });
+    return finalResult;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error(`[getArtistReleases] ✗ exception: ${errorMsg}`);

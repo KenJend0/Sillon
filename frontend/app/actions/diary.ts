@@ -729,8 +729,9 @@ export async function getAlbumReviewsPage(input: {
   tab: AlbumReviewsTab;
   offset?: number;
   limit?: number;
+  orderBy?: 'recent' | 'top';
 }): Promise<{ items: AlbumReview[]; hasMore: boolean; userId: string | null; hasFollowing: boolean }> {
-  const { albumId, tab, offset = 0, limit = 12 } = input;
+  const { albumId, tab, offset = 0, limit = 12, orderBy = 'recent' } = input;
   const supabase = await createSupabaseServer();
   const currentUser = await getAuthUser();
 
@@ -758,8 +759,13 @@ export async function getAlbumReviewsPage(input: {
     .select('id, user_id, rating, review_body, created_at')
     .eq('album_id', albumId)
     .not('review_body', 'is', null)
-    .neq('review_body', '')
-    .order('created_at', { ascending: false });
+    .neq('review_body', '');
+
+  if (orderBy === 'top') {
+    query = query.order('rating', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
+  } else {
+    query = query.order('created_at', { ascending: false });
+  }
 
   if (tab === 'my' && currentUser) {
     query = query.eq('user_id', currentUser.id);

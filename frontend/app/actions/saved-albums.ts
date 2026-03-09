@@ -140,17 +140,18 @@ export async function saveAlbumOnce(albumId: string): Promise<void> {
 }
 
 /**
- * Check if album is saved by current user
+ * Check if album is saved by current user.
+ * Accepts an optional userId to avoid a redundant getAuthUser() call when the caller already has the user.
  */
-export async function isAlbumSaved(albumId: string): Promise<boolean> {
-  const user = await getAuthUser();
-  if (!user) return false;
+export async function isAlbumSaved(albumId: string, userId?: string): Promise<boolean> {
+  const resolvedUserId = userId ?? (await getAuthUser())?.id;
+  if (!resolvedUserId) return false;
 
   const supabase = await createSupabaseServer();
   const { data } = await supabase
     .from('saved_albums')
     .select('id')
-    .eq('user_id', user.id)
+    .eq('user_id', resolvedUserId)
     .eq('album_id', albumId)
     .single();
 

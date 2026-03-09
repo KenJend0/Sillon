@@ -1,0 +1,128 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { voteAlbumGenre } from "@/app/actions/metadata";
+import { GENRE_FAMILIES, type GenreFamily } from "@/lib/genre-families";
+import BottomSheet from "@/components/BottomSheet";
+import { showToast } from "@/components/Toast";
+
+type Props = {
+    genres: string[];
+    albumId: string;
+    userId?: string;
+    genreWeights?: Record<string, number>;
+    className?: string;
+};
+
+export default function GenrePills({ genres, albumId, userId, genreWeights, className }: Props) {
+    const router = useRouter();
+    const [open, setOpen] = useState(false);
+    const [voting, setVoting] = useState(false);
+    const [selectedFamily, setSelectedFamily] = useState<GenreFamily | null>(null);
+
+    async function handleVote(slug: string) {
+        setVoting(true);
+        try {
+            await voteAlbumGenre(albumId, slug);
+            showToast("Genre suggéré, merci !", "success");
+            setSelectedFamily(null);
+            setOpen(false);
+            router.refresh();
+        } catch {
+            showToast("Erreur lors du vote", "error");
+        } finally {
+            setVoting(false);
+        }
+    }
+
+    function handleFamilyClick(family: GenreFamily) {
+        if (family.subgenres.length === 0) {
+            handleVote(family.slug);
+        } else {
+            setSelectedFamily(family);
+        }
+    }
+
+    return (
+        <>
+            <div className={`flex flex-wrap gap-1.5 ${className ?? ""}`}>
+                {genres.map((g) => {
+                    const votes = genreWeights?.[g];
+                    return (
+                        <span
+                            key={g}
+                            className="text-[11px] text-text-tertiary bg-background-secondary rounded-full px-2.5 py-0.5 capitalize"
+                        >
+                            {g}{votes != null && votes > 0 && <span className="ml-1 opacity-60">{votes}</span>}
+                        </span>
+                    );
+                })}
+                {userId && (
+                    <button
+                        onClick={() => setOpen(true)}
+                        className="text-[11px] text-text-tertiary border border-border rounded-full px-2.5 py-0.5 hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150"
+                    >
+                        + Genre
+                    </button>
+                )}
+            </div>
+
+            <BottomSheet
+                isOpen={open}
+                onClose={() => { setSelectedFamily(null); setOpen(false); }}
+                title="Suggérer un genre"
+                maxHeight="h-[60vh]"
+            >
+                <div className="px-6 py-4">
+                    {!selectedFamily ? (
+                        <div className="flex flex-wrap gap-2">
+                            {GENRE_FAMILIES.map((f) => (
+                                <button
+                                    key={f.slug}
+                                    onClick={() => handleFamilyClick(f)}
+                                    disabled={voting}
+                                    className="px-3 py-1.5 rounded-full border border-border text-[13px] text-text-primary hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150 disabled:opacity-50"
+                                >
+                                    {f.label}
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => setSelectedFamily(null)}
+                                className="flex items-center gap-1.5 text-[13px] text-text-tertiary hover:text-text-secondary transition-colors duration-150 mb-5"
+                            >
+                                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                                </svg>
+                                {selectedFamily.label}
+                            </button>
+                            <p className="text-[14px] text-text-secondary mb-4">Un sous-genre plus précis ?</p>
+                            <div className="flex flex-wrap gap-2 mb-6">
+                                {selectedFamily.subgenres.map((sub) => (
+                                    <button
+                                        key={sub.slug}
+                                        onClick={() => handleVote(sub.slug)}
+                                        disabled={voting}
+                                        className="px-3 py-1.5 rounded-full border border-border text-[13px] text-text-primary hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150 disabled:opacity-50"
+                                    >
+                                        {sub.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => handleVote(selectedFamily.slug)}
+                                disabled={voting}
+                                className="w-full text-[13px] text-text-tertiary hover:text-text-secondary transition-colors duration-150"
+                            >
+                                Voter pour {selectedFamily.label} sans préciser
+                            </button>
+                        </>
+                    )}
+                </div>
+            </BottomSheet>
+        </>
+    );
+}

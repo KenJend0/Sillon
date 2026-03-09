@@ -588,9 +588,42 @@ export type SimilarAlbum = {
   sharedGenres: number;
 };
 
+// Cache TTL pour les albums similaires (24h)
+const SIMILAR_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+async function getCachedSimilarAlbums(albumId: string): Promise<SimilarAlbum[] | null> {
+  try {
+    const supabase = await createSupabaseServer();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any)
+      .from('similar_albums_cache')
+      .select('similar_albums, computed_at')
+      .eq('album_id', albumId)
+      .maybeSingle();
+    if (!data) return null;
+    if (Date.now() - new Date(data.computed_at).getTime() > SIMILAR_CACHE_TTL_MS) return null;
+    return data.similar_albums as SimilarAlbum[];
+  } catch {
+    return null;
+  }
+}
+
+async function setCachedSimilarAlbums(albumId: string, albums: SimilarAlbum[]): Promise<void> {
+  try {
+    const supabase = createSupabaseAdmin();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('similar_albums_cache').upsert({
+      album_id: albumId,
+      similar_albums: albums,
+      computed_at: new Date().toISOString(),
+    });
+  } catch { /* best-effort */ }
+}
+
 /**
  * Retourne jusqu'à `limit` albums similaires à `albumId` basés sur le
  * chevauchement de genres pondérés (score = somme des produits de poids).
+ * Résultat mis en cache 24h dans similar_albums_cache.
  * Retourne [] si l'album n'a pas de genres ou en cas d'erreur.
  */
 export async function getSimilarAlbums(
@@ -598,6 +631,10 @@ export async function getSimilarAlbums(
   limit = 6
 ): Promise<SimilarAlbum[]> {
   try {
+    // Cache hit → 1 seule requête SQL au lieu de 4
+    const cached = await getCachedSimilarAlbums(albumId);
+    if (cached !== null) return cached;
+
     const supabase = await createSupabaseServer();
 
     // 1. Genres de l'album courant (top 6 par poids)
@@ -613,12 +650,13 @@ export async function getSimilarAlbums(
     const genreIds = myGenres.map((g) => g.genre_id);
     const myWeightMap = new Map(myGenres.map((g) => [g.genre_id, g.weight]));
 
-    // 2. Autres albums partageant ces genres
+    // 2. Autres albums partageant ces genres (limité à 500 pour éviter scan complet sur genres populaires)
     const { data: candidates } = await supabase
       .from('album_genres')
       .select('album_id, genre_id, weight')
       .in('genre_id', genreIds)
-      .neq('album_id', albumId);
+      .neq('album_id', albumId)
+      .limit(500);
 
     if (!candidates || candidates.length === 0) return [];
 
@@ -675,7 +713,7 @@ export async function getSimilarAlbums(
       return sb.score * popSimB - sa.score * popSimA;
     });
 
-    return rankedIds
+    const result = rankedIds
       .map((id) => {
         const a = albums.find((al) => al.id === id);
         if (!a) return null;
@@ -691,6 +729,11 @@ export async function getSimilarAlbums(
         };
       })
       .filter((x): x is SimilarAlbum => x !== null);
+
+    // Mise en cache fire-and-forget (n'attend pas, n'impacte pas le render)
+    setCachedSimilarAlbums(albumId, result).catch(() => {});
+
+    return result;
   } catch {
     return [];
   }

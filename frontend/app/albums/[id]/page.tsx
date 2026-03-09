@@ -1,10 +1,11 @@
-﻿import { notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import BackButton from "@/components/BackButton";
-import { msToMMSS } from "@/lib/time";
+import { msToMMSS, msToDuration } from "@/lib/time";
 import { createSupabaseServer, getAuthUser } from "@/lib/supabase/server";
 import { isAlbumSaved } from "@/app/actions/saved-albums";
 import { getArtistReleases } from "@/app/actions/musicbrainz";
 import { getSimilarAlbums, fetchAlbumStreamingLinks } from "@/app/actions/metadata";
+import { getAlbumReviewsPreview, type AlbumReview } from "@/app/actions/diary";
 import Link from "next/link";
 import Image from "next/image";
 import AlbumHero from "@/components/AlbumHero";
@@ -13,6 +14,7 @@ import ArtistAlbumsSection from "@/components/ArtistAlbumsSection";
 import DescriptionCollapse from "@/components/DescriptionCollapse";
 import ScrollToHashClient from "@/components/ScrollToHashClient";
 import AdminSpotifyEdit from "@/components/AdminSpotifyEdit";
+import GenrePills from "@/components/GenrePills";
 
 type PageProps = {
     params: Promise<{ id: string }>;
@@ -56,7 +58,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
     const autoOpenDiary = resolvedSearchParams?.addToDiary === "1" || resolvedSearchParams?.addToDiary === "true";
     const supabase = await createSupabaseServer();
 
-    // Fetch album
+    // [1] Fetch album — bloque tout, obligatoire en premier
     const { data: album } = await supabase
         .from("albums")
         .select("id, title, cover_url, release_date, artist_id, mbid")
@@ -65,28 +67,40 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
 
     if (!album) notFound();
 
-    // Fetch artist
-    const { data: artist } = await supabase
-        .from("artists")
-        .select("id, name, mbid")
-        .eq("id", album.artist_id)
-        .maybeSingle();
+    // [2] Fetch artist, tracks et user en parallèle (dépendent seulement de album)
+    const [artistResult, tracksResult, user] = await Promise.all([
+        supabase
+            .from("artists")
+            .select("id, name, mbid")
+            .eq("id", album.artist_id)
+            .maybeSingle(),
+        supabase
+            .from("tracks")
+            .select("id, title, duration_ms, track_no, disc_no")
+            .eq("album_id", id)
+            .order("disc_no", { ascending: true, nullsFirst: true })
+            .order("track_no", { ascending: true, nullsFirst: true }),
+        getAuthUser(),
+    ]);
+    const artist = artistResult.data;
+    const tracks = tracksResult.data ?? [];
 
-    // Fetch tracks
-    const { data: tracks = [] } = await supabase
-        .from("tracks")
-        .select("id, title, duration_ms, track_no, disc_no")
-        .eq("album_id", id)
-        .order("disc_no", { ascending: true, nullsFirst: true })
-        .order("track_no", { ascending: true, nullsFirst: true });
-
-    // Get current user and album saved status + metadata in parallel
-    const user = await getAuthUser();
-    const [albumSaved, genresData, albumMeta, similarAlbums, artistAlbumsData] = await Promise.all([
-        user ? isAlbumSaved(album.id) : Promise.resolve(false),
+    // [3] Grand batch parallèle — tout ce qui dépend de album.id ou user.id
+    const [
+        albumSaved,
+        genresData,
+        albumMeta,
+        similarAlbums,
+        artistAlbumsData,
+        albumStatsResp,
+        followsResp,
+        myEntriesResp,
+        reviewsPreview,
+    ] = await Promise.all([
+        user ? isAlbumSaved(album.id, user.id) : Promise.resolve(false),
         supabase
             .from("album_genres")
-            .select("weight, genres(name)")
+            .select("weight, source, genres(name)")
             .eq("album_id", id)
             .order("weight", { ascending: false })
             .limit(3),
@@ -99,16 +113,38 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
         album.artist_id
             ? supabase
                 .from("albums")
-                .select("id, title, cover_url, release_date")
+                .select("id, title, cover_url, release_date, album_stats(listeners_count)")
                 .eq("artist_id", album.artist_id)
                 .neq("id", album.id)
-                .order("release_date", { ascending: false })
+                .order("listeners_count", { ascending: false, referencedTable: "album_stats" })
                 .limit(8)
             : Promise.resolve({ data: [] }),
+        supabase
+            .from("album_stats")
+            .select("reviews_count, avg_rating, listeners_count")
+            .eq("album_id", id)
+            .maybeSingle(),
+        user
+            ? supabase.from("follows").select("followee_id").eq("follower_id", user.id)
+            : Promise.resolve({ data: null }),
+        user
+            ? supabase
+                .from("diary_entries")
+                .select("id, rating, review_body, listened_at, created_at")
+                .eq("album_id", id)
+                .eq("user_id", user.id)
+                .order("created_at", { ascending: false })
+            : Promise.resolve({ data: null }),
+        getAlbumReviewsPreview(id, 3),
     ]);
 
     const genres: string[] = (genresData.data ?? [])
         .flatMap((row) => (row.genres && typeof row.genres === "object" && "name" in row.genres ? [row.genres.name as string] : []));
+    const genreWeights: Record<string, number> = Object.fromEntries(
+        (genresData.data ?? [])
+            .filter((row) => row.source === 'community' && row.genres && typeof row.genres === "object" && "name" in row.genres)
+            .map((row) => [(row.genres as { name: string }).name, row.weight ?? 1])
+    );
     const description: string | null = albumMeta.data?.description ?? null;
 
     // Liens DB en priorité — fetch automatique si aucun lien en base
@@ -129,39 +165,65 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
             if (fetched.deezer) streamingLinks.deezer = fetched.deezer;
         } catch { /* best-effort */ }
     }
+
     const artistAlbums = artistAlbumsData.data ?? [];
     const isAdmin = user
         ? (process.env.ADMIN_USER_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean).includes(user.id)
         : false;
 
-    // Activité réseau : abonnés ayant écouté cet album
-    type NetworkListener = { userId: string; username: string; displayName: string | null; avatarUrl: string | null };
+    // Activité réseau — follows déjà dans le batch, 2 requêtes séquentielles restantes
+    type NetworkListener = {
+        userId: string;
+        username: string;
+        displayName: string | null;
+        avatarUrl: string | null;
+        rating: number | null;
+        listenedAt: string | null;
+        entryId: string | null;
+        hasReview: boolean;
+    };
     let networkListeners: NetworkListener[] = [];
-    if (user) {
-        const { data: follows } = await supabase
-            .from("follows")
-            .select("followee_id")
-            .eq("follower_id", user.id);
-        const followeeIds = (follows ?? []).map((f) => f.followee_id);
-        if (followeeIds.length > 0) {
-            const { data: entries } = await supabase
-                .from("diary_entries")
-                .select("user_id")
-                .eq("album_id", album.id)
-                .in("user_id", followeeIds);
-            const listenerIds = [...new Set((entries ?? []).map((e) => e.user_id))];
-            if (listenerIds.length > 0) {
-                const { data: profiles } = await supabase
-                    .from("profiles")
-                    .select("id, username, display_name, avatar_url")
-                    .in("id", listenerIds.slice(0, 5));
-                networkListeners = (profiles ?? []).map((p) => ({
+    const followeeIds = ((followsResp as any).data ?? []).map((f: { followee_id: string }) => f.followee_id);
+    if (user && followeeIds.length > 0) {
+        const { data: entries } = await supabase
+            .from("diary_entries")
+            .select("id, user_id, rating, listened_at, review_body")
+            .eq("album_id", album.id)
+            .in("user_id", followeeIds)
+            .order("listened_at", { ascending: false });
+
+        // Dédupliquer par user_id : garder l'entrée la plus récente par abonné
+        const latestByUser = new Map<string, { id: string; rating: number | null; listenedAt: string; hasReview: boolean }>();
+        for (const e of (entries ?? [])) {
+            if (!latestByUser.has(e.user_id)) {
+                latestByUser.set(e.user_id, {
+                    id: e.id,
+                    rating: e.rating,
+                    listenedAt: e.listened_at,
+                    hasReview: !!(e.review_body && e.review_body.trim()),
+                });
+            }
+        }
+
+        const listenerIds = [...latestByUser.keys()].slice(0, 5);
+        if (listenerIds.length > 0) {
+            const { data: profiles } = await supabase
+                .from("profiles")
+                .select("id, username, display_name, avatar_url")
+                .in("id", listenerIds);
+            networkListeners = (profiles ?? []).map((p) => {
+                const entry = latestByUser.get(p.id);
+                return {
                     userId: p.id,
                     username: p.username ?? "",
                     displayName: p.display_name ?? null,
                     avatarUrl: p.avatar_url ?? null,
-                }));
-            }
+                    rating: entry?.rating ?? null,
+                    listenedAt: entry?.listenedAt ?? null,
+                    entryId: entry?.id ?? null,
+                    hasReview: entry?.hasReview ?? false,
+                };
+            });
         }
     }
 
@@ -171,7 +233,6 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
         const mbResult = await getArtistReleases(artist.mbid);
         if (mbResult.success && mbResult.releases) {
             const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-            // Exclude: current album + all albums already in DB (MB uses release-group MBIDs, album.mbid is release MBID — can't compare directly)
             const excludedTitles = new Set([album.title, ...artistAlbums.map((a) => a.title)].map(norm));
             mbArtistAlbums = mbResult.releases
                 .filter((r) => !excludedTitles.has(norm(r.title)))
@@ -179,13 +240,8 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
         }
     }
 
-    // Fetch stats from DB view (latest entry per user)
-    const { data: albumStats } = await supabase
-        .from("album_stats")
-        .select("reviews_count, avg_rating, listeners_count")
-        .eq("album_id", id)
-        .maybeSingle();
-
+    // Stats et diary entries depuis le batch parallèle
+    const albumStats = albumStatsResp.data;
     const avgRating = albumStats?.avg_rating !== undefined && albumStats?.avg_rating !== null
         ? Number(albumStats.avg_rating)
         : null;
@@ -196,28 +252,23 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
         listeners_count: albumStats?.listeners_count ?? 0,
     };
 
-    // Fetch user's own entries for this album
     let myEntries: { id: string; rating: number | null; review_body: string | null; listened_at: string; created_at: string }[] = [];
     let myLatestEntry: { id: string; rating: number | null; review_body: string | null; listened_at: string; created_at?: string } | undefined = undefined;
-    if (user) {
-        const { data: entriesData } = await supabase
-            .from("diary_entries")
-            .select("id, rating, review_body, listened_at, created_at")
-            .eq("album_id", id)
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false });
-
-        if (entriesData && entriesData.length > 0) {
-            myEntries = entriesData;
-            myLatestEntry = {
-                id: entriesData[0].id,
-                rating: entriesData[0].rating,
-                review_body: entriesData[0].review_body,
-                listened_at: entriesData[0].listened_at,
-                created_at: entriesData[0].created_at,
-            };
-        }
+    const entriesData = (myEntriesResp as any).data;
+    if (entriesData && entriesData.length > 0) {
+        myEntries = entriesData;
+        myLatestEntry = {
+            id: entriesData[0].id,
+            rating: entriesData[0].rating,
+            review_body: entriesData[0].review_body,
+            listened_at: entriesData[0].listened_at,
+            created_at: entriesData[0].created_at,
+        };
     }
+
+    // T5: durée totale et nombre de pistes
+    const trackCount = tracks.length;
+    const totalDurationMs = tracks.reduce((sum, t) => sum + (t.duration_ms ?? 0), 0);
 
     const year = album.release_date ? new Date(album.release_date).getFullYear() : undefined;
 
@@ -228,10 +279,10 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
         artistId: artist?.id,
         coverUrl: album.cover_url,
         year,
+        trackCount: trackCount > 0 ? trackCount : undefined,
+        totalDurationMs: totalDurationMs > 0 ? totalDurationMs : undefined,
     };
 
-    // Display logic: if only 1 metadata present (genres/streaming/bio) and it's NOT bio → inline in hero
-    // If 2+ present OR bio is present → show in dedicated section below
     const hasGenres = genres.length > 0;
     const hasDescription = !!description;
     const hasStreamingLinks = !!(streamingLinks.spotify || streamingLinks.appleMusic || streamingLinks.deezer || streamingLinks.tidal);
@@ -255,7 +306,8 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                     myEntriesCount={myEntries.length}
                     autoOpenDiary={autoOpenDiary}
                     albumHasGenres={hasGenres}
-                    genres={showInHero && hasGenres ? genres : undefined}
+                    genres={showInHero ? genres : (genres.length === 0 && user ? [] : undefined)}
+                    genreWeights={genreWeights}
                     streamingLinks={showInHero && hasStreamingLinks ? streamingLinks : undefined}
                     networkListeners={networkListeners}
                 />
@@ -266,17 +318,16 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                 <div className="border-t border-border-divider pt-8 mb-20">
                     {showInSection && (hasGenres || hasStreamingLinks) && (
                         <div className="mb-6">
+                            {/* T6: GenrePills avec bouton vote communautaire */}
                             {hasGenres && (
                                 <div className="flex items-center gap-2 flex-wrap mb-4">
                                     <span className="text-[12px] text-text-tertiary">Genres</span>
-                                    {genres.map((g) => (
-                                        <span
-                                            key={g}
-                                            className="text-[11px] text-text-tertiary bg-background-secondary rounded-full px-2.5 py-0.5 capitalize"
-                                        >
-                                            {g}
-                                        </span>
-                                    ))}
+                                    <GenrePills
+                                        genres={genres}
+                                        albumId={album.id}
+                                        userId={genres.length < 3 ? user?.id : undefined}
+                                        genreWeights={genreWeights}
+                                    />
                                 </div>
                             )}
 
@@ -375,7 +426,11 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
 
             {/* ========== 3. OTHERS' NOTES ========== */}
             <section id="reviews" className="border-t border-border-divider pt-10 mb-20">
-                <AlbumReviewSection albumId={album.id} reviewsCount={stats.reviews_count} />
+                <AlbumReviewSection
+                    albumId={album.id}
+                    reviewsCount={stats.reviews_count}
+                    initialReviews={reviewsPreview}
+                />
             </section>
 
             {/* ========== 4. DU MÊME ARTISTE ========== */}
@@ -387,9 +442,9 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
             )}
 
             {/* ========== 5. SIMILAR ALBUMS ========== */}
-            {similarAlbums.length > 0 && (
-                <section className="border-t border-border-divider pt-10 mb-20">
-                    <h2 className="text-h2 text-text-primary mb-8">Albums similaires</h2>
+            <section className="border-t border-border-divider pt-10 mb-20">
+                <h2 className="text-h2 text-text-primary mb-8">Albums similaires</h2>
+                {similarAlbums.length > 0 ? (
                     <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2">
                         {similarAlbums.map((a) => (
                             <Link key={a.id} href={`/albums/${a.id}`} className="snap-center shrink-0 w-44 sm:w-48 md:w-52 block group">
@@ -408,8 +463,10 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                             </Link>
                         ))}
                     </div>
-                </section>
-            )}
+                ) : (
+                    <p className="text-[14px] text-text-tertiary">Aucun album similaire trouvé pour le moment.</p>
+                )}
+            </section>
 
             <ScrollToHashClient />
         </main>

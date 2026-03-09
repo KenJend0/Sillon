@@ -34,6 +34,7 @@ export default function ReviewsBottomSheet({
     const [hasMore, setHasMore] = useState(false);
     const [offset, setOffset] = useState(0);
     const [currentTab, setCurrentTab] = useState<Tab>("all");
+    const [orderBy, setOrderBy] = useState<"recent" | "top">("recent");
     const [userId, setUserId] = useState<string | null>(null);
     const [hasFollowing, setHasFollowing] = useState(false);
 
@@ -43,7 +44,7 @@ export default function ReviewsBottomSheet({
         setOffset(0);
         setHasMore(false);
         loadReviews(0, true);
-    }, [isOpen, currentTab]);
+    }, [isOpen, currentTab, orderBy]);
 
     const loadReviews = async (startOffset: number, replace: boolean) => {
         setLoading(true);
@@ -53,6 +54,7 @@ export default function ReviewsBottomSheet({
                 tab: currentTab,
                 offset: startOffset,
                 limit: 12,
+                orderBy,
             });
 
             setUserId(result.userId);
@@ -122,6 +124,31 @@ export default function ReviewsBottomSheet({
                         Moi
                     </button>
                 )}
+            </div>
+
+            {/* Sort */}
+            <div className="flex items-center gap-2 px-6 pt-3 pb-1 flex-shrink-0">
+                <span className="text-[12px] text-text-tertiary">Trier :</span>
+                <button
+                    onClick={() => setOrderBy("recent")}
+                    className={`text-[12px] px-2.5 py-1 rounded-full transition-colors duration-150 ${
+                        orderBy === "recent"
+                            ? "bg-background-secondary text-text-primary font-medium"
+                            : "text-text-secondary hover:text-text-primary"
+                    }`}
+                >
+                    Plus récentes
+                </button>
+                <button
+                    onClick={() => setOrderBy("top")}
+                    className={`text-[12px] px-2.5 py-1 rounded-full transition-colors duration-150 ${
+                        orderBy === "top"
+                            ? "bg-background-secondary text-text-primary font-medium"
+                            : "text-text-secondary hover:text-text-primary"
+                    }`}
+                >
+                    Mieux notées
+                </button>
             </div>
 
             {/* Content */}

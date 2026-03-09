@@ -15,3 +15,8 @@ supprimer page inutiles /diary /import etc
 sur le feed, quand on like, il faut refresh la page pour le voir s'activer, ca peut porter a confusion. 
 repnser les modals de commentaires et d'ecriture de review pour que plutot que former une carte au milieu, ca fasse comme une page qui monte et prend tout le bas en laissant de la place en haut
 changer la presentation du like, pour le moment c'est coeur X en coeur X j'aime et pouvoir cliker sur le 'j'aime' et avoir la liste des gens qui ont liké. 
+ajouter les liens spotify partout grace a la commu, et un ecran de modo pour valider les liens. faire participer la commu simplement c'est la clé
+
+si j'ai ecouté l'album, l'activté resau apparait dans le truc mon ecoute alors que ca devrit etre dans le hero juste en dessous des stats
+
+dans les du meme artiste de album, on prend ceux qui ont le plus de listeners

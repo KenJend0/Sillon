@@ -351,6 +351,14 @@ export default function SearchOverlay() {
             setResults([]);
             setQ("");
             router.push(`/albums/${result.albumId}`);
+            // Fire-and-forget enrichment (genres, bio, streaming links)
+            if ('mbid' in result && result.mbid && 'title' in result && 'artist' in result) {
+              fetch('/api/enrich', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ albumId: result.albumId, mbid: result.mbid, title: result.title, artist: result.artist }),
+              }).catch(() => {});
+            }
           } else {
             showToast("Erreur lors de l'import", "error");
           }
