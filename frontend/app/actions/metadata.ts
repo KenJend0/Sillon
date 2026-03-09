@@ -757,6 +757,17 @@ export async function voteAlbumGenre(albumId: string, genreSlug: string): Promis
   // Admin client : genres + album_genres en écriture sont restreints au service role
   const supabase = createSupabaseAdmin();
 
+  // Rate limit : max 3 votes par user par album
+  const { count: userVoteCount } = await supabase
+    .from('album_genre_votes')
+    .select('*', { count: 'exact', head: true })
+    .eq('album_id', albumId)
+    .eq('user_id', user.id);
+
+  if ((userVoteCount ?? 0) >= 3) {
+    throw new Error('Limite de 3 votes par album atteinte');
+  }
+
   // Upsert genre (crée si n'existe pas encore)
   const { data: genre } = await supabase
     .from('genres')

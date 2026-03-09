@@ -29,8 +29,9 @@ export default function GenrePills({ genres, albumId, userId, genreWeights, clas
             setSelectedFamily(null);
             setOpen(false);
             router.refresh();
-        } catch {
-            showToast("Erreur lors du vote", "error");
+        } catch (err: any) {
+            const msg = err?.message?.includes('Limite') ? err.message : "Erreur lors du vote";
+            showToast(msg, "error");
         } finally {
             setVoting(false);
         }
