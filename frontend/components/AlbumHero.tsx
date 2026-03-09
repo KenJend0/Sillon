@@ -155,6 +155,45 @@ export default function AlbumHero({
                 );
             })()}
 
+            {/* Inline metadata (when only one of genres/streaming is present, no bio) */}
+            {genres && genres.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-4">
+                    {genres.map((g) => (
+                        <span key={g} className="text-[11px] text-text-tertiary bg-background-secondary rounded-full px-2.5 py-0.5 capitalize">
+                            {g}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {streamingLinks && Object.values(streamingLinks).some(Boolean) && (
+                <div className="flex items-center gap-2 flex-wrap mt-4">
+                    <span className="text-[12px] text-text-tertiary">Écouter sur</span>
+                    {[
+                        { key: "spotify", label: "Spotify", href: streamingLinks.spotify },
+                        { key: "appleMusic", label: "Apple Music", href: streamingLinks.appleMusic },
+                        { key: "deezer", label: "Deezer", href: streamingLinks.deezer },
+                        { key: "tidal", label: "Tidal", href: streamingLinks.tidal },
+                    ]
+                        .filter((s) => s.href)
+                        .map((s, i, arr) => (
+                            <span key={s.key} className="flex items-center gap-2">
+                                <a
+                                    href={s.href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[12px] text-text-secondary hover:text-text-primary transition-colors duration-150"
+                                >
+                                    {s.label}
+                                </a>
+                                {i < arr.length - 1 && (
+                                    <span className="text-[12px] text-text-disabled">·</span>
+                                )}
+                            </span>
+                        ))}
+                </div>
+            )}
+
             {/* ========== TA NOTE ========== */}
             {myLatestEntry && (
                 <div className="border-t border-border-divider mt-8 pt-8 mb-10">
@@ -211,45 +250,6 @@ export default function AlbumHero({
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-
-            {/* Inline metadata (when only one of genres/streaming is present, no bio) */}
-            {genres && genres.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-4">
-                    {genres.map((g) => (
-                        <span key={g} className="text-[11px] text-text-tertiary bg-background-secondary rounded-full px-2.5 py-0.5 capitalize">
-                            {g}
-                        </span>
-                    ))}
-                </div>
-            )}
-
-            {streamingLinks && Object.values(streamingLinks).some(Boolean) && (
-                <div className="flex items-center gap-2 flex-wrap mt-4">
-                    <span className="text-[12px] text-text-tertiary">Écouter sur</span>
-                    {[
-                        { key: "spotify", label: "Spotify", href: streamingLinks.spotify },
-                        { key: "appleMusic", label: "Apple Music", href: streamingLinks.appleMusic },
-                        { key: "deezer", label: "Deezer", href: streamingLinks.deezer },
-                        { key: "tidal", label: "Tidal", href: streamingLinks.tidal },
-                    ]
-                        .filter((s) => s.href)
-                        .map((s, i, arr) => (
-                            <span key={s.key} className="flex items-center gap-2">
-                                <a
-                                    href={s.href}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[12px] text-text-secondary hover:text-text-primary transition-colors duration-150"
-                                >
-                                    {s.label}
-                                </a>
-                                {i < arr.length - 1 && (
-                                    <span className="text-[12px] text-text-disabled">·</span>
-                                )}
-                            </span>
-                        ))}
                 </div>
             )}
 
