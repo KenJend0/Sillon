@@ -340,32 +340,34 @@ export async function backfillFolloweeEvents(followerId: string, followeeId: str
   try {
     const supabaseAdmin = createSupabaseAdmin();
 
-    // Fetch the followee's recent events that were already fanned out to any recipient
-    // We use a single known recipient (the followee themselves) as a proxy
-    const { data: sourceEvents, error } = await supabaseAdmin
-      .from('feed_events')
-      .select('actor_id, followee_id, type, entry_id, album_id, created_at, payload')
-      .eq('actor_id', followeeId)
-      .eq('user_id', followeeId) // the followee's own copy of their events
+    // Read directly from diary_entries — reliable regardless of fan-out history
+    const { data: entries, error: entriesError } = await supabaseAdmin
+      .from('diary_entries')
+      .select('id, album_id, rating, created_at')
+      .eq('user_id', followeeId)
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    if (error || !sourceEvents || sourceEvents.length === 0) return;
+    if (entriesError || !entries || entries.length === 0) return;
 
-    const rows = sourceEvents.map((e) => ({
+    const rows = entries.map((e) => ({
       user_id: followerId,
-      actor_id: e.actor_id,
-      followee_id: e.followee_id ?? null,
-      type: e.type,
-      entry_id: e.entry_id ?? null,
+      actor_id: followeeId,
+      followee_id: null,
+      type: 'diary_entry' as const,
+      entry_id: e.id,
       album_id: e.album_id ?? null,
       created_at: e.created_at,
-      payload: e.payload ?? {},
+      payload: {},
     }));
 
+    // Insert only — skip duplicates silently
     await supabaseAdmin
       .from('feed_events')
-      .upsert(rows, { onConflict: 'user_id,actor_id,type,entry_id,album_id', ignoreDuplicates: true });
+      .insert(rows)
+      .throwOnError()
+      .then(() => null)
+      .catch(() => null); // duplicate key errors are fine
   } catch (err) {
     console.error('backfillFolloweeEvents error:', err);
   }
