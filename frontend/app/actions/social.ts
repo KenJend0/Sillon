@@ -3,13 +3,14 @@
 import { getAuthUser, createSupabaseServer, createSupabaseAdmin } from '@/lib/supabase/server';
 import { fanoutEvent } from './feed';
 import { ensureProfile } from './profile';
+import { logAuthedProductEvent } from '@/lib/productEvents';
 
 /**
  * Toggle follow: insert if not exists, delete if exists
  * Resolve idOrUsername to profile.id
  * Prevent self-follow
  */
-export async function toggleFollow(idOrUsername: string) {
+export async function toggleFollow(idOrUsername: string, source?: string) {
   try {
     const user = await getAuthUser();
     if (!user) {
@@ -109,6 +110,13 @@ export async function toggleFollow(idOrUsername: string) {
       } catch (fanoutErr) {
         console.error('Fanout follow error:', fanoutErr);
       }
+
+      await logAuthedProductEvent('user_followed', {
+        surface: source ?? 'follow_button',
+        properties: {
+          target_id: targetId,
+        },
+      });
 
       return { success: true, following: true };
     }

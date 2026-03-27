@@ -9,12 +9,14 @@ interface FollowButtonProps {
   userId: string;
   initialIsFollowing: boolean;
   skipRefresh?: boolean;
+  eventSource?: string;
 }
 
 export default function FollowButton({
   userId,
   initialIsFollowing,
   skipRefresh = false,
+  eventSource,
 }: FollowButtonProps) {
   const router = useRouter();
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
@@ -23,7 +25,7 @@ export default function FollowButton({
   const handleToggleFollow = async () => {
     try {
       setIsLoading(true);
-      const result = await toggleFollow(userId);
+      const result = await toggleFollow(userId, eventSource);
 
       if (result.success && typeof result.following === "boolean") {
         setIsFollowing(result.following);

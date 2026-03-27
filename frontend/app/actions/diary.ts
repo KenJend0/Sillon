@@ -1,6 +1,7 @@
 'use server';
 
 import { getAuthUser, createSupabaseServer, createSupabaseAdmin } from '@/lib/supabase/server';
+import { logAuthedProductEvent } from '@/lib/productEvents';
 import { fanoutEvent } from './feed';
 
 export interface UpsertDiaryEntryInput {
@@ -96,6 +97,18 @@ export async function upsertDiaryEntry(input: UpsertDiaryEntryInput) {
     } catch (fanoutErr) {
       console.error('Fanout error:', fanoutErr);
     }
+
+    await logAuthedProductEvent('album_logged', {
+      surface: 'diary',
+      properties: {
+        album_id: input.albumId,
+        entry_id: data.id,
+        has_review: Boolean(input.reviewTitle || input.reviewBody),
+        has_rating: input.rating !== undefined && input.rating !== null,
+        is_relisten: Boolean(input.relisten),
+        is_public: input.isPublic ?? true,
+      },
+    });
 
     return { success: true, data };
   } catch (err) {
@@ -243,6 +256,14 @@ export async function addComment(entryId: string, body: string): Promise<void> {
     throw new Error('An error occurred');
   }
 
+  await logAuthedProductEvent('comment_created', {
+    surface: 'diary',
+    properties: {
+      entry_id: entryId,
+      body_length: body.trim().length,
+    },
+  });
+
   // Fanout comment event to: entry owner + previous commenters + actor's followers (discovery)
   const [{ data: previousCommenters }, { data: actorFollowers }] = await Promise.all([
     supabase.from('diary_comments').select('user_id').eq('entry_id', entryId).neq('user_id', user.id),
@@ -386,6 +407,14 @@ export async function toggleDiaryLike(entryId: string): Promise<void> {
       console.error('Fanout error:', fanoutErr);
       // Don't throw, like was successful even if fanout failed
     }
+
+    await logAuthedProductEvent('review_liked', {
+      surface: 'diary',
+      properties: {
+        entry_id: entryId,
+        owner_id: entry.user_id,
+      },
+    });
   }
 }
 

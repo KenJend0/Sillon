@@ -8,6 +8,7 @@ import type { Database } from "@/types/database";
 import { useSearchParams } from "next/navigation";
 import { canAttemptAuth } from "@/lib/rateLimit";
 import { showToast } from "@/components/Toast";
+import { trackProductEvent } from "@/lib/productEventsClient";
 
 type AuthMode = "login" | "signup" | "reset";
 
@@ -95,6 +96,12 @@ export default function AuthForm() {
         }
 
         if (data.user && data.session) {
+          void trackProductEvent("signup_completed", {
+            surface: "auth_form",
+            properties: {
+              method: "email",
+            },
+          });
           // Email confirmation disabled — user is immediately logged in
           router.push("/onboarding");
         } else if (data.user) {
@@ -145,6 +152,12 @@ export default function AuthForm() {
       }
     } catch (err: any) {
       console.error(err);
+      void trackProductEvent("auth_error", {
+        surface: "auth_form",
+        properties: {
+          mode,
+        },
+      });
       showToast(err.message || "Une erreur s'est produite", "error");
     } finally {
       setLoading(false);

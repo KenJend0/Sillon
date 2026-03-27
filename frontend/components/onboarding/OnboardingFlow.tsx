@@ -7,6 +7,7 @@ import { setOnboardingUsername, checkUsernameAvailability } from '@/app/actions/
 import FollowButton from '@/components/social/FollowButton';
 import { UserAvatar } from '@/components/avatars/DefaultAvatar';
 import { showToast } from '@/components/Toast';
+import { trackProductEvent } from '@/lib/productEventsClient';
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{3,32}$/;
 const USERNAME_CHARS_REGEX = /^[a-zA-Z0-9_.-]*$/;
@@ -219,7 +220,7 @@ export default function OnboardingFlow({ currentDisplayName, suggestedUsers }: P
                                         </p>
                                         <p className="text-[12px] text-text-tertiary">@{user.username}</p>
                                     </div>
-                                    <FollowButton userId={user.id} initialIsFollowing={false} skipRefresh />
+                                    <FollowButton userId={user.id} initialIsFollowing={false} skipRefresh eventSource="onboarding" />
                                 </div>
                             ))}
                         </div>
@@ -262,6 +263,14 @@ export default function OnboardingFlow({ currentDisplayName, suggestedUsers }: P
 
                 <Link
                     href="/add"
+                    onClick={() => {
+                        void trackProductEvent('onboarding_completed', {
+                            surface: 'onboarding',
+                            properties: {
+                                suggested_users_count: suggestedUsers.length,
+                            },
+                        });
+                    }}
                     className="flex items-center justify-between w-full px-4 py-4 bg-[#1C1C1C] text-[#F5F3EF] rounded-[12px] hover:opacity-85 transition-opacity"
                 >
                     <div>

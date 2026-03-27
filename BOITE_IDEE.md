@@ -20,3 +20,4 @@ ajouter les liens spotify partout grace a la commu, et un ecran de modo pour val
 si j'ai ecouté l'album, l'activté resau apparait dans le truc mon ecoute alors que ca devrit etre dans le hero juste en dessous des stats
 
 dans les du meme artiste de album, on prend ceux qui ont le plus de listeners
+

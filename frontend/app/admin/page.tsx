@@ -1,12 +1,22 @@
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { getAuthUser, createSupabaseAdmin } from '@/lib/supabase/server';
-import ReEnrichButton from './ReEnrichButton';
+import { redirect } from 'next/navigation';
+import type { ReactNode } from 'react';
+import { createSupabaseAdmin, getAuthUser } from '@/lib/supabase/server';
 import EnrichAllButton from './EnrichAllButton';
-import StreamingLinksEditor from './StreamingLinksEditor';
 import FetchStreamingAllButton from './FetchStreamingAllButton';
+import ReEnrichButton from './ReEnrichButton';
+import StreamingLinksEditor from './StreamingLinksEditor';
 
 const ADMIN_IDS = (process.env.ADMIN_USER_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+const DAY_MS = 24 * 60 * 60 * 1000;
+const RANGE_OPTIONS = {
+  '7d': { label: '7 jours', days: 7 },
+  '30d': { label: '30 jours', days: 30 },
+  '90d': { label: '90 jours', days: 90 },
+} as const;
+
+type RangeKey = keyof typeof RANGE_OPTIONS;
+type SearchParamsInput = Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined> | undefined;
 
 type Album = {
   id: string;
@@ -26,9 +36,67 @@ type AlbumMeta = {
   deezer_url: string | null;
 };
 
-export default async function AdminPage() {
+type ProductEventRow = {
+  created_at: string;
+  event_name: string;
+  surface: string | null;
+  user_id: string | null;
+};
+
+type WindowMetrics = {
+  signups: number;
+  onboardings: number;
+  albumLoggers: number;
+  followers: number;
+  wau: number;
+  albumLogs: number;
+  authErrors: number;
+  noResultSearches: number;
+  importFailures: number;
+};
+
+type ProductSignals = {
+  available: boolean;
+  weeklyViewAvailable: boolean;
+  current: WindowMetrics;
+  previous: WindowMetrics;
+  recentEvents: ProductEventRow[];
+  frictionByEvent: Array<{ label: string; count: number }>;
+  searchBySurface: Array<{ label: string; count: number }>;
+  weeklyTrend: WeeklyTrendRow[];
+};
+
+type WeeklyTrendRow = {
+  week: string;
+  signup_users: number;
+  onboarded_users: number;
+  activated_users: number;
+  social_users: number;
+  wau: number;
+  album_logs: number;
+  import_failures: number;
+  search_no_results: number;
+  auth_errors: number;
+};
+
+const EMPTY_WINDOW: WindowMetrics = {
+  signups: 0,
+  onboardings: 0,
+  albumLoggers: 0,
+  followers: 0,
+  wau: 0,
+  albumLogs: 0,
+  authErrors: 0,
+  noResultSearches: 0,
+  importFailures: 0,
+};
+
+export default async function AdminPage({ searchParams }: { searchParams?: SearchParamsInput }) {
   const user = await getAuthUser();
   if (!user || !ADMIN_IDS.includes(user.id)) redirect('/');
+
+  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const range = resolveRange(resolvedSearchParams?.range);
 
   const supabase = createSupabaseAdmin();
 
@@ -37,218 +105,615 @@ export default async function AdminPage() {
     { count: artistCount },
     { count: userCount },
     { count: entryCount },
+    { count: followCount },
+    { count: commentCount },
+    { count: reviewCount },
     { data: rawAlbums },
     { data: genreData },
     { data: metaData },
-    { count: reviewCount },
+    productSignals,
   ] = await Promise.all([
     supabase.from('albums').select('*', { count: 'exact', head: true }),
     supabase.from('artists').select('*', { count: 'exact', head: true }),
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
     supabase.from('diary_entries').select('*', { count: 'exact', head: true }),
+    supabase.from('follows').select('*', { count: 'exact', head: true }),
+    supabase.from('diary_comments').select('*', { count: 'exact', head: true }),
+    supabase.from('diary_entries').select('*', { count: 'exact', head: true }).not('review_body', 'is', null),
     supabase.from('albums').select('id, title, mbid, cover_url, release_date, artists(name)').order('title'),
     supabase.from('album_genres').select('album_id'),
     supabase.from('album_metadata').select('album_id, description, fetched_at, spotify_url, apple_music_url, deezer_url').order('fetched_at', { ascending: false }),
-    supabase.from('diary_entries').select('*', { count: 'exact', head: true }).not('review_body', 'is', null),
+    getProductSignals(supabase, range.days),
   ]);
 
-  // Flatten albums
-  const albums: Album[] = ((rawAlbums ?? []) as any[]).map((a) => ({
-    id: a.id,
-    title: a.title,
-    mbid: a.mbid ?? null,
-    cover_url: a.cover_url ?? null,
-    release_date: a.release_date ?? null,
-    artist_name: Array.isArray(a.artists) ? (a.artists[0]?.name ?? '—') : (a.artists?.name ?? '—'),
+  const albums: Album[] = ((rawAlbums ?? []) as any[]).map((album) => ({
+    id: album.id,
+    title: album.title,
+    mbid: album.mbid ?? null,
+    cover_url: album.cover_url ?? null,
+    release_date: album.release_date ?? null,
+    artist_name: Array.isArray(album.artists) ? (album.artists[0]?.name ?? '—') : (album.artists?.name ?? '—'),
   }));
 
-  const withGenreSet = new Set((genreData ?? []).map((r) => r.album_id));
-  const metaMap = new Map<string, AlbumMeta>((metaData ?? []).map((r) => [r.album_id, r as AlbumMeta]));
+  const genreSet = new Set((genreData ?? []).map((row) => row.album_id));
+  const metaMap = new Map<string, AlbumMeta>((metaData ?? []).map((row) => [row.album_id, row as AlbumMeta]));
 
-  const noGenre = albums.filter((a) => !withGenreSet.has(a.id));
-  const noDesc = albums.filter((a) => {
-    const m = metaMap.get(a.id);
-    return !m || !m.description;
+  const noGenre = albums.filter((album) => !genreSet.has(album.id));
+  const noDesc = albums.filter((album) => !metaMap.get(album.id)?.description);
+  const noCover = albums.filter((album) => !album.cover_url);
+  const noMbid = albums.filter((album) => !album.mbid);
+  const noStreaming = albums.filter((album) => {
+    const meta = metaMap.get(album.id);
+    return !meta?.spotify_url && !meta?.apple_music_url && !meta?.deezer_url;
   });
 
-  // Albums non enrichis = manque genres OU description (ou les deux)
-  const noGenreSet = new Set(noGenre.map((a) => a.id));
-  const noDescSet = new Set(noDesc.map((a) => a.id));
-  const notEnriched = albums.filter((a) => noGenreSet.has(a.id) || noDescSet.has(a.id));
-  // Albums sans aucun lien de streaming (Spotify, Apple Music, Deezer)
-  const noStreaming = albums.filter((a) => {
-    const m = metaMap.get(a.id);
-    return !m?.spotify_url && !m?.apple_music_url && !m?.deezer_url;
-  });
-  const noCover = albums.filter((a) => !a.cover_url);
-  const noMbid = albums.filter((a) => !a.mbid);
+  const noGenreSet = new Set(noGenre.map((album) => album.id));
+  const noDescSet = new Set(noDesc.map((album) => album.id));
+  const notEnriched = albums.filter((album) => noGenreSet.has(album.id) || noDescSet.has(album.id));
 
-  // Enrichments récents (7 derniers jours)
   const recentMeta = (metaData ?? [])
-    .filter((m) => m.fetched_at && Date.now() - new Date(m.fetched_at).getTime() < 7 * 86400 * 1000)
-    .slice(0, 10);
+    .filter((meta) => meta.fetched_at && Date.now() - new Date(meta.fetched_at).getTime() < range.days * DAY_MS)
+    .slice(0, 8) as AlbumMeta[];
+
+  const current = productSignals.current;
+  const previous = productSignals.previous;
 
   return (
-    <main className="max-w-4xl mx-auto px-4 py-8 pb-24">
-      <h1 className="text-[24px] font-medium text-text-primary mb-8">Admin</h1>
+    <main className="min-h-screen bg-background pb-24">
+      <div className="mx-auto max-w-page px-6 py-6 lg:py-8">
+        <section className="rounded-[20px] border border-border bg-background-secondary p-6 sm:p-8">
+          <div className="grid gap-8 lg:grid-cols-[1.35fr_0.95fr] lg:items-end">
+            <div>
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <Tag tone="neutral">Admin cockpit</Tag>
+                <Tag tone={productSignals.available ? 'success' : 'warning'}>
+                  {productSignals.available ? 'product events actifs' : 'product events indisponibles'}
+                </Tag>
+                <Tag tone="neutral">fenetre {range.label.toLowerCase()}</Tag>
+                <Tag tone={notEnriched.length + noStreaming.length > 0 ? 'warning' : 'success'}>
+                  {notEnriched.length + noStreaming.length} taches prioritaires
+                </Tag>
+              </div>
+              <h1 className="max-w-3xl text-[28px] font-medium leading-[1.15] tracking-[-0.02em] text-text-primary sm:text-[34px]">
+                Tableau de bord admin Waveform
+              </h1>
+              <p className="mt-4 max-w-2xl text-[15px] leading-7 text-text-secondary sm:text-[16px]">
+                Vue unifiee du catalogue, des signaux produit et des actions de maintenance prioritaires.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {(Object.entries(RANGE_OPTIONS) as Array<[RangeKey, { label: string; days: number }]>).map(([key, option]) => (
+                  <Link
+                    key={key}
+                    href={key === '7d' ? '/admin' : `/admin?range=${key}`}
+                    className={`rounded-full px-3.5 py-1.5 text-[12px] transition-colors ${range.key === key ? 'bg-text-primary text-background' : 'border border-border bg-background text-text-secondary hover:border-[#8E6F5E] hover:text-[#8E6F5E]'}`}
+                  >
+                    {option.label}
+                  </Link>
+                ))}
+              </div>
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <GlassMetric label="Couverture enrichissement" value={coveragePercent(albums.length - notEnriched.length, albums.length)} subtitle={`${albums.length - notEnriched.length}/${albums.length} albums propres`} tone={notEnriched.length > 0 ? 'warning' : 'success'} />
+                <GlassMetric label="Couverture streaming" value={coveragePercent(albums.length - noStreaming.length, albums.length)} subtitle={`${albums.length - noStreaming.length}/${albums.length} avec au moins un lien`} tone={noStreaming.length > 0 ? 'warning' : 'success'} />
+                <GlassMetric label="Couverture covers" value={coveragePercent(albums.length - noCover.length, albums.length)} subtitle={`${albums.length - noCover.length}/${albums.length} avec cover`} tone={noCover.length > 0 ? 'warning' : 'success'} />
+              </div>
+            </div>
 
-      {/* Stats principales */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-        {[
-          { label: 'Albums', value: albumCount ?? 0 },
-          { label: 'Artistes', value: artistCount ?? 0 },
-          { label: 'Membres', value: userCount ?? 0 },
-          { label: 'Écoutes', value: entryCount ?? 0 },
-        ].map((s) => (
-          <div key={s.label} className="bg-background-secondary rounded-[12px] p-4">
-            <p className="text-[28px] font-medium text-text-primary leading-none">{s.value.toLocaleString('fr-FR')}</p>
-            <p className="text-[12px] text-text-tertiary mt-1.5">{s.label}</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MetricCard label={`WAU ${range.key}`} value={current.wau} subtitle="Utilisateurs actifs distincts" accent="sand" />
+              <MetricCard label={`Albums logges ${range.key}`} value={current.albumLogs} subtitle="Profondeur d'usage" accent="rose" />
+              <MetricCard label={`Auth errors ${range.key}`} value={current.authErrors} subtitle="Friction d'entree" accent={current.authErrors > 0 ? 'warning' : 'success'} />
+              <MetricCard label={`Search no result ${range.key}`} value={current.noResultSearches} subtitle="Pertinence catalogue" accent={current.noResultSearches > 0 ? 'warning' : 'success'} />
+            </div>
           </div>
-        ))}
-      </div>
+        </section>
 
-      {/* Santé de la base */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-12">
-        {[
-          { label: 'Non enrichi', value: notEnriched.length },
-          { label: 'Sans streaming', value: noStreaming.length },
-          { label: 'Sans cover', value: noCover.length },
-          { label: 'Sans MBID', value: noMbid.length },
-        ].map((s) => (
-          <div
-            key={s.label}
-            className={`rounded-[12px] p-4 ${s.value > 0 ? 'bg-amber-50 border border-amber-200' : 'bg-green-50 border border-green-200'}`}
-          >
-            <p className={`text-[28px] font-medium leading-none ${s.value > 0 ? 'text-amber-700' : 'text-green-700'}`}>
-              {s.value}
-            </p>
-            <p className={`text-[12px] mt-1.5 ${s.value > 0 ? 'text-amber-600' : 'text-green-600'}`}>{s.label}</p>
-          </div>
-        ))}
-      </div>
+        <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <DeltaCard label={`Signups ${range.key}`} value={current.signups} delta={current.signups - previous.signups} hint="Comparaison avec la fenetre precedente" />
+          <DeltaCard label={`Onboardings ${range.key}`} value={current.onboardings} delta={current.onboardings - previous.onboardings} hint={rateLabel(current.onboardings, current.signups, 'du signup a l onboarding')} />
+          <DeltaCard label={`Album loggers ${range.key}`} value={current.albumLoggers} delta={current.albumLoggers - previous.albumLoggers} hint={rateLabel(current.albumLoggers, current.onboardings, 'de l onboarding a l album')} />
+          <DeltaCard label={`Followers ${range.key}`} value={current.followers} delta={current.followers - previous.followers} hint={rateLabel(current.followers, current.albumLoggers, 'de l album au social')} />
+        </section>
 
-      {/* Albums non enrichis (genres et/ou description manquants) */}
-      <Section title="Non enrichi" count={notEnriched.length} action={<EnrichAllButton albums={notEnriched} />}>
-        {notEnriched.map((a) => (
-          <AlbumRow key={a.id} album={a}>
-            <span className="flex items-center gap-1.5 mr-2 flex-shrink-0">
-              {noGenreSet.has(a.id) && (
-                <span className="text-[10px] rounded-full px-2 py-0.5 bg-amber-100 text-amber-700">sans genres</span>
-              )}
-              {noDescSet.has(a.id) && (
-                <span className="text-[10px] rounded-full px-2 py-0.5 bg-amber-100 text-amber-700">sans bio</span>
-              )}
-            </span>
-            <ReEnrichButton album={a} />
-          </AlbumRow>
-        ))}
-      </Section>
+        <section className="mt-8 grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
+          <Panel title="Vue d'ensemble plateforme" subtitle="Les volumes globaux qui donnent le contexte du cockpit" action={<Link href="/" className="rounded-full border border-border px-3 py-1.5 text-[12px] text-text-secondary transition-colors hover:border-[#8E6F5E] hover:text-[#8E6F5E]">Retour app</Link>}>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <MiniStat label="Albums" value={albumCount ?? 0} />
+              <MiniStat label="Artistes" value={artistCount ?? 0} />
+              <MiniStat label="Membres" value={userCount ?? 0} />
+              <MiniStat label="Ecoutes" value={entryCount ?? 0} />
+              <MiniStat label="Reviews" value={reviewCount ?? 0} />
+              <MiniStat label="Commentaires" value={commentCount ?? 0} />
+              <MiniStat label="Follows" value={followCount ?? 0} />
+            </div>
+          </Panel>
 
-      {/* Albums sans lien de streaming */}
-      <Section title="Sans lien streaming" count={noStreaming.length} action={<FetchStreamingAllButton albums={noStreaming} />}>
-        {noStreaming.map((a) => (
-          <AlbumRow key={a.id} album={a}>
-            <StreamingLinksEditor albumId={a.id} mbid={a.mbid} artistName={a.artist_name} title={a.title} />
-          </AlbumRow>
-        ))}
-      </Section>
+          <Panel title="Radar qualite" subtitle="Les points qui demandent une intervention manuelle ou batch">
+            <div className="space-y-3">
+              <HealthRow label="Albums non enrichis" value={notEnriched.length} total={albums.length} tone={notEnriched.length > 0 ? 'warning' : 'success'} />
+              <HealthRow label="Albums sans streaming" value={noStreaming.length} total={albums.length} tone={noStreaming.length > 0 ? 'warning' : 'success'} />
+              <HealthRow label="Albums sans cover" value={noCover.length} total={albums.length} tone={noCover.length > 0 ? 'warning' : 'success'} />
+              <HealthRow label="Albums sans MBID" value={noMbid.length} total={albums.length} tone={noMbid.length > 0 ? 'critical' : 'success'} />
+            </div>
+          </Panel>
+        </section>
 
-      {/* Albums sans cover */}
-      <Section title="Sans cover" count={noCover.length}>
-        {noCover.map((a) => (
-          <AlbumRow key={a.id} album={a}>
-            {a.mbid && (
-              <a
-                href={`https://musicbrainz.org/release/${a.mbid}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[11px] text-text-tertiary hover:text-[#8E6F5E] border border-border hover:border-[#8E6F5E] rounded-full px-2.5 py-1 transition-colors duration-150 ml-4 flex-shrink-0"
-              >
-                MusicBrainz ↗
-              </a>
-            )}
-          </AlbumRow>
-        ))}
-      </Section>
+        <section className="mt-8 grid gap-4 xl:grid-cols-3">
+          <QueuePanel title="Backlog enrichissement" subtitle="Genres et descriptions manquants" count={notEnriched.length} action={<EnrichAllButton albums={notEnriched} />}>
+            {notEnriched.slice(0, 10).map((album) => (
+              <AlbumTaskRow key={album.id} album={album} meta={metaMap.get(album.id)}>
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  {noGenreSet.has(album.id) && <Tag tone="warning">sans genres</Tag>}
+                  {noDescSet.has(album.id) && <Tag tone="warning">sans bio</Tag>}
+                  <ReEnrichButton album={album} />
+                </div>
+              </AlbumTaskRow>
+            ))}
+            {notEnriched.length > 10 && <PanelFootnote value={notEnriched.length - 10} />}
+          </QueuePanel>
 
-      {/* Albums sans MBID */}
-      <Section title="Sans MBID (non enrichissable)" count={noMbid.length}>
-        {noMbid.map((a) => (
-          <AlbumRow key={a.id} album={a} />
-        ))}
-      </Section>
+          <QueuePanel title="Liens streaming" subtitle="Albums encore invisibles sur les plateformes" count={noStreaming.length} action={<FetchStreamingAllButton albums={noStreaming} />}>
+            {noStreaming.slice(0, 8).map((album) => (
+              <AlbumTaskRow key={album.id} album={album} meta={metaMap.get(album.id)}>
+                <StreamingLinksEditor albumId={album.id} mbid={album.mbid} artistName={album.artist_name} title={album.title} />
+              </AlbumTaskRow>
+            ))}
+            {noStreaming.length > 8 && <PanelFootnote value={noStreaming.length - 8} />}
+          </QueuePanel>
 
-      {/* Enrichissements récents */}
-      {recentMeta.length > 0 && (
-        <div className="border-t border-border-divider pt-6 mb-8">
-          <h2 className="text-[16px] font-medium text-text-primary mb-4">
-            Enrichissements récents
-            <span className="text-[12px] text-text-tertiary font-normal ml-2">(7 derniers jours)</span>
-          </h2>
-          <div className="space-y-1">
-            {recentMeta.map((m) => {
-              const album = albums.find((a) => a.id === m.album_id);
-              if (!album) return null;
-              return (
-                <div key={m.album_id} className="flex items-center justify-between py-2 border-b border-border-divider last:border-0">
-                  <div>
-                    <Link href={`/albums/${album.id}`} className="text-[14px] text-text-primary hover:text-[#8E6F5E] transition-colors">
-                      {album.title}
-                    </Link>
-                    <span className="text-[12px] text-text-tertiary ml-2">{album.artist_name}</span>
-                  </div>
-                  <div className="flex items-center gap-3 ml-4 flex-shrink-0">
-                    <span className={`text-[11px] rounded-full px-2 py-0.5 ${m.description ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-600'}`}>
-                      {m.description ? 'desc ✓' : 'sans desc'}
-                    </span>
-                    <span className="text-[11px] text-text-tertiary">
-                      {m.fetched_at ? new Date(m.fetched_at).toLocaleDateString('fr-FR') : '—'}
-                    </span>
+          <QueuePanel title="Identite catalogue" subtitle="Covers et MBID a nettoyer" count={noCover.length + noMbid.length}>
+            {[...noCover.slice(0, 4), ...noMbid.slice(0, 4)].map((album) => (
+              <AlbumTaskRow key={album.id} album={album} meta={metaMap.get(album.id)}>
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  {!album.cover_url && <Tag tone="warning">sans cover</Tag>}
+                  {!album.mbid && <Tag tone="critical">sans MBID</Tag>}
+                  {album.mbid && (
+                    <a href={`https://musicbrainz.org/release/${album.mbid}`} target="_blank" rel="noopener noreferrer" className="rounded-full border border-border px-3 py-1 text-[11px] text-text-secondary transition-colors duration-150 hover:border-[#8E6F5E] hover:text-[#8E6F5E]">
+                      MusicBrainz ↗
+                    </a>
+                  )}
+                </div>
+              </AlbumTaskRow>
+            ))}
+            {noCover.length + noMbid.length > 8 && <PanelFootnote value={noCover.length + noMbid.length - 8} />}
+          </QueuePanel>
+        </section>
+
+        <section className="mt-8 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+          <Panel title="Signals beta" subtitle={`Metriques produit sur ${range.label.toLowerCase()} calculees a partir de product_events`} tone={productSignals.available ? 'neutral' : 'warning'}>
+            {productSignals.available ? (
+              <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
+                <div className="rounded-[22px] border border-[#DDD4C9] bg-[rgba(255,255,255,0.64)] p-4">
+                  <h3 className="text-[14px] font-medium text-[#1C1C1C]">Funnel {range.label.toLowerCase()}</h3>
+                  <div className="mt-4 space-y-3">
+                    <FunnelStep label="Signup" value={current.signups} nextValue={current.onboardings} />
+                    <FunnelStep label="Onboarding" value={current.onboardings} nextValue={current.albumLoggers} />
+                    <FunnelStep label="Premier album" value={current.albumLoggers} nextValue={current.followers} />
+                    <FunnelStep label="Premier follow" value={current.followers} nextValue={null} />
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+
+                <div className="grid gap-4">
+                  <div className="rounded-[22px] border border-[#DDD4C9] bg-[rgba(255,255,255,0.64)] p-4">
+                    <h3 className="text-[14px] font-medium text-[#1C1C1C]">Frictions {range.label.toLowerCase()}</h3>
+                    <div className="mt-3 space-y-2">
+                      {productSignals.frictionByEvent.length > 0 ? productSignals.frictionByEvent.map((item) => (
+                        <CompactRow key={item.label} label={item.label} value={item.count} />
+                      )) : <EmptyState message="Aucune friction critique loggee cette semaine." compact />}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[22px] border border-[#DDD4C9] bg-[rgba(255,255,255,0.64)] p-4">
+                    <h3 className="text-[14px] font-medium text-[#1C1C1C]">Recherche par surface</h3>
+                    <div className="mt-3 space-y-2">
+                      {productSignals.searchBySurface.length > 0 ? productSignals.searchBySurface.map((item) => (
+                        <CompactRow key={item.label} label={item.label} value={item.count} />
+                      )) : <EmptyState message="Pas encore assez de donnees de recherche." compact />}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <EmptyState message="La table product_events n'est pas encore visible depuis l'admin. Applique la migration Supabase pour activer ce bloc." />
+            )}
+          </Panel>
+
+          <Panel title="Evenements recents" subtitle={`Les derniers signaux utiles sur ${range.label.toLowerCase()}`}>
+            {productSignals.available && productSignals.recentEvents.length > 0 ? (
+              <div className="space-y-2">
+                {productSignals.recentEvents.map((event, index) => (
+                  <div key={`${event.created_at}-${event.event_name}-${index}`} className="rounded-[16px] border border-border bg-background-secondary px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-text-primary">{humanizeEvent(event.event_name)}</p>
+                        <p className="mt-1 text-[12px] text-text-secondary">
+                          {humanizeSurface(event.surface)}
+                          {event.user_id ? ` · user ${event.user_id.slice(0, 8)}...` : ' · anonyme'}
+                        </p>
+                      </div>
+                      <span className="whitespace-nowrap text-[11px] text-text-tertiary">{formatRelative(event.created_at)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState message="Aucun evenement recent a afficher pour l'instant." />
+            )}
+          </Panel>
+        </section>
+
+        <section className="mt-8 grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+          <Panel title="Tendance hebdo" subtitle="Lecture depuis la vue beta_dashboard_weekly pour l'admin" tone={productSignals.weeklyViewAvailable ? 'neutral' : 'warning'}>
+            {productSignals.weeklyViewAvailable ? (
+              <div className="space-y-3">
+                {productSignals.weeklyTrend.map((row) => (
+                  <div key={row.week} className="rounded-[18px] border border-[#E2D9CF] bg-[rgba(255,255,255,0.62)] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[13px] font-medium text-[#1E1E1E]">Semaine du {new Date(row.week).toLocaleDateString('fr-FR')}</p>
+                        <p className="mt-1 text-[12px] text-[#726960]">WAU {row.wau} · logs {row.album_logs} · signups {row.signup_users}</p>
+                      </div>
+                      <Tag tone={row.search_no_results + row.auth_errors + row.import_failures > 0 ? 'warning' : 'success'}>
+                        {row.search_no_results + row.auth_errors + row.import_failures > 0 ? `${row.search_no_results + row.auth_errors + row.import_failures} frictions` : 'stable'}
+                      </Tag>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                      <CompactRow label="onboarding" value={row.onboarded_users} />
+                      <CompactRow label="activation" value={row.activated_users} />
+                      <CompactRow label="social" value={row.social_users} />
+                      <CompactRow label="import fails" value={row.import_failures} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState message="La vue beta_dashboard_weekly n'est pas encore disponible. Execute le script SQL final pour alimenter ce bloc." />
+            )}
+          </Panel>
+
+          <Panel title="Enrichissements recents" subtitle="Les metadonnees recuperees dans les 7 derniers jours">
+            {recentMeta.length > 0 ? (
+              <div className="space-y-2">
+                {recentMeta.map((meta) => {
+                  const album = albums.find((item) => item.id === meta.album_id);
+                  if (!album) return null;
+                  return (
+                    <AlbumTaskRow key={meta.album_id} album={album} meta={meta}>
+                      <div className="flex items-center gap-2">
+                        <Tag tone={meta.description ? 'success' : 'warning'}>{meta.description ? 'bio OK' : 'sans bio'}</Tag>
+                        <span className="text-[11px] text-[#8A8077]">{meta.fetched_at ? new Date(meta.fetched_at).toLocaleDateString('fr-FR') : '—'}</span>
+                      </div>
+                    </AlbumTaskRow>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState message="Pas d'enrichissement recent detecte cette semaine." />
+            )}
+          </Panel>
+
+          <Panel title="Decisions rapides" subtitle="Ce que cette page doit t'aider a arbitrer immediatement">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <DecisionCard title="Reparer la decouvrabilite" body={`${noStreaming.length} albums n'ont encore aucun lien de streaming. C'est le backlog le plus visible pour l'utilisateur final.`} />
+              <DecisionCard title="Nettoyer l'activation" body={productSignals.available ? `${current.onboardings > 0 ? Math.round((current.albumLoggers / current.onboardings) * 100) : 0}% des onboardings ${range.key} vont jusqu'au premier album.` : 'Active product_events pour voir le vrai taux onboarding → album.'} />
+              <DecisionCard title="Traiter les frictions" body={productSignals.available ? `${current.authErrors + current.noResultSearches + current.importFailures} signaux de friction sur ${range.label.toLowerCase()}.` : 'Les frictions produit apparaitront ici une fois la migration activee.'} />
+              <DecisionCard title="Continuer le catalogage" body={`${notEnriched.length} albums restent partiellement incomplets, dont ${noMbid.length} non enrichissables automatiquement.`} />
+            </div>
+          </Panel>
+        </section>
+      </div>
     </main>
   );
 }
 
-function Section({ title, count, action, children }: { title: string; count: number; action?: React.ReactNode; children?: React.ReactNode }) {
+async function getProductSignals(supabase: any, rangeDays: number): Promise<ProductSignals> {
+  try {
+    const cutoff = new Date(Date.now() - (rangeDays * 2) * DAY_MS).toISOString();
+    const { data, error } = await (supabase as any)
+      .from('product_events')
+      .select('created_at, event_name, surface, user_id')
+      .gte('created_at', cutoff)
+      .order('created_at', { ascending: false });
+
+    if (error || !data) {
+      return { available: false, weeklyViewAvailable: false, current: EMPTY_WINDOW, previous: EMPTY_WINDOW, recentEvents: [], frictionByEvent: [], searchBySurface: [], weeklyTrend: [] };
+    }
+
+    const rows = data as ProductEventRow[];
+    const currentBoundary = Date.now() - rangeDays * DAY_MS;
+    const currentRows = rows.filter((row) => new Date(row.created_at).getTime() >= currentBoundary);
+    const previousRows = rows.filter((row) => new Date(row.created_at).getTime() < currentBoundary);
+
+    const weeklyTrend = await getWeeklyTrend(supabase, rangeDays);
+
+    return {
+      available: true,
+      weeklyViewAvailable: weeklyTrend.available,
+      current: computeWindowMetrics(currentRows),
+      previous: computeWindowMetrics(previousRows),
+      recentEvents: rows.slice(0, 10),
+      frictionByEvent: toBreakdown(currentRows.filter((row) => ['auth_error', 'search_no_results', 'album_import_failed'].includes(row.event_name)).map((row) => humanizeEvent(row.event_name))),
+      searchBySurface: toBreakdown(currentRows.filter((row) => row.event_name === 'search_used').map((row) => humanizeSurface(row.surface))),
+      weeklyTrend: weeklyTrend.rows,
+    };
+  } catch {
+    return { available: false, weeklyViewAvailable: false, current: EMPTY_WINDOW, previous: EMPTY_WINDOW, recentEvents: [], frictionByEvent: [], searchBySurface: [], weeklyTrend: [] };
+  }
+}
+
+async function getWeeklyTrend(supabase: any, rangeDays: number): Promise<{ available: boolean; rows: WeeklyTrendRow[] }> {
+  try {
+    const cutoff = new Date(Date.now() - rangeDays * DAY_MS).toISOString().slice(0, 10);
+    const { data, error } = await (supabase as any)
+      .from('beta_dashboard_weekly')
+      .select('week, signup_users, onboarded_users, activated_users, social_users, wau, album_logs, import_failures, search_no_results, auth_errors')
+      .gte('week', cutoff)
+      .order('week', { ascending: false });
+
+    if (error || !data) {
+      return { available: false, rows: [] };
+    }
+
+    return { available: true, rows: data as WeeklyTrendRow[] };
+  } catch {
+    return { available: false, rows: [] };
+  }
+}
+
+function resolveRange(rawValue: string | string[] | undefined): { key: RangeKey; label: string; days: number } {
+  const normalized = Array.isArray(rawValue) ? rawValue[0] : rawValue;
+  if (normalized === '30d' || normalized === '90d') {
+    return { key: normalized, ...RANGE_OPTIONS[normalized] };
+  }
+  return { key: '7d', ...RANGE_OPTIONS['7d'] };
+}
+
+function computeWindowMetrics(rows: ProductEventRow[]): WindowMetrics {
+  const countUsers = (eventName?: string) => new Set(rows.filter((row) => row.user_id && (!eventName || row.event_name === eventName)).map((row) => row.user_id)).size;
+
+  return {
+    signups: countUsers('signup_completed'),
+    onboardings: countUsers('onboarding_completed'),
+    albumLoggers: countUsers('album_logged'),
+    followers: countUsers('user_followed'),
+    wau: countUsers(),
+    albumLogs: rows.filter((row) => row.event_name === 'album_logged').length,
+    authErrors: rows.filter((row) => row.event_name === 'auth_error').length,
+    noResultSearches: rows.filter((row) => row.event_name === 'search_no_results').length,
+    importFailures: rows.filter((row) => row.event_name === 'album_import_failed').length,
+  };
+}
+
+function toBreakdown(labels: string[]): Array<{ label: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const label of labels) counts.set(label, (counts.get(label) ?? 0) + 1);
+  return [...counts.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count).slice(0, 6);
+}
+
+function coveragePercent(value: number, total: number): string {
+  if (total === 0) return '0%';
+  return `${Math.round((value / total) * 100)}%`;
+}
+
+function rateLabel(numerator: number, denominator: number, suffix: string): string {
+  if (denominator === 0) return `0% ${suffix}`;
+  return `${Math.round((numerator / denominator) * 100)}% ${suffix}`;
+}
+
+function humanizeEvent(eventName: string): string {
+  return {
+    signup_completed: 'Signup completed',
+    onboarding_completed: 'Onboarding completed',
+    album_logged: 'Album logged',
+    user_followed: 'User followed',
+    auth_error: 'Auth error',
+    search_no_results: 'Search without result',
+    search_used: 'Search used',
+    album_import_failed: 'Album import failed',
+    album_import_started: 'Album import started',
+    review_liked: 'Review liked',
+    comment_created: 'Comment created',
+  }[eventName] ?? eventName.replaceAll('_', ' ');
+}
+
+function humanizeSurface(surface: string | null): string {
+  if (!surface) return 'surface inconnue';
+  return {
+    internal_search: 'recherche interne',
+    musicbrainz_albums: 'search albums MB',
+    musicbrainz_artists: 'search artists MB',
+    musicbrainz_import: 'import MusicBrainz',
+    onboarding: 'onboarding',
+    follow_button: 'follow button',
+    auth_form: 'auth form',
+    diary: 'diary',
+  }[surface] ?? surface;
+}
+
+function formatDelta(value: number): string {
+  if (value === 0) return 'stable';
+  return `${value > 0 ? '+' : ''}${value}`;
+}
+
+function formatRelative(value: string): string {
+  const diffMinutes = Math.max(1, Math.round((Date.now() - new Date(value).getTime()) / (60 * 1000)));
+  if (diffMinutes < 60) return `il y a ${diffMinutes} min`;
+  const hours = Math.round(diffMinutes / 60);
+  if (hours < 24) return `il y a ${hours} h`;
+  return `il y a ${Math.round(hours / 24)} j`;
+}
+
+function Panel({ title, subtitle, children, action, tone = 'neutral' }: { title: string; subtitle: string; children: ReactNode; action?: ReactNode; tone?: 'neutral' | 'warning' }) {
   return (
-    <div className="border-t border-border-divider pt-6 mb-8">
-      <div className="flex items-center gap-2 mb-4">
-        <h2 className="text-[16px] font-medium text-text-primary">{title}</h2>
-        <span className={`text-[11px] rounded-full px-2 py-0.5 ${count > 0 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-          {count > 0 ? count : '✓ OK'}
-        </span>
-        {count > 0 && action && <span className="ml-auto">{action}</span>}
+    <section className={`rounded-[18px] border p-5 sm:p-6 ${tone === 'warning' ? 'border-[#E2D5BE] bg-[#FBF8F2]' : 'border-border bg-background-secondary'}`}>
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-[18px] font-medium tracking-[-0.02em] text-text-primary">{title}</h2>
+          <p className="mt-1 text-[13px] leading-6 text-text-secondary">{subtitle}</p>
+        </div>
+        {action}
       </div>
-      {count > 0 && <div className="space-y-0">{children}</div>}
+      {children}
+    </section>
+  );
+}
+
+function QueuePanel({ title, subtitle, count, children, action }: { title: string; subtitle: string; count: number; children: ReactNode; action?: ReactNode }) {
+  return (
+    <Panel title={title} subtitle={subtitle} action={action} tone={count > 0 ? 'warning' : 'neutral'}>
+      <div className="mb-4 flex items-center gap-2">
+        <Tag tone={count > 0 ? 'warning' : 'success'}>{count > 0 ? String(count) : 'OK'}</Tag>
+      </div>
+      <div className="space-y-2">{count > 0 ? children : <EmptyState message="Rien a traiter ici pour l'instant." />}</div>
+    </Panel>
+  );
+}
+
+function PanelFootnote({ value }: { value: number }) {
+  return <p className="mt-3 text-[12px] text-[#746D66]">+ {value} elements supplementaires dans cette file.</p>;
+}
+
+function MetricCard({ label, value, subtitle, accent }: { label: string; value: number; subtitle: string; accent: 'sand' | 'rose' | 'warning' | 'success' }) {
+  const theme = {
+    sand: 'from-[#F7EFE4] to-[#EAE0D0] border-[#DCCDB7]',
+    rose: 'from-[#F8EAE8] to-[#EFD9D6] border-[#DFC4C1]',
+    warning: 'from-[#FBF4E6] to-[#F3E4C9] border-[#E0C48F]',
+    success: 'from-[#ECF4EB] to-[#DDE9DA] border-[#C3D5BE]',
+  }[accent];
+
+  return (
+    <div className={`rounded-[16px] border bg-gradient-to-br ${theme} p-4`}>
+      <p className="text-[12px] uppercase tracking-[0.16em] text-text-secondary">{label}</p>
+      <p className="mt-2 text-[34px] font-medium leading-none tracking-[-0.04em] text-text-primary">{value.toLocaleString('fr-FR')}</p>
+      <p className="mt-2 text-[12px] text-text-secondary">{subtitle}</p>
     </div>
   );
 }
 
-function AlbumRow({ album, children }: { album: Album; children?: React.ReactNode }) {
-  const year = album.release_date ? new Date(album.release_date).getFullYear() : null;
+function DeltaCard({ label, value, delta, hint }: { label: string; value: number; delta: number; hint: string }) {
+  const deltaTone = delta > 0 ? 'text-[#2E6B48]' : delta < 0 ? 'text-[#9A5B4A]' : 'text-[#7A7169]';
+  const deltaBg = delta > 0 ? 'bg-[#E4F0E7]' : delta < 0 ? 'bg-[#F4E4DF]' : 'bg-[#EEE7DD]';
+
   return (
-    <div className="flex items-center justify-between py-2.5 border-b border-border-divider last:border-0">
-      <div className="flex-1 min-w-0">
-        <Link href={`/albums/${album.id}`} className="text-[14px] text-text-primary hover:text-[#8E6F5E] transition-colors">
-          {album.title}
-        </Link>
-        <span className="text-[12px] text-text-tertiary ml-2">
-          {album.artist_name}{year ? ` · ${year}` : ''}
-        </span>
-        {album.mbid && (
-          <span className="text-[10px] text-text-disabled ml-2 font-mono hidden sm:inline">
-            {album.mbid.slice(0, 8)}…
-          </span>
-        )}
+    <div className="rounded-[16px] border border-border bg-background p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[13px] text-text-secondary">{label}</p>
+          <p className="mt-2 text-[36px] font-medium leading-none tracking-[-0.04em] text-text-primary">{value.toLocaleString('fr-FR')}</p>
+        </div>
+        <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${deltaTone} ${deltaBg}`}>{formatDelta(delta)}</span>
       </div>
-      {children}
+      <p className="mt-3 text-[12px] leading-5 text-text-secondary">{hint}</p>
     </div>
   );
+}
+
+function GlassMetric({ label, value, subtitle, tone }: { label: string; value: string; subtitle: string; tone: 'warning' | 'success' }) {
+  return (
+    <div className={`rounded-[16px] border p-4 ${tone === 'success' ? 'border-[#C3D5BE] bg-[#F5FAF4]' : 'border-[#DFC9A5] bg-[#FCF8F0]'}`}>
+      <p className="text-[12px] uppercase tracking-[0.14em] text-text-secondary">{label}</p>
+      <p className="mt-2 text-[30px] font-medium leading-none tracking-[-0.04em] text-text-primary">{value}</p>
+      <p className="mt-2 text-[12px] leading-5 text-text-secondary">{subtitle}</p>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-[14px] border border-border bg-background px-4 py-3">
+      <p className="text-[12px] text-text-secondary">{label}</p>
+      <p className="mt-1 text-[26px] font-medium tracking-[-0.03em] text-text-primary">{value.toLocaleString('fr-FR')}</p>
+    </div>
+  );
+}
+
+function HealthRow({ label, value, total, tone }: { label: string; value: number; total: number; tone: 'warning' | 'success' | 'critical' }) {
+  const percentage = total > 0 ? Math.max(4, Math.round((value / total) * 100)) : 0;
+  const barTone = tone === 'success' ? 'bg-[#6E8A61]' : tone === 'critical' ? 'bg-[#B86A5F]' : 'bg-[#C8A565]';
+
+  return (
+    <div className="rounded-[14px] border border-border bg-background p-3">
+      <div className="flex items-center justify-between gap-3 text-[13px] text-text-primary">
+        <span>{label}</span>
+        <span className="font-medium">{value.toLocaleString('fr-FR')}</span>
+      </div>
+      <div className="mt-2 h-2 rounded-full bg-background-tertiary">
+        <div className={`h-2 rounded-full ${barTone}`} style={{ width: `${percentage}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function FunnelStep({ label, value, nextValue }: { label: string; value: number; nextValue: number | null }) {
+  return (
+    <div className="rounded-[14px] border border-border bg-background px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[12px] uppercase tracking-[0.14em] text-text-tertiary">{label}</p>
+          <p className="mt-1 text-[28px] font-medium leading-none tracking-[-0.03em] text-text-primary">{value.toLocaleString('fr-FR')}</p>
+        </div>
+        {nextValue !== null && <Tag tone="neutral">{value > 0 ? `${Math.round((nextValue / value) * 100)}%` : '0%'}</Tag>}
+      </div>
+    </div>
+  );
+}
+
+function CompactRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex items-center justify-between rounded-[12px] border border-border bg-background px-3 py-2">
+      <span className="text-[12px] text-text-secondary">{label}</span>
+      <span className="text-[12px] font-medium text-text-primary">{value}</span>
+    </div>
+  );
+}
+
+function AlbumTaskRow({ album, meta, children }: { album: Album; meta?: AlbumMeta; children?: ReactNode }) {
+  const year = album.release_date ? new Date(album.release_date).getFullYear() : null;
+  return (
+    <div className="rounded-[14px] border border-border bg-background px-4 py-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <Link href={`/albums/${album.id}`} className="truncate text-[14px] font-medium text-text-primary transition-colors hover:text-[#8E6F5E]">
+              {album.title}
+            </Link>
+            <span className="text-[12px] text-text-secondary">{album.artist_name}{year ? ` · ${year}` : ''}</span>
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-text-tertiary">
+            {album.mbid ? <span className="font-mono">{album.mbid.slice(0, 8)}...</span> : <span>MBID absent</span>}
+            {meta?.fetched_at && <span>enrichi le {new Date(meta.fetched_at).toLocaleDateString('fr-FR')}</span>}
+          </div>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function DecisionCard({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-[14px] border border-border bg-background p-4">
+      <h3 className="text-[14px] font-medium text-text-primary">{title}</h3>
+      <p className="mt-2 text-[13px] leading-6 text-text-secondary">{body}</p>
+    </div>
+  );
+}
+
+function EmptyState({ message, compact = false }: { message: string; compact?: boolean }) {
+  return (
+    <div className={`rounded-[14px] border border-dashed border-border bg-background text-text-secondary ${compact ? 'px-3 py-2 text-[12px]' : 'px-4 py-6 text-[13px]'}`}>
+      {message}
+    </div>
+  );
+}
+
+function Tag({ children, tone }: { children: ReactNode; tone: 'neutral' | 'warning' | 'success' | 'critical' }) {
+  const styles = {
+    neutral: 'bg-[#F0ECE6] text-[#61584F]',
+    warning: 'bg-[#F7EEDB] text-[#8A6A27]',
+    success: 'bg-[#E8F1E6] text-[#376548]',
+    critical: 'bg-[#F5E5E1] text-[#9A5A4D]',
+  }[tone];
+
+  return <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${styles}`}>{children}</span>;
 }
 

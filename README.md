@@ -219,6 +219,16 @@ En production (Vercel) : planifiez l'appel périodique du script via une tâche 
 
 ---
 
+## Pilotage beta
+
+Documentation interne utile pour passer du MVP a une vraie beta exploitable:
+
+- [Plan beta 30 jours](docs/beta-plan-30-days.md)
+- [Dashboard beta](docs/beta-dashboard.md)
+- [Checklist QA beta](docs/qa-checklist.md)
+
+---
+
 ## Contribuer
 
 ```bash
