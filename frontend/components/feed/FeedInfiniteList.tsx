@@ -16,6 +16,13 @@ interface FeedInfiniteListProps {
   currentUserId?: string;
 }
 
+type SavedFeedState = {
+  scrollY?: number;
+  events?: FeedEvent[];
+  cursor?: string | null;
+  hasMore?: boolean;
+};
+
 /**
  * Deduplication key generator for feed events
  * Prevents duplicate display of similar events
@@ -112,19 +119,47 @@ function renderEvent(event: FeedEvent, currentUserId?: string) {
 
 const FEED_SCROLL_KEY = 'feed_scroll_state';
 
-function getSavedFeedState() {
+function getFeedScrollKey(currentUserId?: string) {
+  return currentUserId ? `${FEED_SCROLL_KEY}:${currentUserId}` : FEED_SCROLL_KEY;
+}
+
+function isSavedFeedState(value: unknown): value is SavedFeedState {
+  if (!value || typeof value !== 'object') return false;
+
+  const candidate = value as SavedFeedState;
+  if (candidate.scrollY !== undefined && typeof candidate.scrollY !== 'number') return false;
+  if (candidate.cursor !== undefined && candidate.cursor !== null && typeof candidate.cursor !== 'string') return false;
+  if (candidate.hasMore !== undefined && typeof candidate.hasMore !== 'boolean') return false;
+  if (candidate.events !== undefined && !Array.isArray(candidate.events)) return false;
+
+  return true;
+}
+
+function getSavedFeedState(storageKey: string): SavedFeedState | null {
   if (typeof window === 'undefined') return null;
+
   try {
-    const saved = sessionStorage.getItem(FEED_SCROLL_KEY);
-    return saved ? JSON.parse(saved) : null;
+    const saved = sessionStorage.getItem(storageKey);
+    if (!saved) return null;
+
+    const parsed = JSON.parse(saved);
+    if (!isSavedFeedState(parsed)) {
+      sessionStorage.removeItem(storageKey);
+      return null;
+    }
+
+    return parsed;
   } catch {
+    sessionStorage.removeItem(storageKey);
     return null;
   }
 }
 
 export default function FeedInfiniteList({ initialEvents, initialCursor, currentUserId }: FeedInfiniteListProps) {
+  const storageKey = getFeedScrollKey(currentUserId);
+
   // Lazy init: restore from sessionStorage on back-navigation, else use server props
-  const [restoredState] = useState(() => getSavedFeedState());
+  const [restoredState] = useState(() => getSavedFeedState(storageKey));
 
   const [events, setEvents] = useState<FeedEvent[]>(restoredState?.events ?? initialEvents);
   const [cursor, setCursor] = useState<string | null>(restoredState?.cursor ?? initialCursor);
@@ -151,12 +186,14 @@ export default function FeedInfiniteList({ initialEvents, initialCursor, current
 
   // Restore scroll position after back-navigation and clear saved state
   useEffect(() => {
+    sessionStorage.removeItem(FEED_SCROLL_KEY);
+
     if (restoredState) {
-      sessionStorage.removeItem(FEED_SCROLL_KEY);
+      sessionStorage.removeItem(storageKey);
       const target = restoredState.scrollY ?? 0;
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          window.scrollTo({ top: target, behavior: 'instant' });
+          window.scrollTo({ top: target });
         });
       });
     }
@@ -170,7 +207,7 @@ export default function FeedInfiniteList({ initialEvents, initialCursor, current
     try {
       const url = new URL(anchor.href, window.location.origin);
       if (url.pathname.startsWith('/diary/')) {
-        sessionStorage.setItem(FEED_SCROLL_KEY, JSON.stringify({
+        sessionStorage.setItem(storageKey, JSON.stringify({
           scrollY: window.scrollY,
           events: eventsRef.current,
           cursor: cursorRef.current,
@@ -180,7 +217,7 @@ export default function FeedInfiniteList({ initialEvents, initialCursor, current
     } catch {
       // ignore
     }
-  }, []);
+  }, [storageKey]);
 
   const loadMore = useCallback(async () => {
     if (loading || !hasMore) return;

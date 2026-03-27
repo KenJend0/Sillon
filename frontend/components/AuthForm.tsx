@@ -27,8 +27,8 @@ export default function AuthForm() {
   const [loading, setLoading] = useState(false);
   const urlError = searchParams.get("error");
 
-  const navigateAfterAuth = () => {
-    window.location.assign("/feed");
+  const navigateAfterAuth = (destination: "/feed" | "/onboarding" = "/feed") => {
+    window.location.assign(destination);
   };
 
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function AuthForm() {
 
         if (data.user && data.session) {
           showToast("Connexion réussie !", "success");
-          navigateAfterAuth();
+          navigateAfterAuth('/feed');
           return;
         }
       } else if (mode === "signup") {
@@ -107,8 +107,8 @@ export default function AuthForm() {
               method: "email",
             },
           });
-          // Session active immediately: go through /feed, which owns onboarding redirection.
-          navigateAfterAuth();
+          // New accounts should land on onboarding directly instead of relying on /feed.
+          navigateAfterAuth('/onboarding');
           return;
         } else if (data.user) {
           // Email confirmation enabled — user needs to confirm
