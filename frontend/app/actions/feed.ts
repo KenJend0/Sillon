@@ -338,12 +338,11 @@ function mapFeedEvent(raw: any): FeedEvent | null {
  */
 export async function backfillFolloweeEvents(followerId: string, followeeId: string, limit = 20) {
   try {
-    const supabase = await createSupabaseServer();
     const supabaseAdmin = createSupabaseAdmin();
 
     // Fetch the followee's recent events that were already fanned out to any recipient
     // We use a single known recipient (the followee themselves) as a proxy
-    const { data: sourceEvents, error } = await supabase
+    const { data: sourceEvents, error } = await supabaseAdmin
       .from('feed_events')
       .select('actor_id, followee_id, type, entry_id, album_id, created_at, payload')
       .eq('actor_id', followeeId)
