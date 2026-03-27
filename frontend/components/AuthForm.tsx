@@ -27,6 +27,10 @@ export default function AuthForm() {
   const [loading, setLoading] = useState(false);
   const urlError = searchParams.get("error");
 
+  const navigateAfterAuth = () => {
+    window.location.assign("/feed");
+  };
+
   useEffect(() => {
     if (urlError === "confirmation_failed") {
       showToast(
@@ -71,7 +75,8 @@ export default function AuthForm() {
 
         if (data.user && data.session) {
           showToast("Connexion réussie !", "success");
-          router.push("/onboarding");
+          navigateAfterAuth();
+          return;
         }
       } else if (mode === "signup") {
         const { data, error: signUpError } = await supabase.auth.signUp({
@@ -102,8 +107,9 @@ export default function AuthForm() {
               method: "email",
             },
           });
-          // Email confirmation disabled — user is immediately logged in
-          router.push("/onboarding");
+          // Session active immediately: go through /feed, which owns onboarding redirection.
+          navigateAfterAuth();
+          return;
         } else if (data.user) {
           // Email confirmation enabled — user needs to confirm
           showToast(
