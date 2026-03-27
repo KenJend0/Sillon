@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, Settings, Heart, FileText, LogOut } from "lucide-react";
+import { Menu, Settings, Heart, FileText, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { showToast } from "@/components/Toast";
 
@@ -13,7 +13,7 @@ export default function ProfileMenuClient() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { signOut, isAdmin } = useAuth();
 
   // Fermer le menu quand on clique en dehors
   useEffect(() => {
@@ -81,6 +81,16 @@ export default function ProfileMenuClient() {
             <FileText size={16} />
             Légal & infos
           </Link>
+          {isAdmin && (
+            <Link
+              href="/admin"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-[14px] text-text-primary"
+            >
+              <Shield size={16} />
+              Admin
+            </Link>
+          )}
           <button
             onClick={handleLogout}
             disabled={isLoggingOut}

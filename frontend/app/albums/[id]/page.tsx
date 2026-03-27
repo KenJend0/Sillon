@@ -4,7 +4,7 @@ import { msToMMSS, msToDuration } from "@/lib/time";
 import { createSupabaseServer, getAuthUser } from "@/lib/supabase/server";
 import { isAlbumSaved } from "@/app/actions/saved-albums";
 import { getArtistReleases } from "@/app/actions/musicbrainz";
-import { getSimilarAlbums, fetchAlbumStreamingLinks } from "@/app/actions/metadata";
+import { getSimilarAlbums } from "@/app/actions/metadata";
 import { getAlbumReviewsPreview, type AlbumReview } from "@/app/actions/diary";
 import Link from "next/link";
 import Image from "next/image";
@@ -15,6 +15,7 @@ import DescriptionCollapse from "@/components/DescriptionCollapse";
 import ScrollToHashClient from "@/components/ScrollToHashClient";
 import AdminSpotifyEdit from "@/components/AdminSpotifyEdit";
 import GenrePills from "@/components/GenrePills";
+import StreamingLinks from "@/components/StreamingLinks";
 
 type PageProps = {
     params: Promise<{ id: string }>;
@@ -147,24 +148,12 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
     );
     const description: string | null = albumMeta.data?.description ?? null;
 
-    // Liens DB en priorité — fetch automatique si aucun lien en base
-    const dbSpotify = albumMeta.data?.spotify_url ?? null;
-    const dbApple = albumMeta.data?.apple_music_url ?? null;
-    const dbDeezer = albumMeta.data?.deezer_url ?? null;
-    let streamingLinks: { spotify?: string; appleMusic?: string; deezer?: string; tidal?: string } = {
-        ...(dbSpotify ? { spotify: dbSpotify } : {}),
-        ...(dbApple ? { appleMusic: dbApple } : {}),
-        ...(dbDeezer ? { deezer: dbDeezer } : {}),
+    // Liens streaming depuis la DB uniquement — si absents, le composant StreamingLinks les charge côté client
+    const streamingLinks: { spotify?: string; appleMusic?: string; deezer?: string; tidal?: string } = {
+        ...(albumMeta.data?.spotify_url ? { spotify: albumMeta.data.spotify_url } : {}),
+        ...(albumMeta.data?.apple_music_url ? { appleMusic: albumMeta.data.apple_music_url } : {}),
+        ...(albumMeta.data?.deezer_url ? { deezer: albumMeta.data.deezer_url } : {}),
     };
-    const hasAnyLink = dbSpotify || dbApple || dbDeezer;
-    if (!hasAnyLink && album.mbid && artist?.name) {
-        try {
-            const fetched = await fetchAlbumStreamingLinks(album.id, album.mbid, artist.name, album.title);
-            if (fetched.spotify) streamingLinks.spotify = fetched.spotify;
-            if (fetched.appleMusic) streamingLinks.appleMusic = fetched.appleMusic;
-            if (fetched.deezer) streamingLinks.deezer = fetched.deezer;
-        } catch { /* best-effort */ }
-    }
 
     const artistAlbums = artistAlbumsData.data ?? [];
     const isAdmin = user
@@ -185,46 +174,39 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
     let networkListeners: NetworkListener[] = [];
     const followeeIds = ((followsResp as any).data ?? []).map((f: { followee_id: string }) => f.followee_id);
     if (user && followeeIds.length > 0) {
+        // Single query: diary_entries joined with profiles — saves one round-trip
         const { data: entries } = await supabase
             .from("diary_entries")
-            .select("id, user_id, rating, listened_at, review_body")
+            .select("id, user_id, rating, listened_at, review_body, profiles(id, username, display_name, avatar_url)")
             .eq("album_id", album.id)
             .in("user_id", followeeIds)
             .order("listened_at", { ascending: false });
 
         // Dédupliquer par user_id : garder l'entrée la plus récente par abonné
-        const latestByUser = new Map<string, { id: string; rating: number | null; listenedAt: string; hasReview: boolean }>();
+        const latestByUser = new Map<string, { id: string; rating: number | null; listenedAt: string; hasReview: boolean; profile: { id: string; username: string | null; display_name: string | null; avatar_url: string | null } }>();
         for (const e of (entries ?? [])) {
-            if (!latestByUser.has(e.user_id)) {
+            if (!latestByUser.has(e.user_id) && e.profiles) {
+                const p = e.profiles as { id: string; username: string | null; display_name: string | null; avatar_url: string | null };
                 latestByUser.set(e.user_id, {
                     id: e.id,
                     rating: e.rating,
                     listenedAt: e.listened_at,
                     hasReview: !!(e.review_body && e.review_body.trim()),
+                    profile: p,
                 });
             }
         }
 
-        const listenerIds = [...latestByUser.keys()].slice(0, 5);
-        if (listenerIds.length > 0) {
-            const { data: profiles } = await supabase
-                .from("profiles")
-                .select("id, username, display_name, avatar_url")
-                .in("id", listenerIds);
-            networkListeners = (profiles ?? []).map((p) => {
-                const entry = latestByUser.get(p.id);
-                return {
-                    userId: p.id,
-                    username: p.username ?? "",
-                    displayName: p.display_name ?? null,
-                    avatarUrl: p.avatar_url ?? null,
-                    rating: entry?.rating ?? null,
-                    listenedAt: entry?.listenedAt ?? null,
-                    entryId: entry?.id ?? null,
-                    hasReview: entry?.hasReview ?? false,
-                };
-            });
-        }
+        networkListeners = [...latestByUser.values()].slice(0, 5).map(({ profile: p, ...entry }) => ({
+            userId: p.id,
+            username: p.username ?? "",
+            displayName: p.display_name ?? null,
+            avatarUrl: p.avatar_url ?? null,
+            rating: entry.rating ?? null,
+            listenedAt: entry.listenedAt ?? null,
+            entryId: entry.id ?? null,
+            hasReview: entry.hasReview ?? false,
+        }));
     }
 
     // Complement with MusicBrainz if fewer than 3 artist albums in DB
@@ -286,6 +268,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
     const hasGenres = genres.length > 0;
     const hasDescription = !!description;
     const hasStreamingLinks = !!(streamingLinks.spotify || streamingLinks.appleMusic || streamingLinks.deezer || streamingLinks.tidal);
+    // showInHero: only 1 type of metadata (genres OR streaming only), no description
     const metadataCount = [hasGenres, hasDescription, hasStreamingLinks].filter(Boolean).length;
     const showInHero = metadataCount === 1 && !hasDescription;
     const showInSection = metadataCount >= 2 || hasDescription;
@@ -316,48 +299,25 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
             {/* ========== 1B. ALBUM INFO + DESCRIPTION ========== */}
             {(showInSection || (isAdmin && !streamingLinks.spotify)) && (
                 <div className="border-t border-border-divider pt-8 mb-20">
-                    {showInSection && (hasGenres || hasStreamingLinks) && (
+                    {showInSection && hasGenres && (
                         <div className="mb-6">
                             {/* T6: GenrePills avec bouton vote communautaire */}
-                            {hasGenres && (
-                                <div className="flex items-center gap-2 flex-wrap mb-4">
-                                    <span className="text-[12px] text-text-tertiary">Genres</span>
-                                    <GenrePills
-                                        genres={genres}
-                                        albumId={album.id}
-                                        userId={genres.length < 3 ? user?.id : undefined}
-                                        genreWeights={genreWeights}
-                                    />
-                                </div>
-                            )}
+                            <div className="flex items-center gap-2 flex-wrap mb-4">
+                                <span className="text-[12px] text-text-tertiary">Genres</span>
+                                <GenrePills
+                                    genres={genres}
+                                    albumId={album.id}
+                                    userId={genres.length < 3 ? user?.id : undefined}
+                                    genreWeights={genreWeights}
+                                />
+                            </div>
+                        </div>
+                    )}
 
-                            {hasStreamingLinks && (
-                                <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-[12px] text-text-tertiary">Écouter sur</span>
-                                    {[
-                                        { key: "spotify", label: "Spotify", href: streamingLinks.spotify },
-                                        { key: "appleMusic", label: "Apple Music", href: streamingLinks.appleMusic },
-                                        { key: "deezer", label: "Deezer", href: streamingLinks.deezer },
-                                        { key: "tidal", label: "Tidal", href: streamingLinks.tidal },
-                                    ]
-                                        .filter((s) => s.href)
-                                        .map((s, i, arr) => (
-                                            <span key={s.key} className="flex items-center gap-2">
-                                                <a
-                                                    href={s.href}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-[12px] text-text-secondary hover:text-text-primary transition-colors duration-150"
-                                                >
-                                                    {s.label}
-                                                </a>
-                                                {i < arr.length - 1 && (
-                                                    <span className="text-[12px] text-text-disabled">·</span>
-                                                )}
-                                            </span>
-                                        ))}
-                                </div>
-                            )}
+                    {/* Streaming links — lazy loaded client-side if not in DB */}
+                    {showInSection && !showInHero && (
+                        <div className="mb-6">
+                            <StreamingLinks albumId={album.id} initial={streamingLinks} />
                         </div>
                     )}
 
@@ -367,6 +327,13 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                         </div>
                     )}
                     {description && <DescriptionCollapse text={description} />}
+                </div>
+            )}
+
+            {/* Streaming links outside section — for albums with MBID but no other metadata */}
+            {!showInHero && !showInSection && !!(album.mbid && artist?.name) && (
+                <div className="mb-6">
+                    <StreamingLinks albumId={album.id} initial={streamingLinks} />
                 </div>
             )}
 

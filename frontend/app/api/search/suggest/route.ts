@@ -40,7 +40,9 @@ export async function GET(request: NextRequest) {
   }
 
   if (albumIds.length === 0) {
-    return NextResponse.json({ items: [] });
+    return NextResponse.json({ items: [] }, {
+      headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=30" },
+    });
   }
 
   // Search by album title
@@ -80,5 +82,7 @@ export async function GET(request: NextRequest) {
     cover_url: a.cover_url ?? null,
   }));
 
-  return NextResponse.json({ items });
+  return NextResponse.json({ items }, {
+    headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=30" },
+  });
 }

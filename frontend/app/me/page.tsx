@@ -9,6 +9,8 @@ import { getUserSavedAlbums } from "@/app/actions/saved-albums";
 
 export const revalidate = 0; // Pas de cache, recharger à chaque accès
 
+const ADMIN_IDS = (process.env.ADMIN_USER_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+
 export default async function MyProfilePage() {
     const supabase = await createSupabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
@@ -68,6 +70,7 @@ export default async function MyProfilePage() {
 
     const displayName = profile?.display_name || user.email?.split("@")[0] || "User";
     const username = profile?.username || user.email?.split("@")[0] || "user";
+    const isAdmin = ADMIN_IDS.includes(user.id);
 
     const userData = {
         id: user.id,
@@ -75,6 +78,7 @@ export default async function MyProfilePage() {
         display_name: displayName,
         picture_url: profile?.avatar_url ?? null,
         is_me: true,
+        is_admin: isAdmin,
         followers_count: followersCount || 0,
         following_count: followingCount || 0,
         bio: profile?.bio || null,

@@ -9,6 +9,7 @@ import { showToast } from '@/components/Toast';
 type AuthContextType = {
   user: SupabaseUser | null;
   profile: any | null;
+  isAdmin: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
 };
@@ -18,7 +19,23 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  async function syncAdminStatus() {
+    try {
+      const response = await fetch('/api/me', { credentials: 'include' });
+      if (!response.ok) {
+        setIsAdmin(false);
+        return;
+      }
+
+      const payload = await response.json();
+      setIsAdmin(Boolean(payload?.user?.isAdmin));
+    } catch {
+      setIsAdmin(false);
+    }
+  }
 
   /**
    * Ensure profile exists for authenticated user
@@ -50,24 +67,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await supabase.auth.signOut();
           setUser(null);
           setProfile(null);
+          setIsAdmin(false);
         } else if (user) {
           setUser(user);
+          syncAdminStatus().catch(() => setIsAdmin(false));
           // 🎯 NEW: Ensure profile exists (non-blocking)
           ensureUserProfile(user).catch(err => console.error('Profile sync error:', err));
         } else {
           setUser(null);
           setProfile(null);
+          setIsAdmin(false);
         }
       } catch (error) {
         if (error instanceof AuthApiError && error.status === 401) {
           await supabase.auth.signOut();
           setUser(null);
           setProfile(null);
+          setIsAdmin(false);
         } else {
           console.error('Erreur lors de la vérification de la session:', error);
           try { showToast("Erreur de session — vous avez été déconnecté", "error"); } catch {}
           setUser(null);
           setProfile(null);
+          setIsAdmin(false);
         }
       } finally {
         setLoading(false);
@@ -83,16 +105,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         if (session?.user) {
           setUser(session.user);
+          syncAdminStatus().catch(() => setIsAdmin(false));
           // 🎯 NEW: Ensure profile on auth state change (non-blocking)
           ensureUserProfile(session.user).catch(err => console.error('Profile sync error:', err));
         } else {
           setUser(null);
           setProfile(null);
+          setIsAdmin(false);
         }
       } catch (error) {
         if (error instanceof AuthApiError && error.status === 401) {
           setUser(null);
           setProfile(null);
+          setIsAdmin(false);
         } else {
           console.error('Erreur lors du changement d\'état de session:', error);
           try { showToast("Erreur de session", "error"); } catch {}
@@ -109,10 +134,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
+    setIsAdmin(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ user, profile, isAdmin, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );

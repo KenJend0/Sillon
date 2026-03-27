@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu, LogOut, Settings, Heart, FileText } from "lucide-react";
+import { Menu, LogOut, Settings, Heart, FileText, Shield } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { UserAvatar } from "@/components/avatars/DefaultAvatar";
@@ -15,6 +15,7 @@ type Props = {
     display_name: string;
     picture_url: string | null;
     is_me?: boolean;
+    is_admin?: boolean;
     is_following?: boolean;
     followers_count?: number;
     following_count?: number;
@@ -83,6 +84,16 @@ export default function ProfileHeader({ user, stats, onFollowClick }: Props) {
                   <FileText size={16} />
                   Légal & infos
                 </Link>
+                {user.is_admin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-[14px] text-text-primary"
+                  >
+                    <Shield size={16} />
+                    Admin
+                  </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-[14px] border-t border-border-divider text-[#C86C6C] text-left"
