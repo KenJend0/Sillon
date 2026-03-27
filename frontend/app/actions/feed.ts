@@ -361,13 +361,10 @@ export async function backfillFolloweeEvents(followerId: string, followeeId: str
       payload: {},
     }));
 
-    // Insert only — skip duplicates silently
+    // Insert only — duplicate key errors are caught by the outer try/catch
     await supabaseAdmin
       .from('feed_events')
-      .insert(rows)
-      .throwOnError()
-      .then(() => null)
-      .catch(() => null); // duplicate key errors are fine
+      .insert(rows);
   } catch (err) {
     console.error('backfillFolloweeEvents error:', err);
   }
