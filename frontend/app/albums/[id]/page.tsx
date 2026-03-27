@@ -171,6 +171,12 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
         entryId: string | null;
         hasReview: boolean;
     };
+    type JoinedProfile = {
+        id: string;
+        username: string | null;
+        display_name: string | null;
+        avatar_url: string | null;
+    };
     let networkListeners: NetworkListener[] = [];
     const followeeIds = ((followsResp as any).data ?? []).map((f: { followee_id: string }) => f.followee_id);
     if (user && followeeIds.length > 0) {
@@ -183,10 +189,11 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
             .order("listened_at", { ascending: false });
 
         // Dédupliquer par user_id : garder l'entrée la plus récente par abonné
-        const latestByUser = new Map<string, { id: string; rating: number | null; listenedAt: string; hasReview: boolean; profile: { id: string; username: string | null; display_name: string | null; avatar_url: string | null } }>();
+        const latestByUser = new Map<string, { id: string; rating: number | null; listenedAt: string; hasReview: boolean; profile: JoinedProfile }>();
         for (const e of (entries ?? [])) {
-            if (!latestByUser.has(e.user_id) && e.profiles) {
-                const p = e.profiles as { id: string; username: string | null; display_name: string | null; avatar_url: string | null };
+            const rawProfile = Array.isArray(e.profiles) ? e.profiles[0] : e.profiles;
+            if (!latestByUser.has(e.user_id) && rawProfile) {
+                const p = rawProfile as JoinedProfile;
                 latestByUser.set(e.user_id, {
                     id: e.id,
                     rating: e.rating,
