@@ -16,7 +16,7 @@ const RANGE_OPTIONS = {
 } as const;
 
 type RangeKey = keyof typeof RANGE_OPTIONS;
-type SearchParamsInput = Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined> | undefined;
+type SearchParamsInput = Promise<Record<string, string | string[] | undefined>> | undefined;
 
 type Album = {
   id: string;
@@ -95,7 +95,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
   const user = await getAuthUser();
   if (!user || !ADMIN_IDS.includes(user.id)) redirect('/');
 
-  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const range = resolveRange(resolvedSearchParams?.range);
 
   const supabase = createSupabaseAdmin();
