@@ -1,0 +1,57 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { getForYouSuggestions, type ForYouAlbum } from "@/app/actions/explore";
+
+export default function PourToiSection() {
+    const [albums, setAlbums] = useState<ForYouAlbum[] | null>(null);
+
+    useEffect(() => {
+        getForYouSuggestions().then(setAlbums);
+    }, []);
+
+    // null = chargement (invisible), [] = rien à suggérer (invisible)
+    if (!albums || albums.length === 0) return null;
+
+    return (
+        <section>
+            <h2 className="text-h2 text-text-primary mb-5">Pour toi</h2>
+            {/* 3 items → 1 colonne (3 lignes), sinon 2 colonnes */}
+            <div className={`grid gap-3 ${albums.length === 3 ? "grid-cols-1" : "grid-cols-2"}`}>
+                {albums.map((album, idx) => (
+                    <Link
+                        key={album.album_id}
+                        href={`/albums/${album.album_id}`}
+                        className={`group flex items-center gap-3 hover:opacity-75 transition-opacity duration-150 ${
+                            albums.length !== 3 && albums.length % 2 !== 0 && idx === albums.length - 1 ? "col-span-2" : ""
+                        }`}
+                    >
+                        <div className="w-12 h-12 rounded-[6px] overflow-hidden bg-background-secondary flex-shrink-0 relative">
+                            {album.cover_url ? (
+                                <Image
+                                    src={album.cover_url}
+                                    alt={album.title}
+                                    fill
+                                    className="object-cover"
+                                    sizes="48px"
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-background-tertiary" />
+                            )}
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-[13px] text-text-primary font-medium leading-snug line-clamp-2">
+                                {album.title}
+                            </p>
+                            <p className="text-[11px] text-text-secondary truncate mt-0.5">
+                                {album.artist}
+                            </p>
+                        </div>
+                    </Link>
+                ))}
+            </div>
+        </section>
+    );
+}

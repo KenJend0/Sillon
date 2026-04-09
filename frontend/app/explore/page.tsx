@@ -4,6 +4,8 @@
 export const revalidate = 3600;
 import DiscoverCard from "@/components/DiscoverCard";
 import SearchOverlay from "@/components/SearchOverlay";
+import PourToiSection from "@/components/PourToiSection";
+import DiscoverySection from "@/components/DiscoverySection";
 
 type DiscoverItem = {
     id: string;
@@ -92,48 +94,19 @@ async function getTrendingThisWeek(): Promise<DiscoverItem[]> {
         }));
 }
 
-async function getNewOnWaveform(): Promise<DiscoverItem[]> {
-    const supabase = createSupabaseAnon();
-
-    // Albums most recently added to the Waveform catalog
-    const { data: newAlbums } = await supabase
-        .from("albums")
-        .select("id, title, cover_url, artists(name), created_at")
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-    if (!newAlbums) return [];
-
-    return newAlbums.map((album) => ({
-        id: `new-${album.id}`,
-        album_id: album.id,
-        album_title: album.title || "Unknown",
-        artist_name: (album.artists as any)?.name || "Unknown",
-        cover_url: album.cover_url || "",
-        discover_kind: "new_release",
-    }));
-}
 
 export default async function ExplorePage() {
     let trending: DiscoverItem[] = [];
-    let newOnWaveform: DiscoverItem[] = [];
 
     try {
-        [trending, newOnWaveform] = await Promise.all([
-            getTrendingThisWeek(),
-            getNewOnWaveform(),
-        ]);
+        trending = await getTrendingThisWeek();
     } catch (err) {
-        // In case of Supabase/network errors, fall back to empty lists so UI shows the friendly onboarding state.
-        // This avoids an empty-explore experience for new users when the backend refresh script hasn't run.
-        // Server-side logs are useful to investigate the root cause.
         // eslint-disable-next-line no-console
         console.error("Explore data fetch failed:", err);
         trending = [];
-        newOnWaveform = [];
     }
 
-    const isEmpty = trending.length === 0 && newOnWaveform.length === 0;
+    const isEmpty = trending.length === 0;
 
     return (
         <>
@@ -171,6 +144,9 @@ export default async function ExplorePage() {
                     </div>
                 ) : (
                     <div className="space-y-12">
+                        {/* Pour toi — suggestions personnalisées (client-side, user-specific) */}
+                        <PourToiSection />
+
                         {/* Trending this week */}
                         <section>
                             <div className="mb-5">
@@ -197,31 +173,8 @@ export default async function ExplorePage() {
                             )}
                         </section>
 
-                        {/* New on Waveform */}
-                        <section>
-                            <div className="mb-5">
-                                <h2 className="text-h2 text-text-primary mb-2">
-                                    Récemment ajoutés
-                                </h2>
-
-                            </div>
-                            {newOnWaveform.length > 0 ? (
-                                <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2">
-                                    {newOnWaveform.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="snap-center shrink-0 w-44 sm:w-48 md:w-52"
-                                        >
-                                            <DiscoverCard item={item} />
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-text-tertiary text-[14px]">
-                                    Rien pour le moment.
-                                </p>
-                            )}
-                        </section>
+                        {/* Découverte — artistes inconnus de l'utilisateur, bien notés */}
+                        <DiscoverySection />
                     </div>
                 )}
             </main>

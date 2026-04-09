@@ -55,7 +55,7 @@ Bugs et frictions identifiés, à régler avant de croître.
 - [x] **Supprimer les pages inutiles** — `/diary/page.tsx` et `/import/page.tsx` supprimées (remplacées par `/add` et auto-import), les liens dans le middleware mis à jour
 
 ### Layout desktop (version PC)
-- [ ] Refonte du layout pour les écrans larges : sidebar gauche (nav), colonne centrale (contenu), sidebar droite (contexte / widgets) — garder le design mobile-first intact
+- [ ] Refonte du layout pour les écrans larges. garder le design mobile-first intact
 
 ---
 
@@ -64,12 +64,12 @@ Bugs et frictions identifiés, à régler avant de croître.
 Rendre les pages albums et artistes vraiment riches.
 
 ### Pages album
-- [ ] **Activité réseau** — afficher les amis qui ont déjà écouté cet album (avatars + note si disponible) directement sur la page album
-- [ ] **Enrichissement metadata** — genres (tags) via MusicBrainz ou Last.fm, description de l'album si disponible
-- [ ] **Albums similaires / de la même disco** — carousel "Du même artiste" et "Albums similaires" en bas de page album
+- [x] **Activité réseau** — afficher les amis qui ont déjà écouté cet album (avatars + note si disponible) directement sur la page album
+- [x] **Enrichissement metadata** — genres (tags) via MusicBrainz ou Last.fm, description de l'album si disponible
+- [x] **Albums similaires / de la même disco** — carousel "Du même artiste" et "Albums similaires" en bas de page album
 
 ### Pages artiste
-- [ ] **Bio et tags** — bio Wikipedia déjà fetchée (`fetchArtistMetadata`), l'afficher proprement avec genres et tags ; artistes similaires
+- [x] **Bio et tags** — bio Wikipedia déjà fetchée (`fetchArtistMetadata`), l'afficher proprement avec genres et tags ; artistes similaires
 - [ ] **Discographie complète** — filtres par type (Albums, EPs, Singles, Lives), tri par date
 
 ### Likes sur les titres (tracks)
@@ -83,8 +83,9 @@ Rendre les pages albums et artistes vraiment riches.
 Ce qui rend l'app vraiment utilisable au quotidien.
 
 ### Feed
-- [ ] **Agrégation des événements** — *"Mehdi, Camille et 8 autres ont aimé GUTS"* (groupBy album + event_type + fenêtre de 24h)
-- [ ] **Section "Pour toi" dans Explore** — albums bien notés par tes abonnements que tu n'as pas encore écouté (collaborative filtering simple, pas de ML)
+- [x] **Agrégation des événements** — *"Mehdi, Camille et 8 autres ont aimé GUTS"* (groupBy album + event_type + fenêtre de 24h)
+- [x] **Section "Pour toi" dans Explore** — collaborative filtering Jaccard : voisins de goût (>= 3 albums notés >= 8 en commun, toute la plateforme), suggestions hors journal, disparaît proprement si pas assez de données
+- [x] **Carousel "Découverte" dans Explore** — remplace "Récemment ajoutés" : albums bien notés globalement dont l'artiste est inconnu de l'utilisateur
 
 ### Profils & stats
 - [ ] **Stats sur le profil** — note moyenne globale, distribution des notes (histogramme), top artistes, top genres ; dans un onglet dédié ou accessible depuis le menu
@@ -141,6 +142,7 @@ Une fois que l'app est stable et qu'il y a des utilisateurs.
 Une fois qu'il y a assez de données.
 
 - [ ] **Recherche par titre de chanson** — si l'utilisateur tape "Come Together", remonter l'album parent ("Abbey Road") via l'endpoint `/recording` de MusicBrainz, puis lookup release-group ; nécessite 2 appels MB + déduplication avec les résultats album classiques
+- [ ] **Tags de genre MusicBrainz sur les albums** — stocker les tags MB (`/release-group/{mbid}?inc=tags`) au moment de l'import dans un champ `tags[]` sur la table `albums` ; débloque la découverte par genre (proposer des albums bien notés *hors* des genres habituels du user) et l'amélioration des stats profil
 - [ ] **Recommandations ML** — matrix factorization (SVD/ALS) ou user-based CF sur ratings + follows + saves
 - [ ] **Listes thématiques UGC** — *"Best of 2024"*, *"Albums pluvieux"* (à la Letterboxd) — créer, partager, commenter
 - [ ] **Stats avancées** — graphes par année / genre / artiste, distribution des notes, tendances temporelles
@@ -191,3 +193,4 @@ Une fois qu'il y a assez de données.
 - [x] Recherche artistes filtrée par albums studio
 - [x] Liens streaming fetchés (Spotify, Apple Music, Deezer, Tidal) via MusicBrainz external URLs
 - [x] Bio artiste via Wikipedia / Wikidata (avec cache DB)
+- [x] Agrégation des événements
