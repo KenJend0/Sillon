@@ -3,7 +3,6 @@ import type { NextRequest } from "next/server";
 
 // Protect these top-level routes (and any nested paths)
 const AUTH_MATCHER = [
-  "/diary/:path*",
   "/settings/:path*",
   "/add/:path*",
   "/me/:path*",
@@ -58,7 +57,6 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/diary/:path*",
     "/settings/:path*",
     "/add/:path*",
     "/me/:path*",

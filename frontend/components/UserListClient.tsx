@@ -47,13 +47,13 @@ export default function UserListClient({ initialUsers, currentUserId }: Props) {
   return (
     <div className="bg-background-secondary rounded-[12px] overflow-hidden">
       {users.map((user) => (
-        <div key={user.id} className={pending[user.id] ? "opacity-70" : ""}>
-          <UserCard
-            user={user}
-            currentUserId={currentUserId}
-            onFollowToggle={currentUserId ? handleToggleFollow : undefined}
-          />
-        </div>
+        <UserCard
+          key={user.id}
+          user={user}
+          currentUserId={currentUserId}
+          onFollowToggle={currentUserId ? handleToggleFollow : undefined}
+          isLoading={!!pending[user.id]}
+        />
       ))}
     </div>
   );

@@ -48,6 +48,15 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_KEY=eyJ...      # serveur uniquement
 ```
 
+Variables optionnelles :
+
+```env
+UPSTASH_REDIS_REST_URL=https://...
+UPSTASH_REDIS_REST_TOKEN=...
+```
+
+Elles activent le rate limiting serveur. Sans elles, l'app reste en mode fail-open: les routes et actions passent sans limitation.
+
 ### Lancer en dev
 
 ```bash
@@ -212,7 +221,7 @@ En production (Vercel) : planifiez l'appel périodique du script via une tâche 
 
 1. Connecter le repo sur [vercel.com](https://vercel.com)
 2. Définir le **Root Directory** sur `frontend`
-3. Ajouter les variables d'environnement (Supabase URL, anon key, service key)
+3. Ajouter les variables d'environnement (Supabase URL, anon key, service key, et éventuellement Upstash Redis pour le rate limiting)
 4. Deploy
 
 > La clé `SUPABASE_SERVICE_KEY` doit rester côté serveur — ne jamais la préfixer `NEXT_PUBLIC_`.

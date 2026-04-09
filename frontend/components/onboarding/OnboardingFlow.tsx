@@ -72,7 +72,7 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
         try {
             const result = await setOnboardingUsername(trimmed);
             if (!result.ok) {
-                showToast('Erreur, réessaie.', 'error');
+                showToast(result.error || 'Erreur, réessaie.', 'error');
                 return;
             }
             setStep(2);

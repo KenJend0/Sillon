@@ -6,6 +6,8 @@ import EnrichAllButton from './EnrichAllButton';
 import FetchStreamingAllButton from './FetchStreamingAllButton';
 import ReEnrichButton from './ReEnrichButton';
 import StreamingLinksEditor from './StreamingLinksEditor';
+import DeleteReportedContentButton from './DeleteReportedContentButton';
+import AnalyzeReportButton from './AnalyzeReportButton';
 
 const ADMIN_IDS = (process.env.ADMIN_USER_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -111,6 +113,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
     { data: rawAlbums },
     { data: genreData },
     { data: metaData },
+    { data: rawReports },
     productSignals,
   ] = await Promise.all([
     supabase.from('albums').select('*', { count: 'exact', head: true }),
@@ -123,8 +126,26 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
     supabase.from('albums').select('id, title, mbid, cover_url, release_date, artists(name)').order('title'),
     supabase.from('album_genres').select('album_id'),
     supabase.from('album_metadata').select('album_id, description, fetched_at, spotify_url, apple_music_url, deezer_url').order('fetched_at', { ascending: false }),
+    (supabase as any).from('content_reports').select('id, content_type, content_id, reason, created_at, reporter_id').order('created_at', { ascending: false }).limit(50),
     getProductSignals(supabase, range.days),
   ]);
+
+  // Enrich reports with reporter usernames + content text
+  const reports = (rawReports ?? []) as Array<{ id: string; content_type: string; content_id: string; reason: string; created_at: string; reporter_id: string }>;
+  const reporterIds = [...new Set(reports.map((r) => r.reporter_id))];
+  const entryIds = reports.filter((r) => r.content_type === 'diary_entry').map((r) => r.content_id);
+  const commentIds = reports.filter((r) => r.content_type === 'diary_comment').map((r) => r.content_id);
+
+  const [{ data: reporterProfiles }, { data: entryTexts }, { data: commentTexts }] = await Promise.all([
+    reporterIds.length > 0 ? supabase.from('profiles').select('id, username').in('id', reporterIds) : Promise.resolve({ data: [] }),
+    entryIds.length > 0 ? supabase.from('diary_entries').select('id, review_title, review_body').in('id', entryIds) : Promise.resolve({ data: [] }),
+    commentIds.length > 0 ? supabase.from('diary_comments').select('id, body').in('id', commentIds) : Promise.resolve({ data: [] }),
+  ]);
+
+  const reporterMap = new Map((reporterProfiles ?? []).map((p) => [p.id, p.username]));
+  const entryTextMap = new Map((entryTexts ?? []).map((e) => [e.id, e.review_body || e.review_title || null]));
+  const commentTextMap = new Map((commentTexts ?? []).map((c) => [c.id, c.body]));
+
 
   const albums: Album[] = ((rawAlbums ?? []) as any[]).map((album) => ({
     id: album.id,
@@ -435,6 +456,75 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
               tone={notEnriched.length > 0 ? 'warning' : 'success'}
             />
           </div>
+        </section>
+
+        {/* ── Modération — signalements ────────────────────────────────── */}
+        <section className="rounded-[20px] border border-border bg-background-secondary p-6 sm:p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <h2 className="text-[20px] font-medium text-text-primary tracking-[-0.01em]">Signalements</h2>
+            <Tag tone={reports.length > 0 ? 'warning' : 'success'}>
+              {reports.length} en attente
+            </Tag>
+          </div>
+
+          {reports.length === 0 ? (
+            <EmptyState message="Aucun signalement pour l'instant." />
+          ) : (
+            <div className="space-y-2">
+              {reports.map((report) => {
+                const text = report.content_type === 'diary_entry'
+                  ? entryTextMap.get(report.content_id)
+                  : commentTextMap.get(report.content_id);
+
+                return (
+                  <div key={report.id} className="rounded-[14px] border border-border bg-background px-4 py-3 space-y-2">
+                    {/* Meta row */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Tag tone={report.content_type === 'diary_entry' ? 'neutral' : 'warning'}>
+                        {report.content_type === 'diary_entry' ? 'Écoute' : 'Commentaire'}
+                      </Tag>
+                      <span className="text-[12px] text-text-tertiary">
+                        signalé par <span className="text-text-secondary">@{reporterMap.get(report.reporter_id) ?? '?'}</span>
+                      </span>
+                      <span className="text-[11px] text-text-tertiary ml-auto">
+                        {new Date(report.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      </span>
+                    </div>
+
+                    {/* Content preview */}
+                    {text ? (
+                      <p className="text-[13px] text-text-primary leading-[1.6] line-clamp-3 italic">
+                        «&thinsp;{text.trim()}&thinsp;»
+                      </p>
+                    ) : (
+                      <p className="text-[12px] text-text-tertiary italic">Contenu supprimé ou sans texte</p>
+                    )}
+
+                    {/* Actions row */}
+                    <div className="flex items-center gap-2 pt-1 flex-wrap">
+                      <AnalyzeReportButton
+                        contentType={report.content_type as 'diary_entry' | 'diary_comment'}
+                        contentId={report.content_id}
+                      />
+                      {report.content_type === 'diary_entry' && (
+                        <Link
+                          href={`/diary/${report.content_id}`}
+                          className="text-[11px] text-text-tertiary hover:text-text-primary border border-border rounded-full px-2.5 py-1 transition-colors duration-150"
+                        >
+                          Voir
+                        </Link>
+                      )}
+                      <DeleteReportedContentButton
+                        reportId={report.id}
+                        contentType={report.content_type as 'diary_entry' | 'diary_comment'}
+                        contentId={report.content_id}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
       </div>

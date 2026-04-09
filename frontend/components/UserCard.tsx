@@ -10,8 +10,8 @@ type User = {
 };
 
 export default function UserCard({
-                                     user, onFollowToggle, currentUserId,
-                                 }: { user: User; onFollowToggle?: (id: string, next?: boolean) => void; currentUserId?: string | null; }) {
+                                     user, onFollowToggle, currentUserId, isLoading = false,
+                                 }: { user: User; onFollowToggle?: (id: string, next?: boolean) => void; currentUserId?: string | null; isLoading?: boolean; }) {
     const hideButton = user.is_me || (!!currentUserId && user.id === currentUserId);
 
     return (
@@ -46,14 +46,18 @@ export default function UserCard({
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
-                        onFollowToggle(user.id, !user.is_following);
+                        if (!isLoading) onFollowToggle(user.id, !user.is_following);
                     }}
-                    className={`flex-shrink-0 px-4 py-1.5 text-[12px] font-medium rounded-[8px] transition-colors duration-150 ${
+                    disabled={isLoading}
+                    className={`flex-shrink-0 px-4 py-1.5 text-[12px] font-medium rounded-[8px] transition-colors duration-150 inline-flex items-center gap-1.5 disabled:cursor-not-allowed ${
                         user.is_following
                             ? "bg-background-tertiary text-text-primary hover:bg-[#D8D3CB]"
                             : "bg-[#1C1C1C] text-[#F5F3EF] hover:opacity-85"
                     }`}
                 >
+                    {isLoading && (
+                        <span className="h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin flex-shrink-0" />
+                    )}
                     {user.is_following ? "Suivi" : "Suivre"}
                 </button>
             )}

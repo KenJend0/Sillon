@@ -72,6 +72,13 @@ export async function getMyFeed({
 
     const supabase = await createSupabaseServer();
 
+    // Fetch blocked user IDs to exclude their events from the feed
+    const { data: blockedRows } = await (supabase as any)
+      .from('user_blocks')
+      .select('blocked_id')
+      .eq('blocker_id', user.id);
+    const blockedIds = (blockedRows ?? []).map((r: any) => r.blocked_id);
+
     // Feed is fan-out at write time, so we only read events where user_id = auth.uid()
     // No need to fetch followers or use .in() — all relevant events are already here
 
@@ -125,6 +132,11 @@ export async function getMyFeed({
       .neq('actor_id', user.id) // Don't show own actions — user already knows what they did
       .order('created_at', { ascending: false })
       .limit(limit);
+
+    // Exclude events from blocked users
+    if (blockedIds.length > 0) {
+      query = query.not('actor_id', 'in', `(${blockedIds.join(',')})`);
+    }
 
     // Cursor: only fetch events older than the last seen timestamp
     if (cursor) {

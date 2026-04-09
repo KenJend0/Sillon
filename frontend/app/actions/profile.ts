@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { getAuthUser } from '@/lib/supabase/server';
 import { createSupabaseAdmin } from '@/lib/supabase/server';
+import { findBannedUsernameWord } from '@/lib/bannedWords';
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{3,32}$/;
 
@@ -193,6 +194,7 @@ export async function setOnboardingUsername(newUsername: string) {
 
   const trimmed = newUsername.trim();
   if (!USERNAME_REGEX.test(trimmed)) return { ok: false, error: 'invalid_username' };
+  if (findBannedUsernameWord(trimmed)) return { ok: false, error: 'Ce pseudo contient du contenu inapproprié.' };
 
   const supabase = await createSupabaseServer();
 
@@ -239,6 +241,9 @@ export async function checkUsernameAvailability(username: string) {
   if (!USERNAME_REGEX.test(username)) {
     return { ok: true, available: false, error: 'invalid_username' };
   }
+  if (findBannedUsernameWord(username)) {
+    return { ok: true, available: false, error: 'username_banned' };
+  }
 
   const supabase = await createSupabaseServer();
   const { data, error } = await supabase
@@ -266,6 +271,7 @@ export async function changeUsername(newUsername: string) {
   if (!USERNAME_REGEX.test(trimmed)) {
     return { ok: false, error: 'invalid_username' };
   }
+  if (findBannedUsernameWord(trimmed)) return { ok: false, error: 'Ce pseudo contient du contenu inapproprié.' };
 
   const supabase = await createSupabaseServer();
 

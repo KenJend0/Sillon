@@ -4,6 +4,7 @@ import { getAuthUser, createSupabaseServer, createSupabaseAdmin } from '@/lib/su
 import { fanoutEvent, backfillFolloweeEvents } from './feed';
 import { ensureProfile } from './profile';
 import { logAuthedProductEvent } from '@/lib/productEvents';
+import { checkActionRateLimit } from '@/lib/serverRateLimit';
 
 /**
  * Toggle follow: insert if not exists, delete if exists
@@ -16,6 +17,9 @@ export async function toggleFollow(idOrUsername: string, source?: string) {
     if (!user) {
       return { success: false, error: 'Not authenticated' };
     }
+
+    const rlError = await checkActionRateLimit(user.id, 'follow');
+    if (rlError) return { success: false, error: rlError };
 
     // Ensure current user's profile exists
     await ensureProfile();
@@ -48,6 +52,17 @@ export async function toggleFollow(idOrUsername: string, source?: string) {
     // Prevent self-follow
     if (targetId === user.id) {
       return { success: false, error: 'Cannot follow yourself' };
+    }
+
+    // Prevent following a blocked user (or a user who blocked you)
+    const { data: blockCheck } = await (supabase as any)
+      .from('user_blocks')
+      .select('blocker_id')
+      .or(`and(blocker_id.eq.${user.id},blocked_id.eq.${targetId}),and(blocker_id.eq.${targetId},blocked_id.eq.${user.id})`)
+      .limit(1);
+
+    if (blockCheck && blockCheck.length > 0) {
+      return { success: false, error: 'Action impossible' };
     }
 
     // Check if already following
@@ -145,13 +160,14 @@ export async function getSuggestedUsers(limit = 5): Promise<SuggestedUser[]> {
 
   const supabase = await createSupabaseServer();
 
-  // Fetch already-followed user IDs to exclude them
-  const { data: followed } = await supabase
-    .from('follows')
-    .select('followee_id')
-    .eq('follower_id', user.id);
+  // Fetch already-followed and blocked user IDs to exclude them
+  const [{ data: followed }, { data: blocked }] = await Promise.all([
+    supabase.from('follows').select('followee_id').eq('follower_id', user.id),
+    (supabase as any).from('user_blocks').select('blocked_id').eq('blocker_id', user.id),
+  ]);
 
   const followedIds = new Set<string>((followed || []).map((f) => f.followee_id));
+  const blockedIds = new Set<string>((blocked || []).map((b: any) => b.blocked_id));
 
   // Users with recent public activity, deduped and not already followed
   const { data: recentEntries } = await supabase
@@ -162,13 +178,15 @@ export async function getSuggestedUsers(limit = 5): Promise<SuggestedUser[]> {
     .order('created_at', { ascending: false })
     .limit(100);
 
+  const excludedIds = new Set([...followedIds, ...blockedIds]);
+
   const suggestedIds: string[] = [];
   if (recentEntries?.length) {
     const seen = new Set<string>();
     for (const entry of recentEntries) {
       if (
         !seen.has(entry.user_id) &&
-        !followedIds.has(entry.user_id) &&
+        !excludedIds.has(entry.user_id) &&
         suggestedIds.length < limit
       ) {
         seen.add(entry.user_id);
@@ -186,18 +204,79 @@ export async function getSuggestedUsers(limit = 5): Promise<SuggestedUser[]> {
     return (profiles as SuggestedUser[]) || [];
   }
 
-  // Fallback: recently joined users not already followed
+  // Fallback: recently joined users not already followed or blocked
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, username, display_name, avatar_url')
     .neq('id', user.id)
     .not('username', 'is', null)
     .order('created_at', { ascending: false })
-    .limit(limit + followedIds.size);
+    .limit(limit + excludedIds.size);
 
   return ((profiles as SuggestedUser[]) || [])
-    .filter((p) => !followedIds.has(p.id))
+    .filter((p) => !excludedIds.has(p.id))
     .slice(0, limit);
+}
+
+/**
+ * Toggle block: block if not blocked, unblock if already blocked.
+ * Blocking also removes any follows between the two users.
+ */
+export async function toggleBlock(userId: string): Promise<{ success: boolean; blocking?: boolean; error?: string }> {
+  try {
+    const user = await getAuthUser();
+    if (!user) return { success: false, error: 'Not authenticated' };
+    if (userId === user.id) return { success: false, error: 'Cannot block yourself' };
+
+    const rlError = await checkActionRateLimit(user.id, 'block');
+    if (rlError) return { success: false, error: rlError };
+
+    const supabase = await createSupabaseServer();
+
+    const { data: existing } = await (supabase as any)
+      .from('user_blocks')
+      .select('blocked_id')
+      .eq('blocker_id', user.id)
+      .eq('blocked_id', userId)
+      .maybeSingle();
+
+    if (existing) {
+      // Unblock
+      await (supabase as any)
+        .from('user_blocks')
+        .delete()
+        .eq('blocker_id', user.id)
+        .eq('blocked_id', userId);
+
+      return { success: true, blocking: false };
+    } else {
+      // Block
+      const { error: blockError } = await (supabase as any)
+        .from('user_blocks')
+        .insert({ blocker_id: user.id, blocked_id: userId });
+
+      if (blockError) return { success: false, error: blockError.message };
+
+      // Remove follows in both directions
+      await supabase
+        .from('follows')
+        .delete()
+        .or(`and(follower_id.eq.${user.id},followee_id.eq.${userId}),and(follower_id.eq.${userId},followee_id.eq.${user.id})`);
+
+      // Clean up feed events from blocked user
+      const supabaseAdmin = createSupabaseAdmin();
+      await supabaseAdmin
+        .from('feed_events')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('actor_id', userId);
+
+      return { success: true, blocking: true };
+    }
+  } catch (err) {
+    console.error('toggleBlock error:', err);
+    return { success: false, error: 'An error occurred' };
+  }
 }
 
 // Ajouter un commentaire

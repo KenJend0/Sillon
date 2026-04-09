@@ -25,6 +25,7 @@ export async function generateMetadata({ params }: any) {
 }
 
 import FollowButton from "@/components/social/FollowButton";
+import ProfileActionsMenu from "@/components/social/ProfileActionsMenu";
 import BackButton from "@/components/BackButton";
 import { UserAvatar } from "@/components/avatars/DefaultAvatar";
 import PublicProfileTabs from "@/components/profile/PublicProfileTabs";
@@ -96,25 +97,29 @@ export default async function PublicProfilePage({
 
   let isFollowing = false;
   let isFollowingYou = false;
+  let isBlocking = false;
   let myListenedAlbums: Record<string, number | null> = {};
   let mySavedAlbumIds: string[] = [];
 
   if (authUser) {
-    // Run follow checks and current user lookups in parallel (single roundtrip)
+    // Run follow/block checks and current user lookups in parallel (single roundtrip)
     const [
       { data: followStatus },
       { data: followBackStatus },
+      { data: blockStatus },
       myDiaryRes,
       mySavedRes,
     ] = await Promise.all([
       supabase.from("follows").select("follower_id").eq("follower_id", authUser.id).eq("followee_id", profile.id).maybeSingle(),
       supabase.from("follows").select("follower_id").eq("follower_id", profile.id).eq("followee_id", authUser.id).maybeSingle(),
+      (supabase as any).from("user_blocks").select("blocked_id").eq("blocker_id", authUser.id).eq("blocked_id", profile.id).maybeSingle(),
       supabase.from("diary_entries").select("album_id, rating").eq("user_id", authUser.id),
       supabase.from("saved_albums").select("album_id").eq("user_id", authUser.id),
     ]);
 
     isFollowing = !!followStatus;
     isFollowingYou = !!followBackStatus;
+    isBlocking = !!blockStatus;
 
     (myDiaryRes.data || []).forEach((e) => {
       myListenedAlbums[e.album_id] = e.rating;
@@ -122,10 +127,39 @@ export default async function PublicProfilePage({
     mySavedAlbumIds.push(...(mySavedRes.data || []).map((e) => e.album_id));
   }
 
-  // Public diary entries only
-  const publicDiary = profileDiary.filter((e) => (e as any).is_public !== false);
   const displayName = (profile as any).display_name || username;
   const bio = (profile as any).bio || "";
+
+  // ── Profil bloqué ───────────────────────────────────────────────────────
+  if (isBlocking) {
+    return (
+      <main className="max-w-page mx-auto px-4 sm:px-6 py-6">
+        <BackButton />
+        <div className="mt-8 flex items-start gap-5">
+          <div className="flex-shrink-0 rounded-full border border-border overflow-hidden">
+            <div style={{ width: "80px", height: "80px" }}>
+              <UserAvatar userId={profile.id} src={(profile as any).avatar_url} size={80} />
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-[24px] font-medium text-text-primary tracking-[-0.02em] leading-[1.2]">
+              {displayName}
+            </h1>
+            <p className="text-[12px] text-text-tertiary mt-0.5">@{username}</p>
+            <div className="mt-3">
+              <ProfileActionsMenu userId={profile.id} initialIsBlocking={true} />
+            </div>
+          </div>
+        </div>
+        <p className="text-[14px] text-text-tertiary mt-8">
+          Tu as bloqué cet utilisateur. Son contenu est masqué.
+        </p>
+      </main>
+    );
+  }
+
+  // Public diary entries only
+  const publicDiary = profileDiary.filter((e) => (e as any).is_public !== false);
 
   return (
     <>
@@ -154,6 +188,7 @@ export default async function PublicProfilePage({
                   {isFollowingYou && (
                     <span className="text-[12px] text-text-tertiary">Vous suit</span>
                   )}
+                  <ProfileActionsMenu userId={profile.id} initialIsBlocking={false} />
                 </div>
               )}
             </div>

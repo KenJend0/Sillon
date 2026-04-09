@@ -4,8 +4,9 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Heart, MessageCircle, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Trash2, Flag } from 'lucide-react';
 import { toggleDiaryLike, addComment, deleteComment, getEntryComments } from '@/app/actions/diary';
+import { reportContent } from '@/app/actions/moderation';
 import { showToast } from '@/components/Toast';
 import { UserAvatar } from '@/components/avatars/DefaultAvatar';
 import BackButton from '@/components/BackButton';
@@ -52,7 +53,7 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
       setHasLiked(prevLiked);
       setLikesCount(prevCount);
       console.error('Like error:', err);
-      showToast('Impossible d\'aimer cette entrée', 'error');
+      showToast(err instanceof Error ? err.message : 'Impossible d\'aimer cette entrée', 'error');
     } finally {
       setLiking(false);
     }
@@ -72,7 +73,7 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
       setComments(freshComments);
     } catch (err) {
       console.error('Add comment error:', err);
-      showToast('Impossible d\'ajouter le commentaire', 'error');
+      showToast(err instanceof Error ? err.message : 'Impossible d\'ajouter le commentaire', 'error');
     } finally {
       setPosting(false);
     }
@@ -86,6 +87,21 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
       console.error('Delete comment error:', err);
       showToast('Impossible de supprimer le commentaire', 'error');
     }
+  };
+
+  const handleReportEntry = async () => {
+    if (!currentUser) {
+      showToast('Connecte-toi pour signaler du contenu', 'error');
+      return;
+    }
+    const result = await reportContent('diary_entry', entry.id);
+    showToast(result.success ? 'Contenu signalé — merci' : (result.error ?? 'Erreur'), result.success ? 'success' : 'error');
+  };
+
+  const handleReportComment = async (commentId: string) => {
+    if (!currentUser) return;
+    const result = await reportContent('diary_comment', commentId);
+    showToast(result.success ? 'Commentaire signalé' : (result.error ?? 'Erreur'), result.success ? 'success' : 'error');
   };
 
   const formatDate = (dateStr: string) => {
@@ -155,7 +171,7 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
               {entry.re_listen && <span className="ml-2">• ré-écoute</span>}
             </p>
           </div>
-          {isAuthor && (
+          {isAuthor ? (
             <div className="flex-shrink-0">
               <EditDiaryEntryButton
                 entryId={entry.id}
@@ -168,6 +184,14 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
                 variant="compact"
               />
             </div>
+          ) : currentUser && (
+            <button
+              onClick={handleReportEntry}
+              title="Signaler cette écoute"
+              className="flex-shrink-0 text-text-tertiary hover:text-[#C86C6C] transition-colors duration-150"
+            >
+              <Flag size={15} />
+            </button>
           )}
         </div>
 
@@ -295,7 +319,7 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
           ) : (
             <div className="space-y-4">
               {comments.map((comment) => (
-                <div key={comment.id} className="flex gap-3">
+                <div key={comment.id} className="flex gap-3 group">
                   <Link href={`/u/${comment.author.username}`}>
                     <UserAvatar userId={comment.author.id} src={comment.author.avatar_url} size={32} />
                   </Link>
@@ -310,13 +334,21 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
                       <span className="text-label text-text-tertiary flex-1">
                         {formatDate(comment.created_at)}
                       </span>
-                      {comment.is_mine && (
+                      {comment.is_mine ? (
                         <button
                           onClick={() => handleDeleteComment(comment.id)}
                           className="text-text-tertiary hover:text-text-primary transition-colors duration-150"
                           title="Supprimer"
                         >
                           <Trash2 size={14} />
+                        </button>
+                      ) : currentUser && (
+                        <button
+                          onClick={() => handleReportComment(comment.id)}
+                          className="text-text-tertiary hover:text-[#C86C6C] transition-colors duration-150 opacity-0 group-hover:opacity-100"
+                          title="Signaler"
+                        >
+                          <Flag size={14} />
                         </button>
                       )}
                     </div>

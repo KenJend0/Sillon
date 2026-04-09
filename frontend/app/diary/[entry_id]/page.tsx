@@ -52,14 +52,27 @@ export async function generateMetadata({ params }: any) {
 export default async function DiaryEntryPage({ params }: DiaryEntryPageProps) {
   const { entry_id } = await params;
 
-  const result = await getDiaryEntry(entry_id);
+  const [result, currentUser] = await Promise.all([
+    getDiaryEntry(entry_id),
+    getAuthUser(),
+  ]);
 
   if (!result.success) {
     notFound();
   }
 
-  // Get current user to pass to client for auth checks
-  const currentUser = await getAuthUser();
+  // Hide entry if current user has blocked the author
+  if (currentUser && currentUser.id !== result.data.author.id) {
+    const supabase = await createSupabaseServer();
+    const { data: block } = await (supabase as any)
+      .from('user_blocks')
+      .select('blocker_id')
+      .eq('blocker_id', currentUser.id)
+      .eq('blocked_id', result.data.author.id)
+      .maybeSingle();
+
+    if (block) notFound();
+  }
 
   return <DiaryEntryClient entry={result.data} currentUser={currentUser} />;
 }

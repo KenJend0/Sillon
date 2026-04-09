@@ -3,6 +3,8 @@
 import { getAuthUser, createSupabaseServer, createSupabaseAdmin } from '@/lib/supabase/server';
 import { logAuthedProductEvent } from '@/lib/productEvents';
 import { fanoutEvent } from './feed';
+import { checkActionRateLimit } from '@/lib/serverRateLimit';
+import { findBannedContentWord } from '@/lib/bannedWords';
 
 export interface UpsertDiaryEntryInput {
   albumId: string;
@@ -26,6 +28,9 @@ export async function upsertDiaryEntry(input: UpsertDiaryEntryInput) {
       return { success: false, error: 'Not authenticated' };
     }
 
+    const rlError = await checkActionRateLimit(user.id, 'diary_write');
+    if (rlError) return { success: false, error: rlError };
+
     const supabase = await createSupabaseServer();
 
     // Validation
@@ -43,6 +48,12 @@ export async function upsertDiaryEntry(input: UpsertDiaryEntryInput) {
 
     if (input.reviewBody && input.reviewBody.length > 5000) {
       return { success: false, error: 'Review body too long — max 5000 characters' };
+    }
+    if (input.reviewTitle && findBannedContentWord(input.reviewTitle)) {
+      return { success: false, error: 'Ce titre contient du contenu inapproprié.' };
+    }
+    if (input.reviewBody && findBannedContentWord(input.reviewBody)) {
+      return { success: false, error: 'Cette critique contient du contenu inapproprié.' };
     }
 
     const entryPayload = {
@@ -139,6 +150,9 @@ export async function updateDiaryEntry(input: {
     if (input.reviewBody && input.reviewBody.length > 5000) {
       return { success: false, error: 'Review body too long — max 5000 characters' };
     }
+    if (input.reviewBody && findBannedContentWord(input.reviewBody)) {
+      return { success: false, error: 'Cette critique contient du contenu inapproprié.' };
+    }
 
     const supabase = await createSupabaseServer();
 
@@ -221,12 +235,18 @@ export async function addComment(entryId: string, body: string): Promise<void> {
     throw new Error('Not authenticated');
   }
 
+  const rlError = await checkActionRateLimit(user.id, 'comment');
+  if (rlError) throw new Error(rlError);
+
   if (!body.trim()) {
     throw new Error('Comment body cannot be empty');
   }
 
   if (body.trim().length > 1000) {
     throw new Error('Comment too long — max 1000 characters');
+  }
+  if (findBannedContentWord(body)) {
+    throw new Error('Ce commentaire contient du contenu inapproprié.');
   }
 
   const supabase = await createSupabaseServer();
@@ -244,6 +264,17 @@ export async function addComment(entryId: string, body: string): Promise<void> {
 
   if (!entryCheck.is_public && entryCheck.user_id !== user.id) {
     throw new Error('Entry not found');
+  }
+
+  // Prevent interaction with content from a blocked user
+  if (entryCheck.user_id !== user.id) {
+    const { data: block } = await (supabase as any)
+      .from('user_blocks')
+      .select('blocker_id')
+      .eq('blocker_id', user.id)
+      .eq('blocked_id', entryCheck.user_id)
+      .maybeSingle();
+    if (block) throw new Error('Action impossible');
   }
 
   const { error } = await supabase.from('diary_comments').insert({
@@ -324,6 +355,9 @@ export async function toggleDiaryLike(entryId: string): Promise<void> {
     throw new Error('Not authenticated');
   }
 
+  const rlError = await checkActionRateLimit(user.id, 'like');
+  if (rlError) throw new Error(rlError);
+
   const supabase = await createSupabaseServer();
 
   // Vérifier si un like existe déjà
@@ -347,6 +381,17 @@ export async function toggleDiaryLike(entryId: string): Promise<void> {
 
   if (entryError || !entry) {
     throw new Error('Entry not found');
+  }
+
+  // Prevent interaction with content from a blocked user
+  if (entry.user_id !== user.id) {
+    const { data: block } = await (supabase as any)
+      .from('user_blocks')
+      .select('blocker_id')
+      .eq('blocker_id', user.id)
+      .eq('blocked_id', entry.user_id)
+      .maybeSingle();
+    if (block) throw new Error('Action impossible');
   }
 
   const supabaseAdmin = createSupabaseAdmin();
@@ -1043,4 +1088,33 @@ export async function getDiaryEntry(entryId: string): Promise<GetDiaryEntryResul
     console.error('getDiaryEntry error:', err);
     return { success: false, error: 'An error occurred' };
   }
+}
+
+/**
+ * Get the most recent diary entry for a given album by the current user.
+ * Used on the /add page to detect re-listens and show previous rating.
+ */
+export async function getLatestDiaryEntryForAlbum(
+  albumId: string
+): Promise<{ rating: number | null; listenedAt: string } | null> {
+  const user = await getAuthUser();
+  if (!user) return null;
+
+  const supabase = await createSupabaseServer();
+
+  const { data } = await supabase
+    .from('diary_entries')
+    .select('rating, listened_at')
+    .eq('user_id', user.id)
+    .eq('album_id', albumId)
+    .order('listened_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) return null;
+
+  return {
+    rating: data.rating ?? null,
+    listenedAt: data.listened_at,
+  };
 }
