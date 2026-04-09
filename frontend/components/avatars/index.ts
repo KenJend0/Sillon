@@ -1,1 +1,1 @@
-export { UserAvatar, DefaultAvatars } from "./DefaultAvatar";
+export { UserAvatar } from "./DefaultAvatar";
