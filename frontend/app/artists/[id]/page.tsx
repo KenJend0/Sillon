@@ -1,10 +1,10 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import BackButton from '@/components/BackButton';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServer, getAuthUser } from '@/lib/supabase/server';
 import { ArtistPageContent } from '@/components/ArtistPageContent';
 import { getArtistReleases } from '@/app/actions/musicbrainz';
-import { getOrFetchArtistMeta } from '@/app/actions/artists';
+import { getOrFetchArtistMeta, getSimilarArtists } from '@/app/actions/artists';
 
 // Deduplicate concurrent calls within the same render cycle (cold DB cache path)
 const cachedGetOrFetchArtistMeta = React.cache(async (artistId: string, mbid: string | null) => {
@@ -97,22 +97,75 @@ export default async function ArtistPage({ params }: PageProps) {
         track_count: trackCountMap[album.id] || 0,
         avg_rating: statsMap[album.id]?.avg_rating ?? null,
         reviews_count: statsMap[album.id]?.reviews_count ?? 0,
+        listeners_count: statsMap[album.id]?.listeners_count ?? 0,
     })) || [];
 
-    // 5 & 6: Fetch artist meta + MB releases in parallel
-    console.log(`[ArtistPage] id="${artist.id}" name="${artist.name}" mbid="${artist.mbid}"`);
-    const [meta, relResult] = await Promise.all([
+    // Aggregate artist stats — unique listeners across all albums
+    const ratedAlbums = albumsWithStats.filter(a => a.avg_rating !== null);
+    const globalAvgRating = ratedAlbums.length > 0
+        ? ratedAlbums.reduce((s, a) => s + (a.avg_rating ?? 0), 0) / ratedAlbums.length
+        : null;
+    const totalReviews = Object.values(statsMap).reduce((s, v) => s + (v.reviews_count ?? 0), 0);
+
+    // Fetch everything in parallel
+    const [meta, relResult, user, similarArtistsRaw, allListenerRows] = await Promise.all([
         cachedGetOrFetchArtistMeta(artist.id, artist.mbid),
         artist.mbid ? getArtistReleases(artist.mbid) : Promise.resolve(null),
+        getAuthUser(),
+        getSimilarArtists(artist.name, artist.mbid),
+        albumIds.length > 0
+            ? supabase.from("diary_entries").select("user_id").in("album_id", albumIds)
+            : Promise.resolve({ data: [] }),
     ]);
 
-    console.log(`[ArtistPage] relResult=${JSON.stringify(relResult ? { success: relResult.success, count: relResult.releases?.length ?? 0, error: relResult.error } : 'null (no mbid)')}`);
+    const totalListeners = new Set((allListenerRows.data ?? []).map((r: { user_id: string }) => r.user_id)).size;
 
     let mbReleases: Array<{ mbid: string; releaseGroupMbid: string; title: string; date: string | null; type: string | null }> = [];
     if (relResult?.success && relResult.releases) {
         mbReleases = relResult.releases;
     }
-    console.log(`[ArtistPage] final: mbReleases=${mbReleases.length}, dbAlbums=${albums?.length ?? 0}`);
+
+    // Network activity — who among my follows listened to this artist
+    type NetworkListener = {
+        userId: string;
+        username: string;
+        displayName: string | null;
+        avatarUrl: string | null;
+    };
+    let networkListeners: NetworkListener[] = [];
+    if (user && albumIds.length > 0) {
+        const { data: followsData } = await supabase
+            .from("follows")
+            .select("followee_id")
+            .eq("follower_id", user.id);
+        const followeeIds = new Set((followsData ?? []).map(f => f.followee_id));
+        if (followeeIds.size > 0) {
+            // Réutilise allListenerRows — filtre les abonnés côté JS
+            const followeeListenerIds = [...new Set(
+                (allListenerRows.data ?? [])
+                    .filter((r: { user_id: string }) => followeeIds.has(r.user_id))
+                    .map((r: { user_id: string }) => r.user_id)
+            )];
+            if (followeeListenerIds.length > 0) {
+                const { data: followeeProfiles } = await supabase
+                    .from("profiles")
+                    .select("id, username, display_name, avatar_url")
+                    .in("id", followeeListenerIds);
+                const profileMap = new Map((followeeProfiles ?? []).map(p => [p.id, p]));
+                for (const uid of followeeListenerIds) {
+                    const p = profileMap.get(uid);
+                    if (p) networkListeners.push({
+                        userId: p.id,
+                        username: (p as any).username ?? "",
+                        displayName: (p as any).display_name ?? null,
+                        avatarUrl: (p as any).avatar_url ?? null,
+                    });
+                }
+            }
+        }
+    }
+
+    const similarArtists = similarArtistsRaw;
 
     return (
         <main className="max-w-page mx-auto px-4 py-8 pb-24">
@@ -122,6 +175,11 @@ export default async function ArtistPage({ params }: PageProps) {
                 albums={albumsWithStats}
                 mbReleases={mbReleases}
                 imageUrl={meta.imageUrl}
+                bio={meta.bio}
+                artistStats={{ totalListeners, globalAvgRating, totalReviews }}
+                networkListeners={networkListeners}
+                similarArtists={similarArtists}
+                userId={user?.id}
             />
         </main>
     );

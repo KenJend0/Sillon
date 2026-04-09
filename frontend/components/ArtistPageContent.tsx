@@ -6,6 +6,9 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { importAlbumFromMusicBrainz } from '@/app/actions/musicbrainz';
 import { showToast } from '@/components/Toast';
+import DescriptionCollapse from '@/components/DescriptionCollapse';
+import NetworkListenersBottomSheet from '@/components/NetworkListenersBottomSheet';
+import { UserAvatar } from '@/components/avatars/DefaultAvatar';
 
 type Album = {
     id: string;
@@ -15,6 +18,7 @@ type Album = {
     track_count: number;
     avg_rating?: number | null;
     reviews_count?: number;
+    listeners_count?: number;
 };
 
 type Artist = {
@@ -31,6 +35,24 @@ type MBRelease = {
     type?: string | null;
 };
 
+type NetworkListener = {
+    userId: string;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    rating?: number | null;
+    listenedAt?: string | null;
+    entryId?: string | null;
+    hasReview?: boolean;
+};
+
+type SimilarArtist = {
+    id: string | null;
+    name: string;
+    imageUrl: string | null;
+    mbid?: string | null;
+};
+
 type DiscographyItem = {
     title: string;
     date?: string | null;
@@ -41,6 +63,7 @@ type DiscographyItem = {
     inDatabase: boolean;
     avgRating?: number | null;
     reviewsCount?: number;
+    listenersCount?: number;
     mbid?: string;
 };
 
@@ -52,7 +75,16 @@ type ArtistPageContentProps = {
     previewCountry?: string;
     previewType?: string;
     imageUrl?: string | null;
+    bio?: string | null;
     mbReleases?: MBRelease[];
+    artistStats?: {
+        totalListeners: number;
+        globalAvgRating: number | null;
+        totalReviews: number;
+    };
+    networkListeners?: NetworkListener[];
+    similarArtists?: SimilarArtist[];
+    userId?: string;
 };
 
 export function ArtistPageContent({
@@ -63,14 +95,19 @@ export function ArtistPageContent({
     previewCountry,
     previewType,
     imageUrl,
-    mbReleases = []
+    bio,
+    mbReleases = [],
+    artistStats,
+    networkListeners = [],
+    similarArtists = [],
+    userId,
 }: ArtistPageContentProps) {
     const router = useRouter();
     const [importingMbid, setImportingMbid] = useState<string | null>(null);
+    const [isNetworkOpen, setIsNetworkOpen] = useState(false);
 
     const isPreviewMode = !artist && previewMbid;
     const artistName = artist?.name || previewName || '';
-    const mbid = artist?.mbid || previewMbid;
 
     const discography = useMemo(() => {
         const existingTitles = new Set(albums.map(a => a.title.toLowerCase()));
@@ -83,6 +120,7 @@ export function ArtistPageContent({
             inDatabase: true,
             avgRating: a.avg_rating,
             reviewsCount: a.reviews_count,
+            listenersCount: a.listeners_count,
         }));
 
         const missingReleases: DiscographyItem[] = mbReleases
@@ -106,6 +144,19 @@ export function ArtistPageContent({
         });
     }, [albums, mbReleases]);
 
+    // Top 3 albums by listeners (DB only)
+    const topAlbums = useMemo(() =>
+        [...albums]
+            .filter(a => (a.listeners_count ?? 0) > 0)
+            .sort((a, b) => {
+                const listenersDiff = (b.listeners_count ?? 0) - (a.listeners_count ?? 0);
+                if (listenersDiff !== 0) return listenersDiff;
+                return (b.avg_rating ?? 0) - (a.avg_rating ?? 0);
+            })
+            .slice(0, 3),
+        [albums]
+    );
+
     const handleImportAlbum = async (mbid: string) => {
         if (importingMbid) return;
         setImportingMbid(mbid);
@@ -128,19 +179,13 @@ export function ArtistPageContent({
 
     return (
         <div className="mt-8">
-            {/* Hero */}
+            {/* ========== HERO ========== */}
             <div className="mb-10">
                 <div className="flex items-start gap-5">
                     {/* Artist image */}
                     {imageUrl ? (
                         <div className="flex-shrink-0 w-20 h-20 rounded-full overflow-hidden relative">
-                            <Image
-                                src={imageUrl}
-                                alt={artistName}
-                                fill
-                                className="object-cover"
-                                onError={() => { /* handled by fallback */ }}
-                            />
+                            <Image src={imageUrl} alt={artistName} fill className="object-cover" />
                         </div>
                     ) : (
                         <div className="flex-shrink-0 w-20 h-20 rounded-full bg-background-secondary flex items-center justify-center">
@@ -154,22 +199,114 @@ export function ArtistPageContent({
                         </h1>
                         <div className="text-[14px] text-text-secondary mt-1">
                             {discography.length} {discography.length > 1 ? 'albums' : 'album'}
-                            {!isPreviewMode && totalTracks > 0 && ` · ${totalTracks} morceaux`}
                             {previewType && ` · ${previewType}`}
                         </div>
                         {previewCountry && (
                             <p className="text-[14px] text-text-secondary mt-0.5">{previewCountry}</p>
                         )}
+
+                        {/* Aggregate stats */}
+                        {artistStats && (artistStats.totalListeners > 0 || artistStats.globalAvgRating !== null || artistStats.totalReviews > 0) && (
+                            <div className="flex items-baseline gap-5 mt-3">
+                                {artistStats.globalAvgRating !== null && (
+                                    <span>
+                                        <span className="text-[16px] text-text-primary font-medium">{artistStats.globalAvgRating.toFixed(1)}</span>
+                                        <span className="text-[12px] text-text-tertiary ml-0.5">/10 moy.</span>
+                                    </span>
+                                )}
+                                {artistStats.totalListeners > 0 && (
+                                    <span>
+                                        <span className="text-[16px] text-text-primary font-medium">{artistStats.totalListeners.toLocaleString()}</span>
+                                        <span className="text-[12px] text-text-tertiary ml-1">{artistStats.totalListeners === 1 ? 'auditeur' : 'auditeurs'}</span>
+                                    </span>
+                                )}
+                                {artistStats.totalReviews > 0 && (
+                                    <span>
+                                        <span className="text-[16px] text-text-primary font-medium">{artistStats.totalReviews.toLocaleString()}</span>
+                                        <span className="text-[12px] text-text-tertiary ml-1">{artistStats.totalReviews === 1 ? 'critique' : 'critiques'}</span>
+                                    </span>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
+                {/* Network listeners */}
+                {networkListeners.length > 0 && (() => {
+                    const shown = networkListeners.slice(0, 3);
+                    const rest = networkListeners.length - shown.length;
+                    const tokens = shown.map(l => l.displayName || l.username);
+                    let label: string;
+                    if (tokens.length === 1) {
+                        label = `${tokens[0]} a écouté cet artiste`;
+                    } else if (rest === 0) {
+                        label = `${tokens.slice(0, -1).join(', ')} et ${tokens[tokens.length - 1]} ont écouté cet artiste`;
+                    } else {
+                        label = `${tokens.join(', ')} et ${rest} autre${rest > 1 ? 's' : ''} ont écouté cet artiste`;
+                    }
+                    return (
+                        <button
+                            onClick={() => setIsNetworkOpen(true)}
+                            className="flex items-center gap-2 mt-5 hover:opacity-75 transition-opacity duration-150"
+                        >
+                            <div className="flex -space-x-1.5">
+                                {shown.map(l => (
+                                    <div key={l.userId} className="border border-background-primary rounded-full flex-shrink-0">
+                                        <UserAvatar userId={l.userId} src={l.avatarUrl} size={20} />
+                                    </div>
+                                ))}
+                            </div>
+                            <span className="text-[12px] text-text-tertiary leading-snug">{label}</span>
+                        </button>
+                    );
+                })()}
+
+                {/* Bio */}
+                {bio && (
+                    <div className="mt-6">
+                        <DescriptionCollapse text={bio} />
+                    </div>
+                )}
             </div>
 
-            {/* Discography */}
-            <section>
-                <h2 className="text-h2 text-text-primary mb-6">
-                    Discographie
-                </h2>
+            {/* ========== TOP ALBUMS ========== */}
+            {topAlbums.length > 0 && (
+                <section className="border-t border-border-divider pt-10 mb-12">
+                    <h2 className="text-h2 text-text-primary mb-6">Populaires</h2>
+                    <div className="flex flex-col gap-2">
+                        {topAlbums.map((album, idx) => (
+                            <Link
+                                key={album.id}
+                                href={`/albums/${album.id}`}
+                                className="flex items-center gap-4 py-2 hover:opacity-75 transition-opacity duration-150"
+                            >
+                                <span className="text-[13px] text-text-tertiary tabular-nums w-4 flex-shrink-0">{idx + 1}</span>
+                                <div className="w-10 h-10 rounded-[6px] overflow-hidden flex-shrink-0 bg-background-secondary relative">
+                                    {album.cover_url && (
+                                        <Image src={album.cover_url} alt={album.title} fill className="object-cover" />
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[14px] text-text-primary font-medium truncate">{album.title}</p>
+                                    <p className="text-[12px] text-text-tertiary">
+                                        {year(album.release_date)}
+                                        {(album.listeners_count ?? 0) > 0 && ` · ${album.listeners_count!.toLocaleString()} ${album.listeners_count === 1 ? 'auditeur' : 'auditeurs'}`}
+                                    </p>
+                                </div>
+                                {album.avg_rating != null && (
+                                    <span className="text-[13px] text-text-primary flex-shrink-0">
+                                        {album.avg_rating.toFixed(1)}<span className="text-text-tertiary text-[11px]">/10</span>
+                                    </span>
+                                )}
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* ========== DISCOGRAPHIE ========== */}
+            <section className={topAlbums.length === 0 ? '' : ''}>
+                <h2 className="text-h2 text-text-primary mb-6">Discographie</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {discography.map((album) => {
                         const isImporting = importingMbid === album.mbid;
@@ -188,13 +325,9 @@ export function ArtistPageContent({
                                     ) : (
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex-1 min-w-0">
-                                                <div className="text-[14px] font-medium text-text-primary truncate">
-                                                    {album.title}
-                                                </div>
+                                                <div className="text-[14px] font-medium text-text-primary truncate">{album.title}</div>
                                                 {album.date && (
-                                                    <span className="text-[12px] text-text-secondary">
-                                                        {year(album.date)}
-                                                    </span>
+                                                    <span className="text-[12px] text-text-secondary">{year(album.date)}</span>
                                                 )}
                                             </div>
                                             {album.avgRating != null && (
@@ -210,11 +343,7 @@ export function ArtistPageContent({
 
                         if (album.inDatabase) {
                             return (
-                                <Link
-                                    key={`db-${album.href}`}
-                                    href={album.href}
-                                    className={cardClass}
-                                >
+                                <Link key={`db-${album.href}`} href={album.href} className={cardClass}>
                                     {cardContent}
                                 </Link>
                             );
@@ -239,34 +368,61 @@ export function ArtistPageContent({
                     </div>
                 )}
             </section>
+
+            {/* ========== ARTISTES SIMILAIRES ========== */}
+            {similarArtists.filter(a => a.id !== null).length > 0 && (
+                <section className="border-t border-border-divider pt-10 mt-12 mb-8">
+                    <h2 className="text-h2 text-text-primary mb-6">Artistes similaires</h2>
+                    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2">
+                        {similarArtists.filter(a => a.id !== null).map(a => (
+                            <Link
+                                key={a.id}
+                                href={`/artists/${a.id}`}
+                                className="snap-center shrink-0 flex flex-col items-center gap-2 w-20 hover:opacity-75 transition-opacity duration-150"
+                            >
+                                <div className="w-14 h-14 rounded-full overflow-hidden bg-background-secondary relative flex-shrink-0">
+                                    {a.imageUrl ? (
+                                        <Image src={a.imageUrl} alt={a.name} fill className="object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <span className="text-[20px] text-text-tertiary">{a.name.charAt(0)}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <span className="text-[12px] text-text-secondary text-center leading-tight line-clamp-2 w-full">{a.name}</span>
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Network Listeners Bottom Sheet */}
+            <NetworkListenersBottomSheet
+                listeners={networkListeners.map(l => ({
+                    ...l,
+                    rating: l.rating ?? null,
+                    listenedAt: l.listenedAt ?? null,
+                    entryId: l.entryId ?? null,
+                    hasReview: l.hasReview ?? false,
+                }))}
+                isOpen={isNetworkOpen}
+                onClose={() => setIsNetworkOpen(false)}
+            />
         </div>
     );
 }
 
-/**
- * Album cover with browser-side CoverArt Archive fetch for MB releases.
- * DB albums use their stored cover_url. MB albums use the direct CAA URL
- * and let the browser handle the 307 redirect.
- */
 function AlbumCover({ album }: { album: DiscographyItem }) {
     const [error, setError] = useState(false);
 
-    // For DB albums, use stored cover
     if (album.cover && !error) {
         return (
             <div className="aspect-square overflow-hidden relative">
-                <Image
-                    src={album.cover}
-                    alt={album.title}
-                    fill
-                    className="object-cover"
-                    onError={() => setError(true)}
-                />
+                <Image src={album.cover} alt={album.title} fill className="object-cover" onError={() => setError(true)} />
             </div>
         );
     }
 
-    // For MB albums, try CoverArt Archive directly (browser handles 307 redirect)
     if (album.coverFromArchive && album.releaseGroupMbid && !error) {
         return (
             <div className="aspect-square overflow-hidden relative">
@@ -282,7 +438,6 @@ function AlbumCover({ album }: { album: DiscographyItem }) {
         );
     }
 
-    // Fallback placeholder
     return (
         <div className="aspect-square bg-background-tertiary flex items-center justify-center">
             <span className="text-[12px] text-text-tertiary">Aucune pochette</span>

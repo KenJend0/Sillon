@@ -3,6 +3,86 @@
 import { createSupabaseServer, createSupabaseAdmin } from '@/lib/supabase/server';
 import { fetchArtistMetadata } from './musicbrainz';
 
+const LASTFM_API = 'https://ws.audioscrobbler.com/2.0';
+
+export type SimilarArtist = {
+    id: string | null;   // null si pas dans notre DB
+    name: string;
+    imageUrl: string | null;
+    mbid: string | null;
+};
+
+/**
+ * Récupère les artistes similaires depuis Last.fm, puis tente de les matcher
+ * avec les artistes de notre DB (par MBID ou par nom normalisé).
+ * Retourne au max 6 artistes, ceux dans la DB en priorité.
+ */
+export async function getSimilarArtists(
+    artistName: string,
+    artistMbid: string | null,
+): Promise<SimilarArtist[]> {
+    const apiKey = process.env.LASTFM_API_KEY;
+    if (!apiKey) return [];
+
+    try {
+        const params = new URLSearchParams({
+            method: 'artist.getSimilar',
+            api_key: apiKey,
+            format: 'json',
+            limit: '20',
+            autocorrect: '1',
+            ...(artistMbid ? { mbid: artistMbid } : { artist: artistName }),
+        });
+
+        const res = await fetch(`${LASTFM_API}/?${params}`, {
+            signal: AbortSignal.timeout(8_000),
+        });
+        if (!res.ok) return [];
+
+        const data = await res.json();
+        const similar: Array<{ name: string; mbid?: string }> =
+            data?.similarartists?.artist ?? [];
+
+        if (similar.length === 0) return [];
+
+        const supabase = await createSupabaseServer();
+
+        // Tenter de matcher par MBID d'abord
+        const lfmMbids = similar.map(a => a.mbid).filter(Boolean) as string[];
+        const lfmNames = similar.map(a => a.name.toLowerCase());
+
+        const [mbidMatch, nameMatch] = await Promise.all([
+            lfmMbids.length > 0
+                ? supabase.from('artists').select('id, name, mbid, image_url').in('mbid', lfmMbids)
+                : Promise.resolve({ data: [] }),
+            supabase
+                .from('artists')
+                .select('id, name, mbid, image_url')
+                .in('name', similar.map(a => a.name)),
+        ]);
+
+        const dbByMbid = new Map((mbidMatch.data ?? []).map(a => [a.mbid, a]));
+        const dbByName = new Map((nameMatch.data ?? []).map(a => [a.name.toLowerCase(), a]));
+
+        const results: SimilarArtist[] = similar.slice(0, 12).map(a => {
+            const db = (a.mbid ? dbByMbid.get(a.mbid) : null) ?? dbByName.get(a.name.toLowerCase()) ?? null;
+            return {
+                id: db?.id ?? null,
+                name: db?.name ?? a.name,
+                imageUrl: (db as any)?.image_url ?? null,
+                mbid: db?.mbid ?? a.mbid ?? null,
+            };
+        });
+
+        // DB artists first, then others — max 6
+        const inDb = results.filter(a => a.id !== null);
+        const notInDb = results.filter(a => a.id === null);
+        return [...inDb, ...notInDb].slice(0, 6);
+    } catch {
+        return [];
+    }
+}
+
 /**
  * Batch-fetch artist images for search results.
  * 1. Checks DB cache — only considers an artist "resolved" if image_url is non-null
