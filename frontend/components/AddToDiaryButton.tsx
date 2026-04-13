@@ -248,15 +248,11 @@ export default function AddToDiaryButton({
         <form onSubmit={submit} className="px-6 py-4 space-y-section-sm">
           {/* Rating */}
           <div>
-            <label className="block text-[14px] text-text-secondary mb-3">Note</label>
-            <div className="flex items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <StarRating value={rating} onChange={setRating} />
-              </div>
-              <span className="flex-shrink-0 text-text-primary font-medium text-[14px] whitespace-nowrap">
-                {rating ?? 0} / 10
-              </span>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-[14px] text-text-secondary">Note</label>
+              <span className="text-text-primary font-medium text-[13px]">{rating ?? 0} / 10</span>
             </div>
+            <StarRating value={rating} onChange={setRating} />
           </div>
 
           {/* Date */}
