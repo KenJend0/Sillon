@@ -15,8 +15,8 @@ const PAD_H = 58;
 const PAD_V = 64;
 const COVER_SZ = 164;
 
-// Position haute mais moins tassée visuellement
-const STORY_TOP = 236;
+// Safe zone minimale en haut (barre de statut Instagram)
+const STORY_TOP_MIN = 180;
 
 // ─── Palette Waveform ─────────────────────────────────────────────────────────
 const C = {
@@ -115,8 +115,8 @@ export async function GET(
         }}
       />
 
-      {/* Safe zone supérieure Instagram */}
-      <div style={{ display: 'flex', height: STORY_TOP }} />
+      {/* Spacer haut — centre la carte avec safe zone minimale */}
+      <div style={{ display: 'flex', flex: 1, minHeight: STORY_TOP_MIN }} />
 
       {/* ─── CARTE ──────────────────────────────────────────────────────────── */}
       <div
@@ -366,8 +366,8 @@ export async function GET(
       </div>
       {/* ─── FIN CARTE ────────────────────────────────────────────────────────── */}
 
-      {/* Spacer flexible — pousse le hint vers la zone basse */}
-      <div style={{ display: 'flex', flex: 1 }} />
+      {/* Spacer bas — légèrement plus grand que le haut pour laisser la zone sticker libre */}
+      <div style={{ display: 'flex', flex: 1.3, minHeight: 340 }} />
     </div>
   );
 

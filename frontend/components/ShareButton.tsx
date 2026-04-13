@@ -35,17 +35,25 @@ export default function ShareButton({ entryId }: ShareButtonProps) {
     return blob;
   };
 
+  const copyLinkSilently = async () => {
+    try {
+      await navigator.clipboard.writeText(pageUrl);
+    } catch {
+      // Pas critique — l'image est quand même partagée
+    }
+  };
+
   const handleDownload = async () => {
     setLoading(true);
     try {
-      const blob = await fetchStoryBlob();
+      const [blob] = await Promise.all([fetchStoryBlob(), copyLinkSilently()]);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'waveform-story.png';
       a.click();
       URL.revokeObjectURL(url);
-      showToast('Story téléchargée', 'success');
+      showToast('Story téléchargée · lien copié', 'success');
       setOpen(false);
     } catch {
       showToast("Impossible de générer l'image", 'error');
@@ -57,11 +65,12 @@ export default function ShareButton({ entryId }: ShareButtonProps) {
   const handleShareImage = async () => {
     setLoading(true);
     try {
-      const blob = await fetchStoryBlob();
+      const [blob] = await Promise.all([fetchStoryBlob(), copyLinkSilently()]);
       const file = new File([blob], 'waveform-story.png', { type: 'image/png' });
 
       if (navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file] });
+        showToast('Lien copié · colle-le comme sticker', 'success');
         setOpen(false);
       } else {
         // Fallback silencieux : téléchargement direct
@@ -71,7 +80,7 @@ export default function ShareButton({ entryId }: ShareButtonProps) {
         a.download = 'waveform-story.png';
         a.click();
         URL.revokeObjectURL(url);
-        showToast('Story téléchargée', 'success');
+        showToast('Story téléchargée · lien copié', 'success');
         setOpen(false);
       }
     } catch (err) {
@@ -164,7 +173,7 @@ export default function ShareButton({ entryId }: ShareButtonProps) {
                 Copier le lien de la review
               </span>
               <span className="text-[12px] text-text-tertiary">
-                Pour partager dans un message
+                À coller comme sticker lien sur Instagram
               </span>
             </div>
           </button>
