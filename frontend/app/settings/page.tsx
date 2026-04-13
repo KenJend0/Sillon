@@ -339,18 +339,23 @@ export default function ProfileSettings() {
 
     if (unauthenticated) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
-                <p className="text-[16px] text-text-primary font-medium mb-2">Accès réservé aux membres.</p>
-                <p className="text-[14px] text-text-tertiary mb-8 leading-relaxed max-w-xs">
-                    Crée un compte pour accéder à tes paramètres et personnaliser ton profil.
-                </p>
-                <div className="flex flex-col items-center gap-3">
-                    <a href="/auth?mode=signup" className="px-6 py-3 bg-[#1C1C1C] text-[#F5F3EF] text-[14px] font-medium rounded-[10px] hover:opacity-85 transition-opacity">
-                        Créer un compte
-                    </a>
-                    <a href="/auth?mode=login" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors">
-                        Se connecter →
-                    </a>
+            <div className="mx-auto max-w-page lg:max-w-5xl px-4 md:px-6 pb-28 lg:pb-12">
+                <div className="pt-8 pb-6">
+                    <h1 className="text-h1 text-text-primary mb-2">Paramètres</h1>
+                    <p className="text-[14px] text-text-tertiary">Personnalise ton profil et ton compte.</p>
+                </div>
+                <div className="flex items-center justify-between gap-4 px-4 py-4 bg-background-secondary border border-border rounded-[12px]">
+                    <p className="text-[14px] text-text-secondary leading-snug">
+                        Crée un compte pour accéder à tes paramètres.
+                    </p>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                        <a href="/auth?mode=signup" className="text-[13px] font-medium px-3 py-1.5 bg-[#1C1C1C] text-[#F5F3EF] rounded-[8px] hover:opacity-85 transition-opacity">
+                            Créer un compte
+                        </a>
+                        <a href="/auth?mode=login" className="text-[13px] text-text-secondary hover:text-text-primary transition-colors underline">
+                            Se connecter
+                        </a>
+                    </div>
                 </div>
             </div>
         );

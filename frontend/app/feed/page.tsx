@@ -52,7 +52,7 @@ export default async function FeedPage() {
             </Link>
             <Link
               href="/auth?mode=login"
-              className="text-[13px] text-text-secondary hover:text-text-primary transition-colors"
+              className="text-[13px] text-text-secondary hover:text-text-primary transition-colors underline"
             >
               Se connecter
             </Link>
