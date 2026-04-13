@@ -12,7 +12,7 @@ export default function ScrollToHashClient() {
         const id = hash.startsWith("#") ? hash.slice(1) : hash;
 
         let attempts = 0;
-        const maxAttempts = 10;
+        const maxAttempts = 20;
 
         const getHeaderHeight = () => {
             const selectors = ["header", "[role=\"banner\"]", ".Header", "#header", ".topnav", ".site-header"];
@@ -39,35 +39,9 @@ export default function ScrollToHashClient() {
             }
 
             const headerHeight = getHeaderHeight();
-            const PADDING = 40; // extra space so title sits lower on screen
-
-            // 1) Scroll to bottom of the page
-            const maxScrollTop = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-            window.scrollTo({ top: maxScrollTop, behavior: "smooth" });
-
-            // 2) After bottom scroll, check whether the reviews title is visible.
-            // If not visible, align the top of the screen with the title (under header).
-            setTimeout(() => {
-                let checks = 0;
-                const maxChecks = 6;
-                const checkVisibility = () => {
-                    const rect = el.getBoundingClientRect();
-                    const isVisible = rect.top >= headerHeight && rect.top < window.innerHeight;
-                    if (isVisible) return;
-
-                    if (checks >= maxChecks) {
-                        // Align top with the title (accounting for header+padding)
-                        const top = rect.top + window.scrollY - (headerHeight + PADDING);
-                        window.scrollTo({ top, behavior: "smooth" });
-                        return;
-                    }
-
-                    checks += 1;
-                    setTimeout(checkVisibility, 150);
-                };
-
-                checkVisibility();
-            }, 250);
+            const PADDING = 24;
+            const top = el.getBoundingClientRect().top + window.scrollY - (headerHeight + PADDING);
+            window.scrollTo({ top, behavior: "smooth" });
         };
 
         // Defer first attempt to next tick to maximize chance element exists
