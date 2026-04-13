@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseAdmin } from '@/lib/supabase/server';
 
 export interface OgEntryData {
   albumTitle: string;
@@ -61,10 +61,7 @@ export function formatDate(dateStr: string): string {
 }
 
 export async function getOgEntryData(entryId: string): Promise<OgEntryData | null> {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createSupabaseAdmin();
 
   const { data: entry } = await supabase
     .from('diary_entries')

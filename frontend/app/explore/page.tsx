@@ -158,7 +158,7 @@ export default async function ExplorePage() {
 
                             </div>
                             {trending.length > 0 ? (
-                                <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2">
+                                <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide">
                                     {trending.map((item) => (
                                         <div
                                             key={item.id}

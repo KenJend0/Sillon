@@ -7,9 +7,9 @@ export default function DiscoverySection({ albums }: { albums: DiscoveryAlbum[] 
     return (
         <section>
             <div className="mb-5">
-                <h2 className="text-h2 text-text-primary mb-2">Découverte</h2>
+                <h2 className="text-h2 text-text-primary mb-2">{albums.length > 1 ? "Découvertes" : "Découverte"}</h2>
             </div>
-            <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2">
+            <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide">
                 {albums.map((album) => (
                     <div key={album.album_id} className="snap-center shrink-0 w-44 sm:w-48 md:w-52 lg:w-60">
                         <DiscoverCard

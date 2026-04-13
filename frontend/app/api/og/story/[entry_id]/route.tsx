@@ -43,10 +43,18 @@ export async function GET(
 ) {
   const { entry_id } = await params;
 
-  const [data, fonts] = await Promise.all([
-    getOgEntryData(entry_id),
-    loadFonts(),
-  ]);
+  let data: Awaited<ReturnType<typeof getOgEntryData>>;
+  let fonts: Awaited<ReturnType<typeof loadFonts>>;
+
+  try {
+    [data, fonts] = await Promise.all([
+      getOgEntryData(entry_id),
+      loadFonts(),
+    ]);
+  } catch (err) {
+    console.error('[OG story] init error:', err);
+    return new Response('Internal error', { status: 500 });
+  }
 
   if (!data) {
     return new Response('Not found', { status: 404 });
@@ -349,16 +357,21 @@ export async function GET(
     </div>
   );
 
-  return new ImageResponse(image, {
-    width: W,
-    height: H,
-    fonts: [
-      { name: 'Inter', data: fonts.regular, weight: 400, style: 'normal' },
-      { name: 'Inter', data: fonts.medium,  weight: 500, style: 'normal' },
-      { name: 'Inter', data: fonts.italic,  weight: 400, style: 'italic' },
-    ],
-    headers: {
-      'Cache-Control': 'no-store',
-    },
-  });
+  try {
+    return new ImageResponse(image, {
+      width: W,
+      height: H,
+      fonts: [
+        { name: 'Inter', data: fonts.regular, weight: 400, style: 'normal' },
+        { name: 'Inter', data: fonts.medium,  weight: 500, style: 'normal' },
+        { name: 'Inter', data: fonts.italic,  weight: 400, style: 'italic' },
+      ],
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    });
+  } catch (err) {
+    console.error('[OG story] render error:', err);
+    return new Response('Render error', { status: 500 });
+  }
 }
