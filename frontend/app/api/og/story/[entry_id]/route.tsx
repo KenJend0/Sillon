@@ -9,14 +9,19 @@ export const runtime = 'nodejs';
 const W = 1080;
 const H = 1920;
 
-// ─── Carte compacte ───────────────────────────────────────────────────────────
-const CARD_W = 860;
-const PAD_H = 58;
-const PAD_V = 64;
-const COVER_SZ = 164;
+// ─── Carte ────────────────────────────────────────────────────────────────────
+const CARD_W  = 760;
+const PAD_H   = 64;   // padding horizontal du contenu texte
+const PAD_V   = 56;   // padding vertical bas du contenu texte
+const COVER_SIZE = CARD_W; // cover carrée alignée sur la largeur de la carte
+const CARD_R  = 28;   // border-radius de la carte
+const SECTION_GAP = 48;
+const DIVIDER_TO_REVIEW_GAP = 48;
+const REVIEW_TITLE_GAP = 20;
 
-// Safe zone minimale en haut (barre de statut Instagram)
-const STORY_TOP_MIN = 180;
+// Safe zones story
+const STORY_TOP_MIN    = 140;
+const STORY_BOTTOM_MIN = 240;
 
 // ─── Palette Waveform ─────────────────────────────────────────────────────────
 const C = {
@@ -28,7 +33,6 @@ const C = {
   muted:   '#9A9A9A',
   faint:   '#C2BDB6',
   accent:  '#8E6F5E',
-  accentSoft: '#F0E5DC',
   border:  '#DAD5CD',
   surface: '#E5E0D8',
 } as const;
@@ -61,21 +65,16 @@ export async function GET(
     reviewTitle,
   } = data;
 
-  // Colonne texte album : CARD_W - 2×PAD_H - COVER_SZ - 28(gap) ≈ 500px
-  const albumTitleShort = truncate(albumTitle, 52);
-  const artistShort     = truncate(artistName, 40);
-  // 30px italic sur 708px intérieur ≈ 29 chars/ligne → 4 lignes ≈ 190 chars
-  const reviewExtract = reviewBody ? truncateSemantic(reviewBody, 170) : null;
-  const formattedDate   = formatDate(listenedAt);
-  const reviewTitleShort = reviewTitle ? truncate(reviewTitle, 48) : null;
+  // Largeur utile texte : CARD_W - 2×PAD_H = 732px
+  const albumTitleShort  = truncate(albumTitle, 58);
+  const artistShort      = truncate(artistName, 48);
+  const reviewExtract    = reviewBody ? truncateSemantic(reviewBody, 170) : null;
+  const reviewTitleShort = reviewTitle ? truncate(reviewTitle, 52) : null;
+  const formattedDate    = formatDate(listenedAt);
 
-  const hasReview      = reviewExtract !== null;
-  const hasRating      = rating !== null;
-  // rating inline dans le header quand la review occupe le corps
-  const ratingInHeader = hasReview && hasRating;
-  // rating héro centré quand pas de review
-  const ratingHero     = !hasReview && hasRating;
-  const showBody       = hasReview || ratingHero;
+  const hasReview = reviewExtract !== null;
+  const hasRating = rating !== null;
+  const showBody  = hasReview;
 
   const image = (
     <div
@@ -90,6 +89,7 @@ export async function GET(
         position: 'relative',
       }}
     >
+      {/* Taches de fond décoratives */}
       <div
         style={{
           position: 'absolute',
@@ -115,7 +115,7 @@ export async function GET(
         }}
       />
 
-      {/* Spacer haut — centre la carte avec safe zone minimale */}
+      {/* Spacer haut */}
       <div style={{ display: 'flex', flex: 1, minHeight: STORY_TOP_MIN }} />
 
       {/* ─── CARTE ──────────────────────────────────────────────────────────── */}
@@ -125,197 +125,123 @@ export async function GET(
           flexDirection: 'column',
           width: CARD_W,
           backgroundColor: C.card,
-          borderRadius: 28,
+          borderRadius: CARD_R,
           borderWidth: 1,
           borderStyle: 'solid',
           borderColor: C.border,
-          boxShadow: '0 18px 48px rgba(28, 28, 28, 0.05)',
-          paddingTop: PAD_V,
-          paddingBottom: PAD_V,
-          paddingLeft: PAD_H,
-          paddingRight: PAD_H,
         }}
       >
 
-        {/* ── 1. Header : cover + infos album ─────────────────────────────── */}
-        <div style={{ display: 'flex', gap: 28, alignItems: 'flex-start' }}>
-
-          {/* Cover */}
-          {coverDataUri ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={coverDataUri}
-              width={COVER_SZ}
-              height={COVER_SZ}
-              style={{ borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
-              alt=""
-            />
-          ) : (
-            <div
-              style={{
-                display: 'flex',
-                width: COVER_SZ,
-                height: COVER_SZ,
-                backgroundColor: C.surface,
-                borderRadius: 8,
-                flexShrink: 0,
-              }}
-            />
-          )}
-
-          {/* Infos album */}
+        {/* ── 1. Cover full-bleed ──────────────────────────────────────────── */}
+        {coverDataUri ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={coverDataUri}
+            width={COVER_SIZE}
+            height={COVER_SIZE}
+            style={{
+              objectFit: 'cover',
+              flexShrink: 0,
+              borderTopLeftRadius: CARD_R - 1,
+              borderTopRightRadius: CARD_R - 1,
+            }}
+            alt=""
+          />
+        ) : (
           <div
             style={{
               display: 'flex',
-              flexDirection: 'column',
-              flex: 1,
-              paddingTop: 2,
-              minWidth: 0,
+              width: COVER_SIZE,
+              height: COVER_SIZE,
+              backgroundColor: C.surface,
+              borderTopLeftRadius: CARD_R - 1,
+              borderTopRightRadius: CARD_R - 1,
+              flexShrink: 0,
+            }}
+          />
+        )}
+
+        {/* ── 2. Contenu texte ─────────────────────────────────────────────── */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            paddingLeft: PAD_H,
+            paddingRight: PAD_H,
+            paddingTop: 40,
+            paddingBottom: PAD_V,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 24,
             }}
           >
-            <span
+            <div
               style={{
-                fontSize: 40,
-                fontWeight: 500,
-                color: C.text,
-                lineHeight: 1.14,
-                letterSpacing: '-0.03em',
+                display: 'flex',
+                flexDirection: 'column',
+                flex: 1,
               }}
             >
-              {albumTitleShort}
-            </span>
+              {/* Titre seul */}
+              <span
+                style={{
+                  fontSize: 40,
+                  fontWeight: 500,
+                  color: C.text,
+                  lineHeight: 1.14,
+                  letterSpacing: '-0.03em',
+                }}
+              >
+                {albumTitleShort}
+              </span>
 
-            <div style={{ display: 'flex', height: 10 }} />
+              <div style={{ display: 'flex', height: 12 }} />
 
-            <span
-              style={{
-                fontSize: 24,
-                fontWeight: 400,
-                color: C.sub,
-                lineHeight: 1.35,
-              }}
-            >
-              {artistShort}
-              {year ? `\u2002\u00B7\u2002${year}` : ''}
-            </span>
+              <span
+                style={{
+                  fontSize: 24,
+                  fontWeight: 400,
+                  color: C.sub,
+                  lineHeight: 1.35,
+                }}
+              >
+                {artistShort}
+                {year ? `\u2002\u00B7\u2002${year}` : ''}
+              </span>
+            </div>
 
-            {/* Note inline — seulement quand la review occupe aussi le corps */}
-            {ratingInHeader && (
-              <>
-                <div style={{ display: 'flex', height: 18 }} />
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    alignSelf: 'flex-start',
-                    paddingLeft: 14,
-                    paddingRight: 14,
-                    paddingTop: 8,
-                    paddingBottom: 8,
-                    borderRadius: 999,
-                    backgroundColor: C.accentSoft,
-                    gap: 4,
-                  }}
-                >
-                  <span
-                    style={{ fontSize: 24, fontWeight: 500, color: C.accent, lineHeight: 1 }}
-                  >
-                    {rating}
-                  </span>
-                  <span
-                    style={{ fontSize: 16, fontWeight: 500, color: C.accent, lineHeight: 1 }}
-                  >
-                    {'/ 10'}
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* ── Séparateur header ────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', height: 44 }} />
-        <div style={{ display: 'flex', height: 1, backgroundColor: C.border }} />
-
-        {/* ── 2. Corps : review éditoriale ou note héro ───────────────────── */}
-        {showBody && (
-          <>
-            <div style={{ display: 'flex', height: 40 }} />
-
-            {hasReview ? (
-              /* Variante review : pull-quote éditoriale */
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {reviewTitleShort && (
-                  <>
-                    <span
-                      style={{
-                        fontSize: 18,
-                        fontWeight: 500,
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase',
-                        color: C.muted,
-                      }}
-                    >
-                      {reviewTitleShort}
-                    </span>
-                    <div style={{ display: 'flex', height: 18 }} />
-                  </>
-                )}
-                <span
-                  style={{
-                    fontSize: 56,
-                    fontWeight: 500,
-                    color: C.accent,
-                    lineHeight: 0.7,
-                    letterSpacing: '-0.03em',
-                  }}
-                >
-                  {'\u00AB'}
-                </span>
-                <div style={{ display: 'flex', height: 20 }} />
-                <span
-                  style={{
-                    fontSize: 31,
-                    fontWeight: 400,
-                    fontStyle: 'italic',
-                    color: C.text,
-                    lineHeight: 1.72,
-                    letterSpacing: '-0.015em',
-                  }}
-                >
-                  {reviewExtract}
-                </span>
-              </div>
-            ) : (
-              /* Variante no-review : la note devient le héros de la carte */
+            {hasRating && (
               <div
                 style={{
                   display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingTop: 8,
-                  paddingBottom: 8,
+                  alignItems: 'baseline',
+                  gap: 7,
+                  flexShrink: 0,
                 }}
               >
                 <span
                   style={{
-                    fontSize: 120,
+                    fontSize: 42,
                     fontWeight: 500,
                     color: C.accent,
-                    lineHeight: 0.92,
-                    letterSpacing: '-0.05em',
+                    lineHeight: 1,
+                    letterSpacing: '-0.03em',
                   }}
                 >
                   {rating}
                 </span>
-                <div style={{ display: 'flex', height: 10 }} />
                 <span
                   style={{
-                    fontSize: 18,
+                    fontSize: 15,
                     fontWeight: 500,
                     color: C.muted,
-                    letterSpacing: '0.12em',
+                    lineHeight: 1,
+                    letterSpacing: '0.1em',
                     textTransform: 'uppercase',
                   }}
                 >
@@ -323,51 +249,103 @@ export async function GET(
                 </span>
               </div>
             )}
-
-            {/* Séparateur corps → footer */}
-            <div style={{ display: 'flex', height: 44 }} />
-            <div style={{ display: 'flex', height: 1, backgroundColor: C.border }} />
-          </>
-        )}
-
-        {/* ── 3. Footer : auteur + date + signature Waveform ──────────────── */}
-        <div style={{ display: 'flex', height: 40 }} />
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end',
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={{ fontSize: 23, fontWeight: 500, color: C.text, lineHeight: 1.2 }}>
-              {authorName}
-            </span>
-            <span style={{ fontSize: 19, fontWeight: 400, color: C.muted, lineHeight: 1.3 }}>
-              {formattedDate}
-              {reListenLabel ? `\u2002\u00B7\u2002${reListenLabel}` : ''}
-            </span>
           </div>
 
-          {/* Signature discrète */}
-          <span
+          {/* ── Séparateur ────────────────────────────────────────────────── */}
+          <div
             style={{
-              fontSize: 16,
-              fontWeight: 500,
-              letterSpacing: '0.14em',
-              color: C.faint,
-              textTransform: 'uppercase',
+              display: 'flex',
+              flexDirection: 'column',
+              paddingTop: SECTION_GAP,
+              paddingBottom: showBody ? DIVIDER_TO_REVIEW_GAP : SECTION_GAP,
             }}
           >
-            Waveform
-          </span>
-        </div>
+            <div style={{ display: 'flex', height: 1, backgroundColor: C.border }} />
+          </div>
 
+          {/* ── 3. Review (si présente) ───────────────────────────────────── */}
+          {showBody && (
+            <>
+              {reviewTitleShort && (
+                <>
+                  <span
+                    style={{
+                      fontSize: 17,
+                      fontWeight: 500,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: C.muted,
+                    }}
+                  >
+                    {reviewTitleShort}
+                  </span>
+                  <div style={{ display: 'flex', height: REVIEW_TITLE_GAP }} />
+                </>
+              )}
+
+              <div
+                style={{
+                  fontSize: 30,
+                  fontWeight: 400,
+                  fontStyle: 'italic',
+                  color: C.text,
+                  lineHeight: 1.72,
+                  letterSpacing: '-0.015em',
+                }}
+              >
+                {reviewExtract}
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  paddingTop: SECTION_GAP,
+                  paddingBottom: SECTION_GAP,
+                }}
+              >
+                <div style={{ display: 'flex', height: 1, backgroundColor: C.border }} />
+              </div>
+            </>
+          )}
+
+          {/* ── 4. Footer : auteur + date + signature ─────────────────────── */}
+          <div style={{ display: 'flex', height: SECTION_GAP }} />
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end',
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <span style={{ fontSize: 22, fontWeight: 500, color: C.text, lineHeight: 1.2 }}>
+                {authorName}
+              </span>
+              <span style={{ fontSize: 18, fontWeight: 400, color: C.muted, lineHeight: 1.3 }}>
+                {formattedDate}
+                {reListenLabel ? `\u2002\u00B7\u2002${reListenLabel}` : ''}
+              </span>
+            </div>
+
+            <span
+              style={{
+                fontSize: 15,
+                fontWeight: 500,
+                letterSpacing: '0.14em',
+                color: C.faint,
+                textTransform: 'uppercase',
+              }}
+            >
+              Waveform
+            </span>
+          </div>
+        </div>
       </div>
       {/* ─── FIN CARTE ────────────────────────────────────────────────────────── */}
 
-      {/* Spacer bas — légèrement plus grand que le haut pour laisser la zone sticker libre */}
-      <div style={{ display: 'flex', flex: 1.3, minHeight: 340 }} />
+      {/* Spacer bas — zone sticker Instagram */}
+      <div style={{ display: 'flex', flex: 1.3, minHeight: STORY_BOTTOM_MIN }} />
     </div>
   );
 
@@ -380,7 +358,7 @@ export async function GET(
       { name: 'Inter', data: fonts.italic,  weight: 400, style: 'italic' },
     ],
     headers: {
-      'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+      'Cache-Control': 'no-store',
     },
   });
 }
