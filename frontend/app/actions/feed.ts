@@ -669,6 +669,8 @@ export async function getPublicFeed(limit = 30): Promise<PublicFeedEntry[]> {
   try {
     const supabase = createSupabaseAnon();
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const maxUniqueAuthors = Math.max(limit, 1);
+    const scanLimit = Math.max(limit * 5, 100);
 
     // Step 1: fetch diary entries
     const { data: entries, error: entriesError } = await supabase
@@ -677,15 +679,26 @@ export async function getPublicFeed(limit = 30): Promise<PublicFeedEntry[]> {
       .eq('is_public', true)
       .gte('created_at', since)
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(scanLimit);
 
     if (entriesError || !entries || entries.length === 0) {
       if (entriesError) console.error('getPublicFeed entries error:', entriesError.message, entriesError.details);
       return [];
     }
 
-    const userIds = [...new Set(entries.map((e: any) => e.user_id))];
-    const albumIds = [...new Set(entries.map((e: any) => e.album_id))];
+    // Keep only the latest entry per author, then cap to requested unique authors.
+    const latestByUser = new Map<string, any>();
+    for (const entry of entries as any[]) {
+      if (!latestByUser.has(entry.user_id)) {
+        latestByUser.set(entry.user_id, entry);
+      }
+      if (latestByUser.size >= maxUniqueAuthors) break;
+    }
+
+    const uniqueEntries = Array.from(latestByUser.values());
+
+    const userIds = [...new Set(uniqueEntries.map((e: any) => e.user_id))];
+    const albumIds = [...new Set(uniqueEntries.map((e: any) => e.album_id))];
 
     // Step 2: fetch profiles and albums in parallel
     const [{ data: profiles }, { data: albums }] = await Promise.all([
@@ -702,7 +715,7 @@ export async function getPublicFeed(limit = 30): Promise<PublicFeedEntry[]> {
     const albumMap = new Map((albums ?? []).map((a: any) => [a.id, a]));
     const artistMap = new Map((artists ?? []).map((a: any) => [a.id, a]));
 
-    return entries
+    return uniqueEntries
       .filter((e: any) => profileMap.has(e.user_id) && albumMap.has(e.album_id))
       .map((e: any) => {
         const profile = profileMap.get(e.user_id);
