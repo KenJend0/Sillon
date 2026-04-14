@@ -31,7 +31,6 @@ export default function InstagramBanner() {
     setPlatform(detectPlatform(ua))
     setVisible(true)
 
-    // Analytics
     try {
       window.va?.('event', { name: 'banner_impression', data: { banner: 'instagram' } })
     } catch {}
@@ -64,11 +63,8 @@ export default function InstagramBanner() {
       window.va?.('event', { name: 'open_browser_click', data: { banner: 'instagram' } })
     } catch {}
 
-    const intentUrl = buildIntentUrl()
-    location.href = intentUrl
+    location.href = buildIntentUrl()
 
-    // Timeout fallback : si la page est encore visible après 1.5s,
-    // Instagram a bloqué l'intent → afficher le fallback copie
     setTimeout(() => {
       if (!document.hidden) {
         setIntentFailed(true)
@@ -90,101 +86,85 @@ export default function InstagramBanner() {
         zIndex: 9999,
         background: '#1C1C1C',
         color: '#F5F3EF',
-        padding: '12px 16px',
+        padding: '10px 14px',
         display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
+        alignItems: 'center',
+        gap: '8px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-        <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.4', flex: 1 }}>
-          Pour une meilleure expérience, ouvre Waveform dans ton navigateur.
-        </p>
+      {/* Texte principal */}
+      <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.3', flex: 1 }}>
+        {platform === 'ios' && (
+          <>
+            Tape <strong>•••</strong> en haut à droite, puis{' '}
+            <strong>Ouvrir dans un navigateur externe</strong>.
+          </>
+        )}
+        {platform === 'android' && (
+          intentFailed
+            ? (copied ? 'Lien copié — colle-le dans ton navigateur.' : 'Ouvre ton navigateur et colle le lien.')
+            : 'Ouvre Waveform dans ton navigateur pour une meilleure expérience.'
+        )}
+        {platform === null && 'Ouvre ce lien dans ton navigateur.'}
+      </p>
+
+      {/* Boutons selon plateforme */}
+      {platform === 'android' && !intentFailed && (
         <button
-          onClick={dismiss}
-          aria-label="Fermer"
+          onClick={openInBrowser}
           style={{
-            background: 'none',
+            background: '#F5F3EF',
+            color: '#1C1C1C',
             border: 'none',
-            color: '#F5F3EF',
+            borderRadius: '6px',
+            padding: '6px 12px',
+            fontSize: '13px',
+            fontWeight: 500,
             cursor: 'pointer',
-            fontSize: '18px',
-            padding: '0 0 0 8px',
-            lineHeight: 1,
+            whiteSpace: 'nowrap',
             flexShrink: 0,
           }}
         >
-          ✕
+          Ouvrir
         </button>
-      </div>
-
-      {platform === 'android' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {!intentFailed ? (
-            <button
-              onClick={openInBrowser}
-              style={{
-                background: '#F5F3EF',
-                color: '#1C1C1C',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '10px 16px',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                width: '100%',
-              }}
-            >
-              Ouvrir dans le navigateur
-            </button>
-          ) : (
-            <p style={{ margin: 0, fontSize: '13px', color: '#ccc' }}>
-              {copied
-                ? 'Lien copié. Colle-le dans ton navigateur.'
-                : 'Copie le lien et colle-le dans ton navigateur.'}
-            </p>
-          )}
-          <button
-            onClick={copyLink}
-            style={{
-              background: 'none',
-              border: '1px solid rgba(245,243,239,0.3)',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontSize: '13px',
-              color: '#F5F3EF',
-              cursor: 'pointer',
-              width: '100%',
-            }}
-          >
-            {copied ? 'Lien copié ✓' : 'Copier le lien'}
-          </button>
-        </div>
+      )}
+      {(platform === 'ios' || intentFailed) && (
+        <button
+          onClick={copyLink}
+          style={{
+            background: 'none',
+            border: '1px solid rgba(245,243,239,0.4)',
+            borderRadius: '6px',
+            padding: '6px 10px',
+            fontSize: '12px',
+            color: '#F5F3EF',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
+        >
+          {copied ? 'Copié ✓' : 'Copier'}
+        </button>
       )}
 
-      {platform === 'ios' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <p style={{ margin: 0, fontSize: '13px', color: '#ccc' }}>
-            Tape <strong>•••</strong> en bas à droite, puis <strong>Ouvrir dans Safari</strong>.
-          </p>
-          <button
-            onClick={copyLink}
-            style={{
-              background: 'none',
-              border: '1px solid rgba(245,243,239,0.3)',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontSize: '13px',
-              color: '#F5F3EF',
-              cursor: 'pointer',
-              width: '100%',
-            }}
-          >
-            {copied ? 'Lien copié ✓' : 'Copier le lien'}
-          </button>
-        </div>
-      )}
+      {/* Fermer */}
+      <button
+        onClick={dismiss}
+        aria-label="Fermer"
+        style={{
+          background: 'none',
+          border: 'none',
+          color: 'rgba(245,243,239,0.6)',
+          cursor: 'pointer',
+          fontSize: '16px',
+          padding: '0',
+          lineHeight: 1,
+          flexShrink: 0,
+        }}
+      >
+        ✕
+      </button>
     </div>
   )
 }

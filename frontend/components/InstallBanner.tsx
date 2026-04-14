@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 
-// BeforeInstallPromptEvent n'est pas dans les types standard
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
@@ -38,16 +37,11 @@ export default function InstallBanner() {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    // Ne jamais afficher si contexte Instagram (InstagramBanner prioritaire)
     if (isInstagramContext()) return
-    // Déjà installé en standalone
     if ((navigator as Navigator & { standalone?: boolean }).standalone) return
-    // Déjà installé via flag
     if (localStorage.getItem(INSTALLED_KEY)) return
-    // Dismissed récemment
     if (isDismissedRecently()) return
 
-    // iOS Safari : instructif uniquement
     if (isIosSafari()) {
       setMode('ios')
       setVisible(true)
@@ -57,7 +51,6 @@ export default function InstallBanner() {
       return
     }
 
-    // Android Chrome / Samsung Internet : attendre beforeinstallprompt
     const handler = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
@@ -105,42 +98,25 @@ export default function InstallBanner() {
       role="banner"
       style={{
         position: 'fixed',
-        bottom: 0,
+        top: 0,
         left: 0,
         right: 0,
         zIndex: 9998,
         background: '#1C1C1C',
         color: '#F5F3EF',
-        padding: '14px 16px',
+        padding: '10px 14px',
         display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-        boxShadow: '0 -2px 8px rgba(0,0,0,0.4)',
+        alignItems: 'center',
+        gap: '8px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-        <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.4', flex: 1 }}>
-          {mode === 'android'
-            ? 'Installe Waveform sur ton téléphone pour un accès rapide.'
-            : "Tape l'icône \u25a1\u2191 puis \"Sur l'écran d'accueil\" pour installer Waveform."}
-        </p>
-        <button
-          onClick={dismiss}
-          aria-label="Fermer"
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#F5F3EF',
-            cursor: 'pointer',
-            fontSize: '18px',
-            padding: '0 0 0 8px',
-            lineHeight: 1,
-            flexShrink: 0,
-          }}
-        >
-          ✕
-        </button>
-      </div>
+      <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.3', flex: 1 }}>
+        {mode === 'ios'
+          ? <>Tape <strong>Partager</strong> en bas, puis <strong>Sur l&apos;écran d&apos;accueil</strong>.</>
+          : <>Installe Waveform — accès rapide depuis ton écran d&apos;accueil.</>
+        }
+      </p>
 
       {mode === 'android' && (
         <button
@@ -149,17 +125,35 @@ export default function InstallBanner() {
             background: '#F5F3EF',
             color: '#1C1C1C',
             border: 'none',
-            borderRadius: '8px',
-            padding: '10px 16px',
-            fontSize: '14px',
+            borderRadius: '6px',
+            padding: '6px 12px',
+            fontSize: '13px',
             fontWeight: 500,
             cursor: 'pointer',
-            width: '100%',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
         >
-          Ajouter à l&apos;écran d&apos;accueil
+          Installer
         </button>
       )}
+
+      <button
+        onClick={dismiss}
+        aria-label="Fermer"
+        style={{
+          background: 'none',
+          border: 'none',
+          color: 'rgba(245,243,239,0.6)',
+          cursor: 'pointer',
+          fontSize: '16px',
+          padding: '0',
+          lineHeight: 1,
+          flexShrink: 0,
+        }}
+      >
+        ✕
+      </button>
     </div>
   )
 }
