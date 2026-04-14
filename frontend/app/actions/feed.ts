@@ -7,7 +7,7 @@ import { getAuthUser } from '@/lib/supabase/server';
  * Frontend event types (MVP, no DB change)
  * Mapped from DB types: diary/follow/discover/like/comment
  */
-export type FeedEventType = 'REVIEW_CREATED' | 'UNRATED_LISTEN' | 'REVIEW_LIKED' | 'ALBUM_SAVED' | 'USER_FOLLOWED' | 'COMMENT_CREATED';
+export type FeedEventType = 'REVIEW_CREATED' | 'UNRATED_LISTEN' | 'REVIEW_LIKED' | 'ALBUM_SAVED' | 'USER_FOLLOWED' | 'COMMENT_CREATED' | 'COMMENT_REPLY';
 
 export type FeedActor = {
   id: string;
@@ -38,6 +38,7 @@ export interface FeedEvent {
   comments_count?: number; // For REVIEW_CREATED
   entry_owner_id?: string; // Owner of the liked/commented diary entry
   current_user_also_commented?: boolean; // For COMMENT_CREATED: current user has also commented on same entry
+  comment_id?: string; // For COMMENT_REPLY: ID of the reply comment (used for deep-linking)
   created_at: string;
   _dedup_key?: string; // For client-side deduplication
   // Aggregation: set when multiple actors performed the same action on the same target
@@ -93,6 +94,7 @@ export async function getMyFeed({
         type,
         entry_id,
         album_id,
+        comment_id,
         created_at,
         actor:profiles!actor_id (
           id,
@@ -295,6 +297,7 @@ function aggregateFeedEvents(events: FeedEvent[], currentUserId: string): FeedEv
     // COMMENT_CREATED targeting currentUser's entry — consecutive comments on the same entry
     if (e.type === 'COMMENT_CREATED' && e.entry_owner_id === currentUserId && e.entry_id && e.actor.id !== currentUserId) {
       const group = [e];
+      const seenActors = new Set<string>([e.actor.id]);
       const anchor = new Date(e.created_at).getTime();
       let j = i + 1;
       while (
@@ -305,7 +308,11 @@ function aggregateFeedEvents(events: FeedEvent[], currentUserId: string): FeedEv
         events[j].actor.id !== currentUserId &&
         anchor - new Date(events[j].created_at).getTime() < MS_24H
       ) {
-        group.push(events[j++]);
+        if (!seenActors.has(events[j].actor.id)) {
+          seenActors.add(events[j].actor.id);
+          group.push(events[j]);
+        }
+        j++;
       }
       result.push(group.length > 1
         ? { ...e, actors: group.slice(0, 5).map(ev => ev.actor), actors_count: group.length, _dedup_key: `agg-comment-${e.entry_id}` }
@@ -441,6 +448,25 @@ function mapFeedEvent(raw: any): FeedEvent | null {
       return null;
     }
 
+    case 'comment_reply': {
+      const replyAlbum = raw.entry?.album || (raw.album ? { id: raw.album.id, title: raw.album.title, cover_url: raw.album.cover_url } : null);
+
+      if (replyAlbum) {
+        return {
+          ...baseEvent,
+          type: 'COMMENT_REPLY',
+          entry_id: raw.entry?.id ?? undefined,
+          comment_id: raw.comment_id ?? undefined,
+          album: {
+            id: replyAlbum.id,
+            title: replyAlbum.title,
+            cover_url: replyAlbum.cover_url,
+          },
+        };
+      }
+      return null;
+    }
+
     default:
       return null;
   }
@@ -542,7 +568,7 @@ export async function backfillFolloweeEvents(followerId: string, followeeId: str
 }
 
 export async function fanoutEvent(
-  type: 'diary_entry' | 'like' | 'comment' | 'follow' | 'discover',
+  type: 'diary_entry' | 'like' | 'comment' | 'comment_reply' | 'follow' | 'discover',
   payload: Record<string, unknown>,
   targets?: string[]
 ) {
@@ -598,6 +624,7 @@ export async function fanoutEvent(
       type,
       entry_id: (payload.entryId || null) as string | null,
       album_id: (payload.albumId || null) as string | null,
+      comment_id: (payload.commentId || null) as string | null,
       followee_id: type === 'follow' ? (payload.followeeId as string | null) : null,
       payload: payload || {},
     }));
@@ -613,6 +640,7 @@ export async function fanoutEvent(
       .insert(safeEvents as any[]);
 
     if (insertError) {
+      console.error('fanoutEvent insert error:', insertError.message, { type, code: insertError.code });
       return { success: false, error: 'An error occurred' };
     }
 

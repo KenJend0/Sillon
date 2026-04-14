@@ -216,6 +216,7 @@ export type Database = {
           created_at: string
           entry_id: string
           id: string
+          parent_comment_id: string | null
           updated_at: string
           user_id: string
         }
@@ -224,6 +225,7 @@ export type Database = {
           created_at?: string
           entry_id: string
           id?: string
+          parent_comment_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -232,6 +234,7 @@ export type Database = {
           created_at?: string
           entry_id?: string
           id?: string
+          parent_comment_id?: string | null
           updated_at?: string
           user_id?: string
         }

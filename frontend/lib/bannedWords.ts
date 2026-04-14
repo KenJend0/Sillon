@@ -47,7 +47,12 @@ const CONTENT_BANNED_WORDS: string[] = [
 
   // Sexual spam / promo patterns
   'onlyfans', 'onlyfans.com', 'fansly', 'pornhub', 'xvideos', 'xnxx',
-  't.me/', 'telegram.me', 'discord.gg/', 'linktr.ee/', 'wa.me/',
+  'telegram.me', 'discord.gg/', 'linktr.ee/',
+];
+
+const CONTENT_BANNED_REGEXES: Array<{ raw: string; regex: RegExp }> = [
+  { raw: 't.me/', regex: /(^|[^a-z0-9])t\.?me\/[a-z0-9_/-]+/i },
+  { raw: 'wa.me/', regex: /(^|[^a-z0-9])wa\.?me\/[a-z0-9_/-]+/i },
 ];
 
 const SHORT_WORD_MAX_LENGTH = 4;
@@ -61,15 +66,15 @@ type BannedPattern = {
 
 function buildBannedPatterns(words: string[]): BannedPattern[] {
   return words.map((word) => {
-  const normalized = normalizeForModeration(word);
-  const compact = compactForModeration(normalized);
+    const normalized = normalizeForModeration(word);
+    const compact = compactForModeration(normalized);
 
-  return {
-    raw: word,
-    normalized,
-    compact,
-    shortMatcher: compact.length <= SHORT_WORD_MAX_LENGTH ? buildLooseShortWordRegex(compact) : null,
-  };
+    return {
+      raw: word,
+      normalized,
+      compact,
+      shortMatcher: compact.length <= SHORT_WORD_MAX_LENGTH ? buildLooseShortWordRegex(compact) : null,
+    };
   });
 }
 
@@ -87,6 +92,12 @@ export function findBannedUsernameWord(text: string): string | null {
  * Narrower moderation for reviews and comments to reduce false positives.
  */
 export function findBannedContentWord(text: string): string | null {
+  const lower = text.toLowerCase();
+
+  for (const pattern of CONTENT_BANNED_REGEXES) {
+    if (pattern.regex.test(lower)) return pattern.raw;
+  }
+
   return findBannedPattern(text, CONTENT_BANNED_PATTERNS);
 }
 
@@ -105,7 +116,12 @@ function findBannedPattern(text: string, patterns: BannedPattern[]): string | nu
     if (pattern.shortMatcher?.test(normalizedText)) return pattern.raw;
 
     if (normalizedText.includes(pattern.normalized)) return pattern.raw;
-    if (compactText.includes(pattern.compact)) return pattern.raw;
+
+    // Only use compact matching for longer patterns so short URL fragments like
+    // "t.me" do not accidentally match across ordinary words in prose.
+    if (pattern.compact.length > SHORT_WORD_MAX_LENGTH && compactText.includes(pattern.compact)) {
+      return pattern.raw;
+    }
   }
 
   return null;

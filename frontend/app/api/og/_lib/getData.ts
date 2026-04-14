@@ -74,7 +74,7 @@ export async function getOgEntryData(entryId: string): Promise<OgEntryData | nul
   const [{ data: album }, { data: profile }] = await Promise.all([
     supabase
       .from('albums')
-      .select('title, cover_url, release_date, artist_id')
+      .select('title, cover_url, release_date, artist_id, mbid')
       .eq('id', entry.album_id)
       .maybeSingle(),
     supabase
@@ -95,20 +95,30 @@ export async function getOgEntryData(entryId: string): Promise<OgEntryData | nul
   }
 
   // Fetch cover → data URI pour éviter les redirects 307 CoverArt dans Satori
+  // Priorité : CoverArt Archive 1200px (via mbid) > cover_url en DB (souvent 500px)
   let coverDataUri: string | null = null;
+  const coverUrls: string[] = [];
+  if (album?.mbid) {
+    coverUrls.push(`https://coverartarchive.org/release-group/${album.mbid}/front-1200`);
+  }
   if (album?.cover_url) {
+    coverUrls.push(album.cover_url);
+  }
+
+  for (const url of coverUrls) {
     try {
-      const res = await fetch(album.cover_url, {
+      const res = await fetch(url, {
         redirect: 'follow',
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(6000),
       });
       if (res.ok) {
         const contentType = res.headers.get('content-type') ?? 'image/jpeg';
         const buffer = await res.arrayBuffer();
         coverDataUri = `data:${contentType};base64,${Buffer.from(buffer).toString('base64')}`;
+        break;
       }
     } catch {
-      coverDataUri = null;
+      // essaie l'URL suivante
     }
   }
 

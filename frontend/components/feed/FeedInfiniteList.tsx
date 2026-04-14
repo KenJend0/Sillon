@@ -8,6 +8,7 @@ import FeedCardUserFollowed from './cards/FeedCardUserFollowed';
 import FeedCardReviewLiked from './cards/FeedCardReviewLiked';
 import FeedCardCommentCreated from './cards/FeedCardCommentCreated';
 import FeedCardUnratedListen from './cards/FeedCardUnratedListen';
+import FeedCardCommentReply from './cards/FeedCardCommentReply';
 import { showToast } from '@/components/Toast';
 
 interface FeedInfiniteListProps {
@@ -40,6 +41,8 @@ function getDedupKey(event: FeedEvent): string {
       return `like-${event.actor.id}-${event.liked_entry_id}`;
     case 'COMMENT_CREATED':
       return `comment-${event.actor.id}-${event.entry_id}`;
+    case 'COMMENT_REPLY':
+      return `reply-${event.id}`;
     case 'USER_FOLLOWED':
       return `follow-${event.actor.id}-${event.followee?.id}`;
     case 'ALBUM_SAVED':
@@ -111,6 +114,13 @@ function renderEvent(event: FeedEvent, currentUserId?: string) {
       <FeedCardCommentCreated
         event={event as typeof event & { type: 'COMMENT_CREATED' }}
         currentUserId={currentUserId}
+      />
+    );
+  }
+  if (event.type === 'COMMENT_REPLY') {
+    return (
+      <FeedCardCommentReply
+        event={event as typeof event & { type: 'COMMENT_REPLY' }}
       />
     );
   }

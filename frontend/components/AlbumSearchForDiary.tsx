@@ -115,6 +115,13 @@ export default function AlbumSearchForDiary({ onSelectAlbum }: AlbumSearchForDia
         try {
             const result = await importAlbumFromMusicBrainz(mb.mbid);
             if (result.success && 'albumId' in result && result.albumId) {
+                if ('mbid' in result && result.mbid && 'title' in result && 'artist' in result) {
+                    fetch('/api/enrich', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ albumId: result.albumId, mbid: result.mbid, title: result.title, artist: result.artist }),
+                    }).catch(() => {});
+                }
                 onSelectAlbum({
                     id: result.albumId,
                     title: mb.title,

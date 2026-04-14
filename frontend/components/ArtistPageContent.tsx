@@ -162,6 +162,13 @@ export function ArtistPageContent({
         try {
             const result = await importAlbumFromMusicBrainz(mbid);
             if (result.success && 'albumId' in result && result.albumId) {
+                if ('mbid' in result && result.mbid && 'title' in result && 'artist' in result) {
+                    fetch('/api/enrich', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ albumId: result.albumId, mbid: result.mbid, title: result.title, artist: result.artist }),
+                    }).catch(() => {});
+                }
                 router.push(`/albums/${result.albumId}`);
             } else {
                 showToast("Erreur lors de l'import", 'error');

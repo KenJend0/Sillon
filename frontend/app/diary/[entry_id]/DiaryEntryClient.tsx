@@ -1,9 +1,9 @@
 ﻿'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Heart, MessageCircle, Trash2, Flag } from 'lucide-react';
 import { toggleDiaryLike, addComment, deleteComment, getEntryComments } from '@/app/actions/diary';
 import { reportContent } from '@/app/actions/moderation';
@@ -22,6 +22,7 @@ interface DiaryEntryClientProps {
 
 export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [hasLiked, setHasLiked] = useState(entry.has_liked);
   const [likesCount, setLikesCount] = useState(entry.stats.likes_count);
   const [comments, setComments] = useState<DiaryEntryComment[]>(entry.comments);
@@ -29,8 +30,26 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
   const [liking, setLiking] = useState(false);
   const [posting, setPosting] = useState(false);
   const [showLikesSheet, setShowLikesSheet] = useState(false);
+  // parentCommentId = ID du commentaire top-level ; mentionUsername = @mention pré-rempli
+  const [replyingTo, setReplyingTo] = useState<{ parentCommentId: string; mentionUsername: string } | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
 
   const isAuthor = currentUser?.id === entry.author.id;
+
+  // Auto-expand the thread and scroll to the reply when arriving via ?reply= deep link
+  useEffect(() => {
+    const replyId = searchParams.get('reply');
+    if (!replyId) return;
+    const parentComment = comments.find((c) => (c.replies ?? []).some((r) => r.id === replyId));
+    if (parentComment) {
+      setExpandedReplies((prev) => new Set([...prev, parentComment.id]));
+      setTimeout(() => {
+        document.getElementById(`comment-${replyId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLike = async () => {
     if (!currentUser) {
@@ -80,10 +99,38 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
     }
   };
 
+  const handleAddReply = async () => {
+    if (!currentUser) {
+      showToast('Connecte-toi pour répondre', 'error');
+      return;
+    }
+    if (!replyingTo || posting || !replyText.trim()) return;
+    const { parentCommentId } = replyingTo;
+    setPosting(true);
+    try {
+      await addComment(entry.id, replyText.trim(), parentCommentId);
+      setReplyText('');
+      setReplyingTo(null);
+      // Auto-expand le thread après avoir posté
+      setExpandedReplies((prev) => new Set([...prev, parentCommentId]));
+      const freshComments = await getEntryComments(entry.id);
+      setComments(freshComments);
+    } catch (err) {
+      console.error('Add reply error:', err);
+      showToast(err instanceof Error ? err.message : 'Impossible d\'ajouter la réponse', 'error');
+    } finally {
+      setPosting(false);
+    }
+  };
+
   const handleDeleteComment = async (commentId: string) => {
     try {
       await deleteComment(commentId);
-      setComments((prev) => prev.filter((c) => c.id !== commentId));
+      setComments((prev) =>
+        prev
+          .filter((c) => c.id !== commentId)
+          .map((c) => ({ ...c, replies: (c.replies ?? []).filter((r) => r.id !== commentId) }))
+      );
     } catch (err) {
       console.error('Delete comment error:', err);
       showToast('Impossible de supprimer le commentaire', 'error');
@@ -252,7 +299,9 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
           </div>
           <div className="flex items-center gap-2 text-text-tertiary">
             <MessageCircle size={18} />
-            <span className="text-label">{comments.length}</span>
+            <span className="text-label">
+              {comments.reduce((acc, c) => acc + 1 + (c.replies ?? []).length, 0)}
+            </span>
           </div>
           <div className="ml-auto">
             <ShareButton entryId={entry.id} />
@@ -321,45 +370,167 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
           {comments.length === 0 ? (
             <p className="text-text-tertiary text-meta">Personne n'a encore répondu.</p>
           ) : (
-            <div className="space-y-4">
-              {comments.map((comment) => (
-                <div key={comment.id} className="flex gap-3 group">
-                  <Link href={`/u/${comment.author.username}`}>
-                    <UserAvatar userId={comment.author.id} src={comment.author.avatar_url} size={32} />
-                  </Link>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2 text-meta">
-                      <Link
-                        href={`/u/${comment.author.username}`}
-                        className="font-medium text-text-primary hover:text-text-secondary transition-colors duration-150"
-                      >
-                        {comment.author.username}
+            <div className="space-y-5">
+              {comments.map((comment) => {
+                const replies = comment.replies ?? [];
+                const isExpanded = expandedReplies.has(comment.id);
+                const isReplyingHere = replyingTo?.parentCommentId === comment.id;
+
+                const toggleExpand = () =>
+                  setExpandedReplies((prev) => {
+                    const next = new Set(prev);
+                    next.has(comment.id) ? next.delete(comment.id) : next.add(comment.id);
+                    return next;
+                  });
+
+                const openReplyForm = (mentionUsername: string, expand = false) => {
+                  if (expand) setExpandedReplies((prev) => new Set([...prev, comment.id]));
+                  setReplyingTo({ parentCommentId: comment.id, mentionUsername });
+                  setReplyText(mentionUsername !== comment.author.username ? `@${mentionUsername} ` : '');
+                };
+
+                const closeReplyForm = () => { setReplyingTo(null); setReplyText(''); };
+
+                return (
+                  <div key={comment.id} id={`comment-${comment.id}`}>
+                    {/* Top-level comment */}
+                    <div className="flex gap-3 group">
+                      <Link href={`/u/${comment.author.username}`}>
+                        <UserAvatar userId={comment.author.id} src={comment.author.avatar_url} size={32} />
                       </Link>
-                      <span className="text-label text-text-tertiary flex-1">
-                        {formatDate(comment.created_at)}
-                      </span>
-                      {comment.is_mine ? (
-                        <button
-                          onClick={() => handleDeleteComment(comment.id)}
-                          className="text-text-tertiary hover:text-text-primary transition-colors duration-150"
-                          title="Supprimer"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      ) : currentUser && (
-                        <button
-                          onClick={() => handleReportComment(comment.id)}
-                          className="text-text-tertiary hover:text-[#C86C6C] transition-colors duration-150 opacity-0 group-hover:opacity-100"
-                          title="Signaler"
-                        >
-                          <Flag size={14} />
-                        </button>
-                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2 text-meta">
+                          <Link
+                            href={`/u/${comment.author.username}`}
+                            className="font-medium text-text-primary hover:text-text-secondary transition-colors duration-150"
+                          >
+                            {comment.author.username}
+                          </Link>
+                          <span className="text-label text-text-tertiary flex-1">
+                            {formatDate(comment.created_at)}
+                          </span>
+                          {comment.is_mine ? (
+                            <button
+                              onClick={() => handleDeleteComment(comment.id)}
+                              className="text-text-tertiary hover:text-text-primary transition-colors duration-150"
+                              title="Supprimer"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          ) : currentUser && (
+                            <button
+                              onClick={() => handleReportComment(comment.id)}
+                              className="text-text-tertiary hover:text-[#C86C6C] transition-colors duration-150 opacity-0 group-hover:opacity-100"
+                              title="Signaler"
+                            >
+                              <Flag size={14} />
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-[14px] text-text-primary leading-[1.7] mt-2">{comment.body}</p>
+                        {currentUser && (
+                          <button
+                            onClick={() => isReplyingHere ? closeReplyForm() : openReplyForm(comment.author.username)}
+                            className="mt-2 text-label text-text-tertiary hover:text-text-primary transition-colors duration-150"
+                          >
+                            {isReplyingHere ? 'Annuler' : 'Répondre'}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-[14px] text-text-primary leading-[1.7] mt-2">{comment.body}</p>
+
+                    {/* Bouton collapse/expand réponses */}
+                    {replies.length > 0 && (
+                      <button
+                        onClick={toggleExpand}
+                        className="mt-2 ml-11 text-label text-text-tertiary hover:text-text-primary transition-colors duration-150 flex items-center gap-1"
+                      >
+                        <span className="inline-block transition-transform duration-150" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
+                        {isExpanded
+                          ? 'Masquer les réponses'
+                          : `${replies.length} réponse${replies.length > 1 ? 's' : ''}`}
+                      </button>
+                    )}
+
+                    {/* Réponses (visibles seulement si expanded) */}
+                    {isExpanded && replies.length > 0 && (
+                      <div className="mt-2 ml-11 space-y-4 border-l border-border pl-4">
+                        {replies.map((reply) => (
+                          <div key={reply.id} id={`comment-${reply.id}`} className="flex gap-3 group scroll-mt-20">
+                            <Link href={`/u/${reply.author.username}`}>
+                              <UserAvatar userId={reply.author.id} src={reply.author.avatar_url} size={26} />
+                            </Link>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline gap-2 text-meta">
+                                <Link
+                                  href={`/u/${reply.author.username}`}
+                                  className="font-medium text-text-primary hover:text-text-secondary transition-colors duration-150"
+                                >
+                                  {reply.author.username}
+                                </Link>
+                                <span className="text-label text-text-tertiary flex-1">
+                                  {formatDate(reply.created_at)}
+                                </span>
+                                {reply.is_mine ? (
+                                  <button
+                                    onClick={() => handleDeleteComment(reply.id)}
+                                    className="text-text-tertiary hover:text-text-primary transition-colors duration-150"
+                                    title="Supprimer"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                ) : currentUser && (
+                                  <button
+                                    onClick={() => handleReportComment(reply.id)}
+                                    className="text-text-tertiary hover:text-[#C86C6C] transition-colors duration-150 opacity-0 group-hover:opacity-100"
+                                    title="Signaler"
+                                  >
+                                    <Flag size={13} />
+                                  </button>
+                                )}
+                              </div>
+                              <p className="text-[13px] text-text-primary leading-[1.7] mt-1">{reply.body}</p>
+                              {currentUser && (
+                                <button
+                                  onClick={() => openReplyForm(reply.author.username, true)}
+                                  className="mt-1 text-label text-text-tertiary hover:text-text-primary transition-colors duration-150"
+                                >
+                                  Répondre
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Formulaire de réponse inline */}
+                    {isReplyingHere && (
+                      <div className="flex gap-2 mt-3 ml-11">
+                        <input
+                          type="text"
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                          placeholder={`Répondre à @${replyingTo.mentionUsername}…`}
+                          autoFocus
+                          className="flex-1 bg-background-secondary border border-border rounded-[10px] px-3 py-2 text-[13px] text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] transition-all"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddReply(); }
+                            if (e.key === 'Escape') closeReplyForm();
+                          }}
+                        />
+                        <button
+                          onClick={handleAddReply}
+                          disabled={posting || !replyText.trim()}
+                          className="px-3 py-2 border border-border text-text-primary hover:bg-[#1C1C1C] hover:text-[#F5F3EF] disabled:bg-background-secondary disabled:text-text-disabled disabled:border-border rounded-[8px] text-label font-medium transition-colors duration-150"
+                        >
+                          Envoyer
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

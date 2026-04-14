@@ -23,6 +23,7 @@ export default function AuthForm() {
   );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
   const [loading, setLoading] = useState(false);
   const urlError = searchParams.get("error");
 
@@ -84,6 +85,9 @@ export default function AuthForm() {
           password,
           options: {
             emailRedirectTo: redirectTo,
+            data: {
+              display_name: firstName.trim() || null,
+            },
           },
         });
 
@@ -175,6 +179,20 @@ export default function AuthForm() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
 
+        {mode === "signup" && (
+          <div>
+            <label className="block text-[14px] font-medium text-text-secondary mb-1">
+              Prénom
+            </label>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="Ton prénom"
+              className="w-full bg-background border border-border rounded-[10px] px-3 py-2 text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] transition-colors duration-150"
+            />
+          </div>
+        )}
 
         {mode !== "reset" && (
           <div>
@@ -250,6 +268,7 @@ export default function AuthForm() {
                   setMode("signup");
                   setEmail("");
                   setPassword("");
+                  setFirstName("");
                 }}
                 className="underline underline-offset-2 text-text-primary hover:text-[#8E6F5E] transition-colors duration-150"
               >

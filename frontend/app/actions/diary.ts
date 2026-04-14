@@ -228,8 +228,8 @@ export async function deleteDiaryEntry(entryId: string) {
   }
 }
 
-// Ajouter un commentaire
-export async function addComment(entryId: string, body: string): Promise<void> {
+// Ajouter un commentaire (ou une réponse si parentCommentId est fourni)
+export async function addComment(entryId: string, body: string, parentCommentId?: string): Promise<void> {
   const user = await getAuthUser();
   if (!user) {
     throw new Error('Not authenticated');
@@ -254,7 +254,7 @@ export async function addComment(entryId: string, body: string): Promise<void> {
   // Verify the parent entry is visible to this user (public or owned by them)
   const { data: entryCheck, error: entryCheckError } = await supabase
     .from('diary_entries')
-    .select('id, user_id, is_public')
+    .select('id, user_id, is_public, album_id')
     .eq('id', entryId)
     .single();
 
@@ -277,42 +277,92 @@ export async function addComment(entryId: string, body: string): Promise<void> {
     if (block) throw new Error('Action impossible');
   }
 
-  const { error } = await supabase.from('diary_comments').insert({
-    entry_id: entryId,
-    user_id: user.id,
-    body,
-  });
+  // Validate parentCommentId: it must belong to this entry and must not itself be a reply
+  // Use admin client to bypass RLS — we already checked entry visibility above
+  let parentCommentAuthorId: string | null = null;
+  if (parentCommentId) {
+    const supabaseAdmin = createSupabaseAdmin();
+    const { data: parentComment, error: parentError } = await supabaseAdmin
+      .from('diary_comments')
+      .select('id, entry_id, parent_comment_id, user_id')
+      .eq('id', parentCommentId)
+      .single();
 
-  if (error) {
+    if (parentError || !parentComment) {
+      throw new Error('Parent comment not found');
+    }
+    if (parentComment.entry_id !== entryId) {
+      throw new Error('Parent comment does not belong to this entry');
+    }
+    // Only 1 level of nesting allowed
+    if (parentComment.parent_comment_id) {
+      throw new Error('Cannot reply to a reply');
+    }
+    parentCommentAuthorId = parentComment.user_id;
+  }
+
+  const { data: insertedComment, error } = await supabase
+    .from('diary_comments')
+    .insert({
+      entry_id: entryId,
+      user_id: user.id,
+      body,
+      ...(parentCommentId ? { parent_comment_id: parentCommentId } : {}),
+    })
+    .select('id')
+    .single();
+
+  if (error || !insertedComment) {
     throw new Error('An error occurred');
   }
+
+  const newCommentId = insertedComment.id;
 
   await logAuthedProductEvent('comment_created', {
     surface: 'diary',
     properties: {
       entry_id: entryId,
       body_length: body.trim().length,
+      is_reply: Boolean(parentCommentId),
     },
   });
 
-  // Fanout comment event to: entry owner + previous commenters + actor's followers (discovery)
-  const [{ data: previousCommenters }, { data: actorFollowers }] = await Promise.all([
-    supabase.from('diary_comments').select('user_id').eq('entry_id', entryId).neq('user_id', user.id),
-    supabase.from('follows').select('follower_id').eq('followee_id', user.id),
-  ]);
+  if (parentCommentId && parentCommentAuthorId) {
+    // Reply: notify only the author of the parent comment (skip self-replies)
+    if (parentCommentAuthorId !== user.id) {
+      try {
+        await fanoutEvent('comment_reply', {
+          userId: user.id,
+          entryId: entryId,
+          albumId: (entryCheck as any).album_id ?? null,
+          commentId: newCommentId,
+          parentCommentId,
+        }, [parentCommentAuthorId]);
+      } catch (fanoutErr) {
+        console.error('comment_reply fanout error:', fanoutErr);
+      }
+    }
+  } else {
+    // Top-level comment: fanout to entry owner + previous commenters + actor's followers
+    const [{ data: previousCommenters }, { data: actorFollowers }] = await Promise.all([
+      supabase.from('diary_comments').select('user_id').eq('entry_id', entryId).neq('user_id', user.id),
+      supabase.from('follows').select('follower_id').eq('followee_id', user.id),
+    ]);
 
-  try {
-    const targetSet = new Set<string>([entryCheck.user_id]);
-    (previousCommenters || []).forEach((c: any) => targetSet.add(c.user_id));
-    (actorFollowers || []).forEach((f: any) => targetSet.add(f.follower_id));
-    targetSet.delete(user.id); // fanoutEvent always adds actor to its own feed
+    try {
+      const targetSet = new Set<string>([entryCheck.user_id]);
+      (previousCommenters || []).forEach((c: any) => targetSet.add(c.user_id));
+      (actorFollowers || []).forEach((f: any) => targetSet.add(f.follower_id));
+      targetSet.delete(user.id);
 
-    await fanoutEvent('comment', {
-      userId: user.id,
-      entryId: entryId,
-    }, [...targetSet]);
-  } catch (fanoutErr) {
-    console.error('Comment fanout error:', fanoutErr);
+      await fanoutEvent('comment', {
+        userId: user.id,
+        entryId: entryId,
+        commentId: newCommentId,
+      }, [...targetSet]);
+    } catch (fanoutErr) {
+      console.error('Comment fanout error:', fanoutErr);
+    }
   }
 }
 
@@ -521,7 +571,7 @@ export async function getEntryComments(entryId: string): Promise<DiaryEntryComme
 
   const { data: commentsData, error } = await supabase
     .from('diary_comments')
-    .select('id, body, created_at, user_id')
+    .select('id, body, created_at, user_id, parent_comment_id')
     .eq('entry_id', entryId)
     .order('created_at', { ascending: true });
 
@@ -540,12 +590,13 @@ export async function getEntryComments(entryId: string): Promise<DiaryEntryComme
     (profilesData || []).map((p) => [p.id, p])
   );
 
-  return (commentsData || []).map((c) => {
+  const allComments: DiaryEntryComment[] = (commentsData || []).map((c) => {
     const profile = profilesMap.get(c.user_id);
     return {
       id: c.id,
       body: c.body,
       created_at: c.created_at,
+      parent_comment_id: c.parent_comment_id ?? null,
       author: {
         id: c.user_id,
         username: profile?.username || 'unknown',
@@ -553,8 +604,21 @@ export async function getEntryComments(entryId: string): Promise<DiaryEntryComme
         avatar_url: profile?.avatar_url || null,
       },
       is_mine: currentUser?.id === c.user_id,
+      replies: [],
     };
   });
+
+  // Build tree: attach replies to their parent
+  const commentMap = new Map(allComments.map((c) => [c.id, c]));
+  const topLevel: DiaryEntryComment[] = [];
+  for (const comment of allComments) {
+    if (comment.parent_comment_id && commentMap.has(comment.parent_comment_id)) {
+      commentMap.get(comment.parent_comment_id)!.replies.push(comment);
+    } else {
+      topLevel.push(comment);
+    }
+  }
+  return topLevel;
 }
 
 // ============================================================================
@@ -892,6 +956,7 @@ export type DiaryEntryComment = {
   id: string;
   body: string;
   created_at: string;
+  parent_comment_id: string | null;
   author: {
     id: string;
     username: string;
@@ -899,6 +964,7 @@ export type DiaryEntryComment = {
     avatar_url: string | null;
   };
   is_mine: boolean;
+  replies: DiaryEntryComment[];
 };
 
 export type DiaryEntryDetail = {
@@ -1018,7 +1084,7 @@ export async function getDiaryEntry(entryId: string): Promise<GetDiaryEntryResul
     // Fetch comments — RLS patch (Phase 1) enforces parent-entry visibility
     const { data: commentsData } = await supabase
       .from('diary_comments')
-      .select('id, body, created_at, user_id')
+      .select('id, body, created_at, user_id, parent_comment_id')
       .eq('entry_id', entryId)
       .order('created_at', { ascending: true });
 
@@ -1035,12 +1101,13 @@ export async function getDiaryEntry(entryId: string): Promise<GetDiaryEntryResul
       (commentProfiles || []).map((p) => [p.id, p])
     );
 
-    const comments: DiaryEntryComment[] = (commentsData || []).map((c) => {
+    const allComments: DiaryEntryComment[] = (commentsData || []).map((c) => {
       const profile = commentProfilesMap.get(c.user_id);
       return {
         id: c.id,
         body: c.body,
         created_at: c.created_at,
+        parent_comment_id: c.parent_comment_id ?? null,
         author: {
           id: c.user_id,
           username: profile?.username || 'unknown',
@@ -1048,8 +1115,20 @@ export async function getDiaryEntry(entryId: string): Promise<GetDiaryEntryResul
           avatar_url: profile?.avatar_url || null,
         },
         is_mine: currentUser?.id === c.user_id,
+        replies: [],
       };
     });
+
+    // Build tree: attach replies to their parent
+    const commentMap = new Map(allComments.map((c) => [c.id, c]));
+    const comments: DiaryEntryComment[] = [];
+    for (const comment of allComments) {
+      if (comment.parent_comment_id && commentMap.has(comment.parent_comment_id)) {
+        commentMap.get(comment.parent_comment_id)!.replies.push(comment);
+      } else {
+        comments.push(comment);
+      }
+    }
 
     const album = entry.albums as any;
     const artist = album?.artists as any;
