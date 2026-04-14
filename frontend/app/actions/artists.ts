@@ -178,67 +178,43 @@ export async function getArtistImagesByMbids(
   return result;
 }
 
-const NO_BIO_SENTINEL = '_none';
-
 /**
- * Get artist bio + image from DB cache, or fetch from MusicBrainz/Wikipedia/Wikidata
+ * Get artist image from DB cache, or fetch from MusicBrainz/Wikidata
  * and store in DB for future requests.
- *
- * Cache strategy:
- * - bio = null or ''   → not yet fetched → fetch everything
- * - bio = '_none'      → fetched, no bio found → don't re-fetch bio
- *                        but re-fetch image if image_url is still null
- * - bio = 'actual text'→ cached bio — still fetch image if image_url is null
  *
  * All writes use supabaseAdmin to bypass RLS on the artists table.
  */
 export async function getOrFetchArtistMeta(
   artistId: string,
   mbid: string | null
-): Promise<{ bio: string | null; imageUrl: string | null }> {
+): Promise<{ imageUrl: string | null }> {
   const supabase = await createSupabaseServer();
   const supabaseAdmin = createSupabaseAdmin();
 
   // Check DB first
   const { data: artist } = await (supabase
     .from('artists')
-    .select('bio, image_url') as any)
+    .select('image_url') as any)
     .eq('id', artistId)
     .maybeSingle();
 
-  const row = artist as { bio?: string | null; image_url?: string | null } | null;
+  const row = artist as { image_url?: string | null } | null;
 
-  const hasBio = !!(row?.bio && row.bio !== NO_BIO_SENTINEL && row.bio !== '');
-  const isSentinel = row?.bio === NO_BIO_SENTINEL;
-  const hasImage = !!(row?.image_url);
-
-  // Everything is cached → return immediately
-  if ((hasBio || isSentinel) && hasImage) {
-    return {
-      bio: hasBio ? (row!.bio ?? null) : null,
-      imageUrl: row!.image_url ?? null,
-    };
+  // Image cached → return immediately
+  if (row?.image_url) {
+    return { imageUrl: row.image_url };
   }
 
   // No mbid → can't fetch from external APIs
   if (!mbid) {
-    return {
-      bio: hasBio ? (row!.bio ?? null) : null,
-      imageUrl: row?.image_url ?? null,
-    };
+    return { imageUrl: row?.image_url ?? null };
   }
 
   // Fetch from external APIs
   const meta = await fetchArtistMetadata(mbid);
+  let finalImage = meta.imageUrl || null;
 
-  // Preserve existing bio if already cached
-  const bioToStore = (hasBio || isSentinel)
-    ? (row!.bio ?? NO_BIO_SENTINEL)
-    : (meta.bio || NO_BIO_SENTINEL);
-
-  let finalImage = meta.imageUrl || row?.image_url || null;
-
-  // If no Wikidata image and no existing image, fallback to first album cover
+  // If no Wikidata image, fallback to first album cover
   if (!finalImage) {
     const { data: firstAlbum } = await supabase
       .from('albums')
@@ -254,11 +230,8 @@ export async function getOrFetchArtistMeta(
   // Store via admin client (bypasses RLS on artists table)
   await (supabaseAdmin
     .from('artists')
-    .update({ bio: bioToStore, image_url: finalImage } as any) as any)
+    .update({ image_url: finalImage } as any) as any)
     .eq('id', artistId);
 
-  return {
-    bio: hasBio ? (row!.bio ?? null) : (meta.bio || null),
-    imageUrl: finalImage,
-  };
+  return { imageUrl: finalImage };
 }

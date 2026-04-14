@@ -15,7 +15,7 @@ const MB_SEARCH_TIMEOUT_MS = 800;
 // Secondary types that indicate non-studio releases (live, compilation, etc.)
 const EXCLUDED_SECONDARY_TYPES = new Set([
   'Live', 'Compilation', 'Remix', 'Demo',
-  'Mixtape/Street', 'Spokenword', 'Interview',
+  'Spokenword', 'Interview',
   'Audiobook', 'Audio drama', 'Field recording',
 ]);
 
@@ -190,13 +190,13 @@ async function setCachedResults<T>(key: string, results: T): Promise<void> {
  * Fetch cover URL from CoverArt Archive with retry
  * Same robust logic as for artist releases
  */
-async function fetchCoverUrl(releaseGroupId: string, maxRetries = 2): Promise<string | null> {
+export async function fetchCoverUrl(mbid: string, entityType: 'release-group' | 'release' = 'release-group', maxRetries = 2): Promise<string | null> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 seconds
 
-      const coverArchiveUrl = `https://coverartarchive.org/release-group/${encodeURIComponent(releaseGroupId)}/front`;
+      const coverArchiveUrl = `https://coverartarchive.org/${entityType}/${encodeURIComponent(mbid)}/front`;
       const coverResponse = await fetch(coverArchiveUrl, {
         headers: { 'User-Agent': USER_AGENT },
         redirect: 'manual',
@@ -1036,36 +1036,6 @@ export async function previewArtistFromMusicBrainz(mbid: string) {
 
     const artistData: any = await artistResponse.json();
 
-    // Try to extract bio from Wikipedia if available
-    let bio = null;
-    const wikipediaUrl = artistData.relations?.find((rel: any) => 
-      rel.type === 'wikipedia' && rel.url?.resource
-    )?.url?.resource;
-
-    if (wikipediaUrl) {
-      try {
-        // Extract language + page title from URL (e.g. fr.wikipedia.org/wiki/Radiohead)
-        const urlObj = new URL(wikipediaUrl);
-        const lang = urlObj.hostname.split('.')[0]; // "fr", "en", "de", etc.
-        const pageName = urlObj.pathname.split('/wiki/').pop();
-        if (pageName) {
-          const wikiApiUrl = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(decodeURIComponent(pageName))}`;
-          const wikiResponse = await fetch(wikiApiUrl);
-          if (wikiResponse.ok) {
-            const wikiData: any = await wikiResponse.json();
-            bio = wikiData.extract || null;
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch Wikipedia bio:', err);
-      }
-    }
-
-    // Fallback bio from MusicBrainz disambiguation
-    if (!bio && artistData.disambiguation) {
-      bio = artistData.disambiguation;
-    }
-
     // Then fetch ALL releases by this artist using arid search
     const releasesResponse = await fetch(
       `${MUSICBRAINZ_API}/release?query=arid:${encodeURIComponent(mbid)}&limit=100&fmt=json`,
@@ -1084,7 +1054,6 @@ export async function previewArtistFromMusicBrainz(mbid: string) {
           name: artistData.name,
           country: artistData.country || null,
           type: artistData.type || null,
-          bio: bio,
           releases: [],
         }
       };
@@ -1134,7 +1103,6 @@ export async function previewArtistFromMusicBrainz(mbid: string) {
         name: artistData.name,
         country: artistData.country || null,
         type: artistData.type || null,
-        bio: bio,
         releases: releasesWithCovers
           .filter((r) => r['release-group']?.['primary-type'] === 'Album' || r['release-group']?.['primary-type'] === 'EP')
           .map((r) => ({
@@ -1261,11 +1229,10 @@ export async function getArtistReleases(mbid: string): Promise<{
 }
 
 /**
- * Fetch artist metadata (bio + image) from MusicBrainz/Wikipedia/Wikidata.
+ * Fetch artist image from MusicBrainz/Wikidata.
  * This is meant to be called once and cached in DB.
  */
 export async function fetchArtistMetadata(mbid: string): Promise<{
-  bio: string | null;
   imageUrl: string | null;
   country: string | null;
   type: string | null;
@@ -1281,41 +1248,11 @@ export async function fetchArtistMetadata(mbid: string): Promise<{
     );
 
     if (!response.ok) {
-      return { bio: null, imageUrl: null, country: null, type: null, name: '' };
+      return { imageUrl: null, country: null, type: null, name: '' };
     }
 
     const data: any = await response.json();
-    let bio: string | null = null;
     let imageUrl: string | null = null;
-
-    // Extract Wikipedia URL for bio
-    const wikipediaUrl = data.relations?.find((rel: any) =>
-      rel.type === 'wikipedia' && rel.url?.resource
-    )?.url?.resource;
-
-    if (wikipediaUrl) {
-      try {
-        const urlObj = new URL(wikipediaUrl);
-        const lang = urlObj.hostname.split('.')[0]; // "fr", "en", "de", etc.
-        const pageName = urlObj.pathname.split('/wiki/').pop();
-        if (pageName) {
-          const wikiResp = await fetchWithRetry(
-            `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(decodeURIComponent(pageName))}`,
-            undefined,
-            2,
-            3000
-          );
-          if (wikiResp.ok) {
-            const wikiData = await wikiResp.json();
-            bio = wikiData.extract || null;
-          }
-        }
-      } catch {}
-    }
-
-    if (!bio && data.disambiguation) {
-      bio = data.disambiguation;
-    }
 
     // Extract Wikidata URL for image
     const wikidataUrl = data.relations?.find((rel: any) =>
@@ -1347,14 +1284,13 @@ export async function fetchArtistMetadata(mbid: string): Promise<{
     }
 
     return {
-      bio,
       imageUrl,
       country: data.country || null,
       type: data.type || null,
       name: data.name || '',
     };
   } catch {
-    return { bio: null, imageUrl: null, country: null, type: null, name: '' };
+    return { imageUrl: null, country: null, type: null, name: '' };
   }
 }
 

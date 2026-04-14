@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { importAlbumFromMusicBrainz } from '@/app/actions/musicbrainz';
 import { showToast } from '@/components/Toast';
-import DescriptionCollapse from '@/components/DescriptionCollapse';
 import NetworkListenersBottomSheet from '@/components/NetworkListenersBottomSheet';
 import { UserAvatar } from '@/components/avatars/DefaultAvatar';
 
@@ -74,7 +73,6 @@ type ArtistPageContentProps = {
     previewCountry?: string;
     previewType?: string;
     imageUrl?: string | null;
-    bio?: string | null;
     mbReleases?: MBRelease[];
     artistStats?: {
         totalListeners: number;
@@ -94,7 +92,6 @@ export function ArtistPageContent({
     previewCountry,
     previewType,
     imageUrl,
-    bio,
     mbReleases = [],
     artistStats,
     networkListeners = [],
@@ -267,12 +264,6 @@ export function ArtistPageContent({
                     );
                 })()}
 
-                {/* Bio */}
-                {bio && (
-                    <div className="mt-6">
-                        <DescriptionCollapse text={bio} />
-                    </div>
-                )}
             </div>
 
             {/* ========== TOP ALBUMS ========== */}

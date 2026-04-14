@@ -173,7 +173,6 @@ export default async function ArtistPage({ params }: PageProps) {
                 albums={albumsWithStats}
                 mbReleases={mbReleases}
                 imageUrl={meta.imageUrl}
-                bio={meta.bio}
                 artistStats={{ totalListeners, globalAvgRating, totalReviews }}
                 networkListeners={networkListeners}
                 similarArtists={similarArtists}
