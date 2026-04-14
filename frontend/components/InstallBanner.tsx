@@ -37,23 +37,26 @@ export default function InstallBanner() {
   const [mode, setMode] = useState<'android' | 'ios' | null>(null)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<Record<string, unknown> | null>(null)
 
   useEffect(() => {
     const forceDebug = new URLSearchParams(location.search).has('debug-install')
+    const ua = navigator.userAgent
 
-    console.log('[InstallBanner]', {
-      ua: navigator.userAgent,
-      isIos: /iPhone|iPad/.test(navigator.userAgent),
-      isCriOS: navigator.userAgent.includes('CriOS'),
-      isFxiOS: navigator.userAgent.includes('FxiOS'),
+    const info = {
+      isIos: /iPhone|iPad/.test(ua),
+      isCriOS: ua.includes('CriOS'),
+      isFxiOS: ua.includes('FxiOS'),
       isInstagram: isInstagramContext(),
-      standalone: (navigator as Navigator & { standalone?: boolean }).standalone,
+      standalone: (navigator as Navigator & { standalone?: boolean }).standalone ?? false,
       installed: localStorage.getItem(INSTALLED_KEY),
       dismissed: localStorage.getItem(DISMISSED_KEY),
       isIosSafari: isIosSafari(),
-    })
+      ua: ua.slice(0, 80),
+    }
 
     if (forceDebug) {
+      setDebugInfo(info)
       setMode('ios')
       setVisible(true)
       return
@@ -116,6 +119,17 @@ export default function InstallBanner() {
   if (!visible) return null
 
   return (
+    <>
+    {debugInfo && (
+      <div style={{
+        position: 'fixed', top: 40, left: 0, right: 0, zIndex: 99999,
+        background: '#000', color: '#0f0', fontSize: '11px',
+        padding: '10px', fontFamily: 'monospace', whiteSpace: 'pre-wrap',
+        maxHeight: '50vh', overflowY: 'auto',
+      }}>
+        {Object.entries(debugInfo).map(([k, v]) => `${k}: ${JSON.stringify(v)}`).join('\n')}
+      </div>
+    )}
     <div
       role="banner"
       style={{
@@ -177,5 +191,6 @@ export default function InstallBanner() {
         ✕
       </button>
     </div>
+    </>
   )
 }
