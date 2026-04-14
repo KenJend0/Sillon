@@ -39,6 +39,26 @@ export default function InstallBanner() {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
+    const forceDebug = new URLSearchParams(location.search).has('debug-install')
+
+    console.log('[InstallBanner]', {
+      ua: navigator.userAgent,
+      isIos: /iPhone|iPad/.test(navigator.userAgent),
+      isCriOS: navigator.userAgent.includes('CriOS'),
+      isFxiOS: navigator.userAgent.includes('FxiOS'),
+      isInstagram: isInstagramContext(),
+      standalone: (navigator as Navigator & { standalone?: boolean }).standalone,
+      installed: localStorage.getItem(INSTALLED_KEY),
+      dismissed: localStorage.getItem(DISMISSED_KEY),
+      isIosSafari: isIosSafari(),
+    })
+
+    if (forceDebug) {
+      setMode('ios')
+      setVisible(true)
+      return
+    }
+
     if (isInstagramContext()) return
     if ((navigator as Navigator & { standalone?: boolean }).standalone) return
     if (localStorage.getItem(INSTALLED_KEY)) return
