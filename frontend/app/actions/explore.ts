@@ -33,12 +33,11 @@ export async function getForYouSuggestions(): Promise<ForYouAlbum[]> {
 
     const supabase = await createSupabaseServer();
 
-    // Étape 1 : profil de goût de l'utilisateur (albums notés >= 8)
-    const { data: myEntries } = await supabase
-        .from('diary_entries')
-        .select('album_id')
-        .eq('user_id', user.id)
-        .gte('rating', 8);
+    // Étape 1 : profil de goût (>= 8) + tous les albums du journal (pour exclusion)
+    const [{ data: myEntries }, { data: myAllEntries }] = await Promise.all([
+        supabase.from('diary_entries').select('album_id').eq('user_id', user.id).gte('rating', 8),
+        supabase.from('diary_entries').select('album_id').eq('user_id', user.id),
+    ]);
 
     const myLikedIds = (myEntries || []).map((e) => e.album_id).filter(Boolean) as string[];
     if (myLikedIds.length === 0) return [];
@@ -65,8 +64,8 @@ export async function getForYouSuggestions(): Promise<ForYouAlbum[]> {
 
     if (neighborIds.length === 0) return [];
 
-    // Étape 3 : albums bien notés (>= 8) par ces voisins, hors ceux déjà dans mon journal
-    const myAllAlbumIds = new Set(myLikedIds);
+    // Étape 3 : albums bien notés (>= 8) par ces voisins, hors tous les albums déjà dans mon journal
+    const myAllAlbumIds = new Set((myAllEntries || []).map((e) => e.album_id).filter(Boolean));
 
     const { data: recommendations } = await supabase
         .from('diary_entries')
