@@ -2,13 +2,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { createSupabaseAdmin, getAuthUser } from '@/lib/supabase/server';
-import EnrichAllButton from './EnrichAllButton';
-import FetchStreamingAllButton from './FetchStreamingAllButton';
-import ReEnrichButton from './ReEnrichButton';
-import StreamingLinksEditor from './StreamingLinksEditor';
 import DeleteReportedContentButton from './DeleteReportedContentButton';
 import AnalyzeReportButton from './AnalyzeReportButton';
-import DeleteAlbumButton from './DeleteAlbumButton';
+import CatalogueAlbums from './CatalogueAlbums';
 
 const ADMIN_IDS = (process.env.ADMIN_USER_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -60,26 +56,11 @@ type WindowMetrics = {
 
 type ProductSignals = {
   available: boolean;
-  weeklyViewAvailable: boolean;
   current: WindowMetrics;
   previous: WindowMetrics;
   recentEvents: ProductEventRow[];
   frictionByEvent: Array<{ label: string; count: number }>;
   searchBySurface: Array<{ label: string; count: number }>;
-  weeklyTrend: WeeklyTrendRow[];
-};
-
-type WeeklyTrendRow = {
-  week: string;
-  signup_users: number;
-  onboarded_users: number;
-  activated_users: number;
-  social_users: number;
-  wau: number;
-  album_logs: number;
-  import_failures: number;
-  search_no_results: number;
-  auth_errors: number;
 };
 
 const EMPTY_WINDOW: WindowMetrics = {
@@ -160,8 +141,6 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
   const genreSet = new Set((genreData ?? []).map((row) => row.album_id));
   const metaMap = new Map<string, AlbumMeta>((metaData ?? []).map((row) => [row.album_id, row as AlbumMeta]));
 
-  const noGenre = albums.filter((album) => !genreSet.has(album.id));
-  const noDesc = albums.filter((album) => !metaMap.get(album.id)?.description);
   const noCover = albums.filter((album) => !album.cover_url);
   const noMbid = albums.filter((album) => !album.mbid);
   const noStreaming = albums.filter((album) => {
@@ -169,16 +148,33 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
     return !meta?.spotify_url && !meta?.apple_music_url && !meta?.deezer_url;
   });
 
-  const noGenreSet = new Set(noGenre.map((album) => album.id));
-  const noDescSet = new Set(noDesc.map((album) => album.id));
-  const notEnriched = albums.filter((album) => noGenreSet.has(album.id) || noDescSet.has(album.id));
+  const notEnriched = albums.filter((album) => !genreSet.has(album.id));
 
   const recentMeta = (metaData ?? [])
     .filter((meta) => meta.fetched_at && Date.now() - new Date(meta.fetched_at).getTime() < range.days * DAY_MS)
     .slice(0, 8) as AlbumMeta[];
 
+  // Résout l'importateur pour chaque enrichissement récent via product_events
+  const { data: importEventsRaw } = await (supabase as any)
+    .from('product_events')
+    .select('user_id, properties')
+    .eq('event_name', 'album_import_started')
+    .gte('created_at', new Date(Date.now() - 60 * DAY_MS).toISOString());
+
+  const importEvents = (importEventsRaw ?? []) as Array<{ user_id: string; properties: Record<string, string> }>;
+  const importerByMbid = new Map<string, string>();
+  for (const evt of importEvents) {
+    const mbid = evt.properties?.mbid;
+    if (mbid && !importerByMbid.has(mbid)) importerByMbid.set(mbid, evt.user_id);
+  }
+
+  const importerUserIds = [...new Set([...importerByMbid.values()].filter(Boolean))];
+  const { data: importerProfiles } = importerUserIds.length > 0
+    ? await supabase.from('profiles').select('id, username').in('id', importerUserIds)
+    : { data: [] };
+  const usernameById = new Map(((importerProfiles ?? []) as Array<{ id: string; username: string }>).map((p) => [p.id, p.username]));
+
   const current = productSignals.current;
-  const previous = productSignals.previous;
   const totalFrictions = current.authErrors + current.noResultSearches + current.importFailures;
   const activationRate = current.onboardings > 0 ? Math.round((current.albumLoggers / current.onboardings) * 100) : 0;
 
@@ -227,15 +223,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
           </div>
         </section>
 
-        {/* ── 2. Stats globales ────────────────────────────────────────── */}
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <DeltaCard label={`Signups ${range.key}`} value={current.signups} delta={current.signups - previous.signups} hint="Comparaison fenetre precedente" />
-          <DeltaCard label={`Onboardings ${range.key}`} value={current.onboardings} delta={current.onboardings - previous.onboardings} hint={rateLabel(current.onboardings, current.signups, 'signup → onboarding')} />
-          <DeltaCard label={`Album loggers ${range.key}`} value={current.albumLoggers} delta={current.albumLoggers - previous.albumLoggers} hint={rateLabel(current.albumLoggers, current.onboardings, 'onboarding → album')} />
-          <DeltaCard label={`Followers ${range.key}`} value={current.followers} delta={current.followers - previous.followers} hint={rateLabel(current.followers, current.albumLoggers, 'album → social')} />
-        </section>
-
-        {/* ── 3. Santé catalogue ───────────────────────────────────────── */}
+        {/* ── 2. Santé catalogue ───────────────────────────────────────── */}
         <section className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
           <Panel title="Vue d'ensemble plateforme" subtitle="Volumes globaux et couverture qualite catalogue">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -271,49 +259,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
           </Panel>
         </section>
 
-        {/* ── 4. Files d'action ────────────────────────────────────────── */}
-        <section className="grid gap-4 xl:grid-cols-3">
-          <QueuePanel title="Backlog enrichissement" subtitle="Genres et descriptions manquants" count={notEnriched.length} action={<EnrichAllButton albums={notEnriched} />}>
-            {notEnriched.slice(0, 10).map((album) => (
-              <AlbumTaskRow key={album.id} album={album} meta={metaMap.get(album.id)}>
-                <div className="flex items-center gap-2 flex-wrap justify-end">
-                  {noGenreSet.has(album.id) && <Tag tone="warning">sans genres</Tag>}
-                  {noDescSet.has(album.id) && <Tag tone="warning">sans bio</Tag>}
-                  <ReEnrichButton album={album} />
-                </div>
-              </AlbumTaskRow>
-            ))}
-            {notEnriched.length > 10 && <PanelFootnote value={notEnriched.length - 10} />}
-          </QueuePanel>
-
-          <QueuePanel title="Liens streaming" subtitle="Albums encore invisibles sur les plateformes" count={noStreaming.length} action={<FetchStreamingAllButton albums={noStreaming} />}>
-            {noStreaming.slice(0, 8).map((album) => (
-              <AlbumTaskRow key={album.id} album={album} meta={metaMap.get(album.id)}>
-                <StreamingLinksEditor albumId={album.id} mbid={album.mbid} artistName={album.artist_name} title={album.title} />
-              </AlbumTaskRow>
-            ))}
-            {noStreaming.length > 8 && <PanelFootnote value={noStreaming.length - 8} />}
-          </QueuePanel>
-
-          <QueuePanel title="Identite catalogue" subtitle="Covers et MBID a nettoyer" count={noCover.length + noMbid.length}>
-            {[...noCover.slice(0, 4), ...noMbid.slice(0, 4)].map((album) => (
-              <AlbumTaskRow key={album.id} album={album} meta={metaMap.get(album.id)}>
-                <div className="flex items-center gap-2 flex-wrap justify-end">
-                  {!album.cover_url && <Tag tone="warning">sans cover</Tag>}
-                  {!album.mbid && <Tag tone="critical">sans MBID</Tag>}
-                  {album.mbid && (
-                    <a href={`https://musicbrainz.org/release/${album.mbid}`} target="_blank" rel="noopener noreferrer" className="rounded-full border border-border px-3 py-1 text-[11px] text-text-secondary transition-colors hover:border-text-tertiary hover:text-text-primary">
-                      MusicBrainz ↗
-                    </a>
-                  )}
-                </div>
-              </AlbumTaskRow>
-            ))}
-            {noCover.length + noMbid.length > 8 && <PanelFootnote value={noCover.length + noMbid.length - 8} />}
-          </QueuePanel>
-        </section>
-
-        {/* ── 5. Signaux produit ───────────────────────────────────────── */}
+        {/* ── 3. Signaux produit ───────────────────────────────────────── */}
         <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
           <Panel title="Signaux produit" subtitle={`Metriques calculees sur ${range.label.toLowerCase()} depuis product_events`} tone={productSignals.available ? 'neutral' : 'warning'}>
             {productSignals.available ? (
@@ -377,46 +323,22 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
           </Panel>
         </section>
 
-        {/* ── 6. Tendances ─────────────────────────────────────────────── */}
-        <section className="grid gap-4 xl:grid-cols-2">
-          <Panel title="Tendance hebdo" subtitle="Lecture depuis la vue beta_dashboard_weekly" tone={productSignals.weeklyViewAvailable ? 'neutral' : 'warning'}>
-            {productSignals.weeklyViewAvailable ? (
-              <div className="space-y-3">
-                {productSignals.weeklyTrend.map((row) => (
-                  <div key={row.week} className="rounded-[18px] border border-border bg-background p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-[13px] font-medium text-text-primary">Semaine du {new Date(row.week).toLocaleDateString('fr-FR')}</p>
-                        <p className="mt-1 text-[12px] text-text-secondary">WAU {row.wau} · logs {row.album_logs} · signups {row.signup_users}</p>
-                      </div>
-                      <Tag tone={row.search_no_results + row.auth_errors + row.import_failures > 0 ? 'warning' : 'success'}>
-                        {row.search_no_results + row.auth_errors + row.import_failures > 0 ? `${row.search_no_results + row.auth_errors + row.import_failures} frictions` : 'stable'}
-                      </Tag>
-                    </div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-4">
-                      <CompactRow label="onboarding" value={row.onboarded_users} />
-                      <CompactRow label="activation" value={row.activated_users} />
-                      <CompactRow label="social" value={row.social_users} />
-                      <CompactRow label="import fails" value={row.import_failures} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState message="La vue beta_dashboard_weekly n'est pas encore disponible. Execute le script SQL final pour alimenter ce bloc." />
-            )}
-          </Panel>
-
+        {/* ── 4. Enrichissements recents ───────────────────────────────── */}
+        <section>
           <Panel title="Enrichissements recents" subtitle={`Metadonnees recuperees sur ${range.label.toLowerCase()}`}>
             {recentMeta.length > 0 ? (
               <div className="space-y-2">
                 {recentMeta.map((meta) => {
                   const album = albums.find((item) => item.id === meta.album_id);
                   if (!album) return null;
+                  const importerUsername = album.mbid
+                    ? usernameById.get(importerByMbid.get(album.mbid) ?? '')
+                    : undefined;
                   return (
                     <AlbumTaskRow key={meta.album_id} album={album} meta={meta}>
-                      <div className="flex items-center gap-2">
-                        <Tag tone={meta.description ? 'success' : 'warning'}>{meta.description ? 'bio OK' : 'sans bio'}</Tag>
+                      <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <Tag tone={genreSet.has(album.id) ? 'success' : 'warning'}>{genreSet.has(album.id) ? 'tags OK' : 'sans tags'}</Tag>
+                        {importerUsername && <span className="text-[11px] text-text-tertiary">@{importerUsername}</span>}
                         <span className="text-[11px] text-text-tertiary">{meta.fetched_at ? new Date(meta.fetched_at).toLocaleDateString('fr-FR') : '—'}</span>
                       </div>
                     </AlbumTaskRow>
@@ -529,35 +451,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
         </section>
 
         {/* ── Catalogue albums ─────────────────────────────────────────── */}
-        <section className="rounded-[20px] border border-border bg-background-secondary p-6 sm:p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <h2 className="text-[20px] font-medium text-text-primary tracking-[-0.01em]">Catalogue albums</h2>
-            <Tag tone="neutral">{albums.length}</Tag>
-          </div>
-          <div className="space-y-2">
-            {albums.map((album) => (
-              <div key={album.id} className="rounded-[14px] border border-border bg-background px-4 py-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <Link href={`/albums/${album.id}`} className="truncate text-[14px] font-medium text-text-primary transition-colors hover:text-text-secondary">
-                        {album.title}
-                      </Link>
-                      <span className="text-[12px] text-text-secondary">
-                        {album.artist_name}
-                        {album.release_date ? ` · ${new Date(album.release_date).getFullYear()}` : ''}
-                      </span>
-                    </div>
-                    {album.mbid && (
-                      <span className="text-[11px] font-mono text-text-tertiary">{album.mbid.slice(0, 8)}…</span>
-                    )}
-                  </div>
-                  <DeleteAlbumButton albumId={album.id} albumTitle={album.title} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <CatalogueAlbums albums={albums} />
 
       </div>
     </main>
@@ -576,7 +470,7 @@ async function getProductSignals(supabase: any, rangeDays: number): Promise<Prod
       .order('created_at', { ascending: false });
 
     if (error || !data) {
-      return { available: false, weeklyViewAvailable: false, current: EMPTY_WINDOW, previous: EMPTY_WINDOW, recentEvents: [], frictionByEvent: [], searchBySurface: [], weeklyTrend: [] };
+      return { available: false, current: EMPTY_WINDOW, previous: EMPTY_WINDOW, recentEvents: [], frictionByEvent: [], searchBySurface: [] };
     }
 
     const rows = data as ProductEventRow[];
@@ -584,36 +478,16 @@ async function getProductSignals(supabase: any, rangeDays: number): Promise<Prod
     const currentRows = rows.filter((row) => new Date(row.created_at).getTime() >= currentBoundary);
     const previousRows = rows.filter((row) => new Date(row.created_at).getTime() < currentBoundary);
 
-    const weeklyTrend = await getWeeklyTrend(supabase, rangeDays);
-
     return {
       available: true,
-      weeklyViewAvailable: weeklyTrend.available,
       current: computeWindowMetrics(currentRows),
       previous: computeWindowMetrics(previousRows),
       recentEvents: rows.slice(0, 10),
-      frictionByEvent: toBreakdown(currentRows.filter((row) => ['auth_error', 'search_no_results', 'album_import_failed'].includes(row.event_name)).map((row) => humanizeEvent(row.event_name))),
+      frictionByEvent: toBreakdown(currentRows.filter((row) => ['auth_error', 'album_import_failed'].includes(row.event_name) || (row.event_name === 'search_no_results' && row.surface === 'internal_search')).map((row) => humanizeEvent(row.event_name))),
       searchBySurface: toBreakdown(currentRows.filter((row) => row.event_name === 'search_used').map((row) => humanizeSurface(row.surface))),
-      weeklyTrend: weeklyTrend.rows,
     };
   } catch {
-    return { available: false, weeklyViewAvailable: false, current: EMPTY_WINDOW, previous: EMPTY_WINDOW, recentEvents: [], frictionByEvent: [], searchBySurface: [], weeklyTrend: [] };
-  }
-}
-
-async function getWeeklyTrend(supabase: any, rangeDays: number): Promise<{ available: boolean; rows: WeeklyTrendRow[] }> {
-  try {
-    const cutoff = new Date(Date.now() - rangeDays * DAY_MS).toISOString().slice(0, 10);
-    const { data, error } = await (supabase as any)
-      .from('beta_dashboard_weekly')
-      .select('week, signup_users, onboarded_users, activated_users, social_users, wau, album_logs, import_failures, search_no_results, auth_errors')
-      .gte('week', cutoff)
-      .order('week', { ascending: false });
-
-    if (error || !data) return { available: false, rows: [] };
-    return { available: true, rows: data as WeeklyTrendRow[] };
-  } catch {
-    return { available: false, rows: [] };
+    return { available: false, current: EMPTY_WINDOW, previous: EMPTY_WINDOW, recentEvents: [], frictionByEvent: [], searchBySurface: [] };
   }
 }
 
@@ -635,7 +509,7 @@ function computeWindowMetrics(rows: ProductEventRow[]): WindowMetrics {
     wau: countUsers(),
     albumLogs: rows.filter((row) => row.event_name === 'album_logged').length,
     authErrors: rows.filter((row) => row.event_name === 'auth_error').length,
-    noResultSearches: rows.filter((row) => row.event_name === 'search_no_results').length,
+    noResultSearches: rows.filter((row) => row.event_name === 'search_no_results' && row.surface === 'internal_search').length,
     importFailures: rows.filter((row) => row.event_name === 'album_import_failed').length,
   };
 }
@@ -649,11 +523,6 @@ function toBreakdown(labels: string[]): Array<{ label: string; count: number }> 
 function coveragePercent(value: number, total: number): string {
   if (total === 0) return '0%';
   return `${Math.round((value / total) * 100)}%`;
-}
-
-function rateLabel(numerator: number, denominator: number, suffix: string): string {
-  if (denominator === 0) return `0% ${suffix}`;
-  return `${Math.round((numerator / denominator) * 100)}% ${suffix}`;
 }
 
 function humanizeEvent(eventName: string): string {
@@ -686,11 +555,6 @@ function humanizeSurface(surface: string | null): string {
   } as Record<string, string>)[surface] ?? surface;
 }
 
-function formatDelta(value: number): string {
-  if (value === 0) return 'stable';
-  return `${value > 0 ? '+' : ''}${value}`;
-}
-
 function formatRelative(value: string): string {
   const diffMinutes = Math.max(1, Math.round((Date.now() - new Date(value).getTime()) / (60 * 1000)));
   if (diffMinutes < 60) return `il y a ${diffMinutes} min`;
@@ -716,21 +580,6 @@ function Panel({ title, subtitle, children, action, tone = 'neutral' }: { title:
   );
 }
 
-function QueuePanel({ title, subtitle, count, children, action }: { title: string; subtitle: string; count: number; children: ReactNode; action?: ReactNode }) {
-  return (
-    <Panel title={title} subtitle={subtitle} action={action} tone={count > 0 ? 'warning' : 'neutral'}>
-      <div className="mb-4 flex items-center gap-2">
-        <Tag tone={count > 0 ? 'warning' : 'success'}>{count > 0 ? String(count) : 'OK'}</Tag>
-      </div>
-      <div className="space-y-2">{count > 0 ? children : <EmptyState message="Rien a traiter ici pour l'instant." />}</div>
-    </Panel>
-  );
-}
-
-function PanelFootnote({ value }: { value: number }) {
-  return <p className="mt-3 text-[12px] text-text-tertiary">+ {value} elements supplementaires dans cette file.</p>;
-}
-
 function MetricCard({ label, value, subtitle, accent }: { label: string; value: number; subtitle: string; accent: 'sand' | 'rose' | 'warning' | 'success' }) {
   const theme = {
     sand: 'from-[#F7EFE4] to-[#EAE0D0] border-[#DCCDB7]',
@@ -744,24 +593,6 @@ function MetricCard({ label, value, subtitle, accent }: { label: string; value: 
       <p className="text-[12px] uppercase tracking-[0.16em] text-text-secondary">{label}</p>
       <p className="mt-2 text-[34px] font-medium leading-none tracking-[-0.04em] text-text-primary">{value.toLocaleString('fr-FR')}</p>
       <p className="mt-2 text-[12px] text-text-secondary">{subtitle}</p>
-    </div>
-  );
-}
-
-function DeltaCard({ label, value, delta, hint }: { label: string; value: number; delta: number; hint: string }) {
-  const deltaTone = delta > 0 ? 'text-[#2E6B48]' : delta < 0 ? 'text-[#9A5B4A]' : 'text-text-tertiary';
-  const deltaBg = delta > 0 ? 'bg-[#E4F0E7]' : delta < 0 ? 'bg-[#F4E4DF]' : 'bg-background-tertiary';
-
-  return (
-    <div className="rounded-[16px] border border-border bg-background p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[13px] text-text-secondary">{label}</p>
-          <p className="mt-2 text-[36px] font-medium leading-none tracking-[-0.04em] text-text-primary">{value.toLocaleString('fr-FR')}</p>
-        </div>
-        <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${deltaTone} ${deltaBg}`}>{formatDelta(delta)}</span>
-      </div>
-      <p className="mt-3 text-[12px] leading-5 text-text-secondary">{hint}</p>
     </div>
   );
 }
