@@ -16,6 +16,7 @@ type Album = {
 
 export default function CatalogueAlbums({ albums }: { albums: Album[] }) {
   const [search, setSearch] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filtered = search.trim()
     ? albums.filter((a) => {
@@ -48,10 +49,12 @@ export default function CatalogueAlbums({ albums }: { albums: Album[] }) {
         <div className="space-y-2">
           {filtered.map((album) => {
             const year = album.release_date ? new Date(album.release_date).getFullYear() : null;
+            const isExpanded = expandedId === album.id;
             return (
               <div key={album.id} className="rounded-[14px] border border-border bg-background px-4 py-3">
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                {/* Ligne principale */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1">
                     <Link
                       href={`/albums/${album.id}`}
                       className="text-[14px] font-medium text-text-primary transition-colors hover:text-text-secondary"
@@ -65,7 +68,17 @@ export default function CatalogueAlbums({ albums }: { albums: Album[] }) {
                       <span className="text-[11px] font-mono text-text-tertiary">{album.mbid.slice(0, 8)}…</span>
                     )}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? null : album.id)}
+                    className="flex-shrink-0 text-[11px] text-text-tertiary hover:text-text-primary border border-border hover:border-text-tertiary rounded-full px-2.5 py-1 transition-colors duration-150"
+                  >
+                    {isExpanded ? 'Fermer' : 'Actions'}
+                  </button>
+                </div>
+
+                {/* Boutons d'action — montés uniquement quand expandé */}
+                {isExpanded && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 pt-3 border-t border-border">
                     <ReEnrichButton album={{ id: album.id, mbid: album.mbid, title: album.title, artist_name: album.artist_name }} />
                     <StreamingLinksEditor albumId={album.id} mbid={album.mbid} artistName={album.artist_name} title={album.title} />
                     {album.mbid && (
@@ -80,7 +93,7 @@ export default function CatalogueAlbums({ albums }: { albums: Album[] }) {
                     )}
                     <DeleteAlbumButton albumId={album.id} albumTitle={album.title} />
                   </div>
-                </div>
+                )}
               </div>
             );
           })}
