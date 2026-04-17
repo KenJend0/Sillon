@@ -24,6 +24,10 @@ type Album = {
   cover_url: string | null;
   release_date: string | null;
   artist_name: string;
+  hasTags: boolean;
+  hasStreaming: boolean;
+  hasDescription: boolean;
+  fetched_at: string | null;
 };
 
 type AlbumMeta = {
@@ -129,26 +133,29 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
   const commentTextMap = new Map((commentTexts ?? []).map((c) => [c.id, c.body]));
 
 
-  const albums: Album[] = ((rawAlbums ?? []) as any[]).map((album) => ({
-    id: album.id,
-    title: album.title,
-    mbid: album.mbid ?? null,
-    cover_url: album.cover_url ?? null,
-    release_date: album.release_date ?? null,
-    artist_name: Array.isArray(album.artists) ? (album.artists[0]?.name ?? '—') : (album.artists?.name ?? '—'),
-  }));
-
   const genreSet = new Set((genreData ?? []).map((row) => row.album_id));
   const metaMap = new Map<string, AlbumMeta>((metaData ?? []).map((row) => [row.album_id, row as AlbumMeta]));
 
-  const noCover = albums.filter((album) => !album.cover_url);
-  const noMbid = albums.filter((album) => !album.mbid);
-  const noStreaming = albums.filter((album) => {
+  const albums: Album[] = ((rawAlbums ?? []) as any[]).map((album) => {
     const meta = metaMap.get(album.id);
-    return !meta?.spotify_url && !meta?.apple_music_url && !meta?.deezer_url;
+    return {
+      id: album.id,
+      title: album.title,
+      mbid: album.mbid ?? null,
+      cover_url: album.cover_url ?? null,
+      release_date: album.release_date ?? null,
+      artist_name: Array.isArray(album.artists) ? (album.artists[0]?.name ?? '—') : (album.artists?.name ?? '—'),
+      hasTags: genreSet.has(album.id),
+      hasStreaming: !!(meta?.spotify_url || meta?.apple_music_url || meta?.deezer_url),
+      hasDescription: !!(meta?.description),
+      fetched_at: meta?.fetched_at ?? null,
+    };
   });
 
-  const notEnriched = albums.filter((album) => !genreSet.has(album.id));
+  const noCover = albums.filter((album) => !album.cover_url);
+  const noMbid = albums.filter((album) => !album.mbid);
+  const noStreaming = albums.filter((album) => !album.hasStreaming);
+  const notEnriched = albums.filter((album) => !album.hasTags);
 
   const recentMeta = (metaData ?? [])
     .filter((meta) => meta.fetched_at && Date.now() - new Date(meta.fetched_at).getTime() < range.days * DAY_MS)

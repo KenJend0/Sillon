@@ -79,7 +79,7 @@ export default function ReEnrichButton({ album }: { album: Album }) {
           <span className="inline-block w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
           En cours…
         </span>
-      ) : 'Ré-enrichir'}
+      ) : 'Tags + bio'}
     </button>
   );
 }
