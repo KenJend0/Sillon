@@ -114,15 +114,18 @@ Ce qui rend l'app vraiment utilisable au quotidien.
 
 Une fois que l'app est stable et qu'il y a des utilisateurs.
 
-### Migration VPS / REST API
-- [ ] **Évaluer la migration** — sortir de la dépendance Supabase/Vercel : REST API custom (Fastify ou Hono), même schéma Postgres, même RLS ou ACL applicatif
-- [ ] **Schéma de migration des données** — script de transfert zero-downtime
+### Monitoring
 - [ ] **Monitoring** — Sentry côté client + serveur, alertes sur les erreurs 5xx et les latences anormales
 
+### Migration VPS / REST API
+> ⏸ Reporté en V3. Le pipeline ML batch (Python + GitHub Actions → Supabase) ne nécessite pas de sortir de ce stack. pgvector + PostgreSQL couvrent les besoins jusqu'à plusieurs centaines de milliers d'utilisateurs. Réévaluer uniquement si inférence temps réel ou volume de vecteurs > 1M.
+- [ ] **Évaluer la migration** — sortir de la dépendance Supabase/Vercel : REST API custom (Fastify ou Hono), même schéma Postgres, même RLS ou ACL applicatif
+- [ ] **Schéma de migration des données** — script de transfert zero-downtime
+
 ### Performance & optimisation BDD
-- [ ] **Audit des requêtes N+1** — identifier les Server Actions qui font des requêtes en boucle (ex : enrichissement feed event par event) et les remplacer par des joins ou des batchs
-- [ ] **Index manquants** — analyser avec `EXPLAIN ANALYZE` les requêtes lentes ; candidats identifiés : `feed_events(actor_id)`, `diary_entries(album_id, user_id)`, `diary_comments(entry_id)`
-- [ ] **Vue matérialisée `album_stats`** — la vue actuelle recalcule à chaque appel ; la matérialiser et la rafraîchir via trigger ou cron
+- [x] **Audit des requêtes N+1** — identifier les Server Actions qui font des requêtes en boucle (ex : enrichissement feed event par event) et les remplacer par des joins ou des batchs
+- [x] **Index manquants** — analyser avec `EXPLAIN ANALYZE` les requêtes lentes ; candidats identifiés : `feed_events(actor_id)`, `diary_entries(album_id, user_id)`, `diary_comments(entry_id)`
+- [x] **Vue matérialisée `album_stats`** — la vue actuelle recalcule à chaque appel ; la matérialiser et la rafraîchir via trigger ou cron
 - [ ] **Mise en cache Server Actions** — utiliser `unstable_cache` (Next.js) ou React `cache()` sur les lectures fréquentes et stables (stats album, bio artiste, discographie)
 - [ ] **Pagination sur les pages artiste / profil** — les requêtes sans LIMIT peuvent devenir lentes avec de la donnée ; cursor-based comme le feed
 
@@ -143,7 +146,11 @@ Une fois qu'il y a assez de données.
 
 - [ ] **Recherche par titre de chanson** — si l'utilisateur tape "Come Together", remonter l'album parent ("Abbey Road") via l'endpoint `/recording` de MusicBrainz, puis lookup release-group ; nécessite 2 appels MB + déduplication avec les résultats album classiques
 - [ ] **Tags de genre MusicBrainz sur les albums** — stocker les tags MB (`/release-group/{mbid}?inc=tags`) au moment de l'import dans un champ `tags[]` sur la table `albums` ; débloque la découverte par genre (proposer des albums bien notés *hors* des genres habituels du user) et l'amélioration des stats profil
-- [ ] **Recommandations ML** — matrix factorization (SVD/ALS) ou user-based CF sur ratings + follows + saves
+- [ ] **Pipeline ML batch** — répertoire `/ml/` Python (numpy, scipy, scikit-learn), tables Supabase (`user_taste_vectors`, `user_similarity`, `user_recommendations`, `recommendation_metrics`), cron GitHub Actions quotidien ; résultats lus directement par Next.js — pas de service live
+- [ ] **Recommandations ML** — Phase 0 : cosine similarity sur matrice user-item (ratings mean-centered) → remplace le Jaccard actuel. Phase 1 : hybrid CF + content-based genre. Phase 2 : matrix factorization SVD/ALS
+- [ ] **"Users with similar taste" + Taste match %** — section dans /explore et badge sur les profils publics, calculés par le batch ML
+- [ ] **Feedback explicite sur les recommandations** — bouton "Pas pour moi" sur les recs "Pour toi" ; signal négatif stocké, utilisé pour filtrer les recs suivantes
+- [ ] **listen_count sur les diary_entries** — migrer `re_listen BOOLEAN` vers `listen_count INT DEFAULT 1` ; signal implicite d'attachement plus fin pour le ML
 - [ ] **Listes thématiques UGC** — *"Best of 2024"*, *"Albums pluvieux"* (à la Letterboxd) — créer, partager, commenter
 - [ ] **Stats avancées** — graphes par année / genre / artiste, distribution des notes, tendances temporelles
 - [ ] **Profils "critiques"** — score de crédibilité basé sur cohérence des notes et ancienneté
