@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -14,42 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      album_genres: {
-        Row: {
-          album_id: string
-          genre_id: string
-          source: string
-          weight: number
-        }
-        Insert: {
-          album_id: string
-          genre_id: string
-          source: string
-          weight?: number
-        }
-        Update: {
-          album_id?: string
-          genre_id?: string
-          source?: string
-          weight?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "album_genres_album_id_fkey"
-            columns: ["album_id"]
-            isOneToOne: false
-            referencedRelation: "albums"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "album_genres_genre_id_fkey"
-            columns: ["genre_id"]
-            isOneToOne: false
-            referencedRelation: "genres"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       album_genre_votes: {
         Row: {
           album_id: string
@@ -86,9 +50,47 @@ export type Database = {
           },
         ]
       }
+      album_genres: {
+        Row: {
+          album_id: string
+          genre_id: string
+          source: string
+          weight: number
+        }
+        Insert: {
+          album_id: string
+          genre_id: string
+          source: string
+          weight?: number
+        }
+        Update: {
+          album_id?: string
+          genre_id?: string
+          source?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "album_genres_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "album_genres_genre_id_fkey"
+            columns: ["genre_id"]
+            isOneToOne: false
+            referencedRelation: "genres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       album_metadata: {
         Row: {
           album_id: string
+          apple_music_url: string | null
+          deezer_url: string | null
           description: string | null
           description_src: string | null
           fetched_at: string
@@ -96,11 +98,11 @@ export type Database = {
           lastfm_playcount: number | null
           lastfm_url: string | null
           spotify_url: string | null
-          apple_music_url: string | null
-          deezer_url: string | null
         }
         Insert: {
           album_id: string
+          apple_music_url?: string | null
+          deezer_url?: string | null
           description?: string | null
           description_src?: string | null
           fetched_at?: string
@@ -108,11 +110,11 @@ export type Database = {
           lastfm_playcount?: number | null
           lastfm_url?: string | null
           spotify_url?: string | null
-          apple_music_url?: string | null
-          deezer_url?: string | null
         }
         Update: {
           album_id?: string
+          apple_music_url?: string | null
+          deezer_url?: string | null
           description?: string | null
           description_src?: string | null
           fetched_at?: string
@@ -120,8 +122,6 @@ export type Database = {
           lastfm_playcount?: number | null
           lastfm_url?: string | null
           spotify_url?: string | null
-          apple_music_url?: string | null
-          deezer_url?: string | null
         }
         Relationships: [
           {
@@ -210,6 +210,33 @@ export type Database = {
         }
         Relationships: []
       }
+      content_reports: {
+        Row: {
+          content_id: string
+          content_type: string
+          created_at: string
+          id: string
+          reason: string
+          reporter_id: string
+        }
+        Insert: {
+          content_id: string
+          content_type: string
+          created_at?: string
+          id?: string
+          reason?: string
+          reporter_id: string
+        }
+        Update: {
+          content_id?: string
+          content_type?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          reporter_id?: string
+        }
+        Relationships: []
+      }
       diary_comments: {
         Row: {
           body: string
@@ -253,14 +280,23 @@ export type Database = {
             referencedRelation: "diary_entry_stats"
             referencedColumns: ["entry_id"]
           },
+          {
+            foreignKeyName: "diary_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "diary_comments"
+            referencedColumns: ["id"]
+          },
         ]
       }
       diary_entries: {
         Row: {
           album_id: string
+          comments_count: number
           created_at: string
           id: string
           is_public: boolean
+          likes_count: number
           listened_at: string
           rating: number | null
           re_listen: boolean
@@ -271,9 +307,11 @@ export type Database = {
         }
         Insert: {
           album_id: string
+          comments_count?: number
           created_at?: string
           id?: string
           is_public?: boolean
+          likes_count?: number
           listened_at?: string
           rating?: number | null
           re_listen?: boolean
@@ -284,9 +322,11 @@ export type Database = {
         }
         Update: {
           album_id?: string
+          comments_count?: number
           created_at?: string
           id?: string
           is_public?: boolean
+          likes_count?: number
           listened_at?: string
           rating?: number | null
           re_listen?: boolean
@@ -522,6 +562,36 @@ export type Database = {
           },
         ]
       }
+      product_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          id: string
+          properties: Json
+          session_id: string | null
+          surface: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          id?: string
+          properties?: Json
+          session_id?: string | null
+          surface?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          id?: string
+          properties?: Json
+          session_id?: string | null
+          surface?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -552,6 +622,39 @@ export type Database = {
           updated_at?: string | null
           username?: string | null
           username_changed?: boolean | null
+        }
+        Relationships: []
+      }
+      recommendation_metrics: {
+        Row: {
+          computed_at: string
+          id: string
+          k: number
+          method: string
+          n_users: number | null
+          ndcg_at_k: number | null
+          precision_at_k: number | null
+          recall_at_k: number | null
+        }
+        Insert: {
+          computed_at?: string
+          id?: string
+          k: number
+          method: string
+          n_users?: number | null
+          ndcg_at_k?: number | null
+          precision_at_k?: number | null
+          recall_at_k?: number | null
+        }
+        Update: {
+          computed_at?: string
+          id?: string
+          k?: number
+          method?: string
+          n_users?: number | null
+          ndcg_at_k?: number | null
+          precision_at_k?: number | null
+          recall_at_k?: number | null
         }
         Relationships: []
       }
@@ -604,6 +707,32 @@ export type Database = {
           key?: string
         }
         Relationships: []
+      }
+      similar_albums_cache: {
+        Row: {
+          album_id: string
+          computed_at: string
+          similar_albums: Json
+        }
+        Insert: {
+          album_id: string
+          computed_at?: string
+          similar_albums?: Json
+        }
+        Update: {
+          album_id?: string
+          computed_at?: string
+          similar_albums?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "similar_albums_cache_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: true
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tracks: {
         Row: {
@@ -659,6 +788,24 @@ export type Database = {
           },
         ]
       }
+      user_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       user_favorite_albums: {
         Row: {
           album_id: string
@@ -694,6 +841,116 @@ export type Database = {
           },
         ]
       }
+      user_recommendations: {
+        Row: {
+          album_id: string
+          computed_at: string
+          method: string
+          rank: number
+          score: number
+          user_id: string
+        }
+        Insert: {
+          album_id: string
+          computed_at?: string
+          method: string
+          rank: number
+          score: number
+          user_id: string
+        }
+        Update: {
+          album_id?: string
+          computed_at?: string
+          method?: string
+          rank?: number
+          score?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_recommendations_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_recommendations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_similarity: {
+        Row: {
+          computed_at: string
+          score: number
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          computed_at?: string
+          score: number
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          computed_at?: string
+          score?: number
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_similarity_user_a_fkey"
+            columns: ["user_a"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_similarity_user_b_fkey"
+            columns: ["user_b"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_taste_vectors: {
+        Row: {
+          album_index: Json
+          computed_at: string
+          n_ratings: number
+          user_id: string
+          vector: number[]
+        }
+        Insert: {
+          album_index: Json
+          computed_at?: string
+          n_ratings?: number
+          user_id: string
+          vector: number[]
+        }
+        Update: {
+          album_index?: Json
+          computed_at?: string
+          n_ratings?: number
+          user_id?: string
+          vector?: number[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_taste_vectors_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       album_stats: {
@@ -713,6 +970,36 @@ export type Database = {
           },
         ]
       }
+      album_stats_mat: {
+        Row: {
+          album_id: string | null
+          avg_rating: number | null
+          listeners_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diary_entries_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beta_dashboard_weekly: {
+        Row: {
+          activated_users: number | null
+          auth_errors: number | null
+          import_failures: number | null
+          onboarded_users: number | null
+          search_no_results: number | null
+          signup_users: number | null
+          social_users: number | null
+          wau: number | null
+          week: string | null
+        }
+        Relationships: []
+      }
       diary_entry_stats: {
         Row: {
           comments_count: number | null
@@ -723,6 +1010,10 @@ export type Database = {
       }
     }
     Functions: {
+      delete_user_account: {
+        Args: { target_user_id: string }
+        Returns: undefined
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
@@ -857,3 +1148,5 @@ export const Constants = {
     Enums: {},
   },
 } as const
+A new version of Supabase CLI is available: v2.98.2 (currently installed v2.76.11)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
