@@ -1562,7 +1562,7 @@ export async function importTrackFromMusicBrainz(
     // 2. Import the parent album (idempotent — returns existing albumId if already imported)
     const importResult = await importAlbumFromMusicBrainz(releaseId);
     if (!importResult.success || !('albumId' in importResult) || !importResult.albumId) {
-      return { success: false, error: importResult.error || 'Échec de l\'import de l\'album parent' };
+      return { success: false, error: ('error' in importResult ? importResult.error : undefined) || 'Échec de l\'import de l\'album parent' };
     }
 
     const albumId = importResult.albumId;
