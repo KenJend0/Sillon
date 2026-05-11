@@ -6,7 +6,6 @@ import { isAlbumSaved } from "@/app/actions/saved-albums";
 import { getArtistReleases } from "@/app/actions/musicbrainz";
 import { getSimilarAlbums } from "@/app/actions/metadata";
 import { getAlbumReviewsPreview, type AlbumReview } from "@/app/actions/diary";
-import { getAlbumTracksStats } from "@/app/actions/track-diary";
 import Link from "next/link";
 import AlbumHero from "@/components/AlbumHero";
 import { CoverImage } from "@/components/CoverImage";
@@ -98,7 +97,6 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
         followsResp,
         myEntriesResp,
         reviewsPreview,
-        tracksStats,
     ] = await Promise.all([
         user ? isAlbumSaved(album.id, user.id) : Promise.resolve(false),
         supabase
@@ -139,7 +137,6 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                 .order("created_at", { ascending: false })
             : Promise.resolve({ data: null }),
         getAlbumReviewsPreview(id, 3),
-        getAlbumTracksStats(id),
     ]);
 
     const genres: string[] = (genresData.data ?? [])
@@ -356,7 +353,6 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                                             Disque {disc}
                                         </p>
                                         {discTracks.map((t) => {
-                                            const tStat = (tracksStats as Map<string, any>)?.get(t.id);
                                             return (
                                                 <div key={t.id} className="flex items-baseline gap-4 py-2 group">
                                                     <span className="text-text-tertiary tabular-nums flex-shrink-0 w-6 text-right text-[12px]">
@@ -365,9 +361,6 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                                                     <Link href={`/tracks/${t.id}`} className="flex-1 text-[14px] text-text-primary hover:text-[#8E6F5E] transition-colors truncate">
                                                         {t.title}
                                                     </Link>
-                                                    {tStat?.avg_rating != null && (
-                                                        <span className="text-[12px] text-[#8E6F5E] tabular-nums flex-shrink-0">{tStat.avg_rating}</span>
-                                                    )}
                                                     <span className="text-text-tertiary tabular-nums flex-shrink-0 text-[12px]">
                                                         {msToMMSS(t.duration_ms)}
                                                     </span>
@@ -380,7 +373,6 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                         ) : (
                             <div>
                                 {allTracks.map((t, idx) => {
-                                    const tStat = (tracksStats as Map<string, any>)?.get(t.id);
                                     return (
                                         <div key={t.id}>
                                             <div className="flex items-baseline gap-4 py-2 group">
@@ -390,9 +382,6 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                                                 <Link href={`/tracks/${t.id}`} className="flex-1 text-[14px] text-text-primary hover:text-[#8E6F5E] transition-colors truncate">
                                                     {t.title}
                                                 </Link>
-                                                {tStat?.avg_rating != null && (
-                                                    <span className="text-[12px] text-[#8E6F5E] tabular-nums flex-shrink-0">{tStat.avg_rating}</span>
-                                                )}
                                                 <span className="text-text-tertiary tabular-nums flex-shrink-0 text-[12px]">
                                                     {msToMMSS(t.duration_ms)}
                                                 </span>
