@@ -1,8 +1,8 @@
 ﻿"use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { CoverImage } from "@/components/CoverImage";
 import type { DiaryEntryUI } from "@/app/actions/diary";
 
 type SortOption = "date_listened" | "release_date" | "personal_rating";
@@ -89,11 +89,12 @@ export default function DiaryList({ entries, isMe }: Props) {
               className="group relative block aspect-square rounded-[10px] overflow-hidden"
             >
               {entry.cover_url ? (
-                <Image
+                <CoverImage
                   src={entry.cover_url}
                   alt={entry.album_title}
                   fill
                   className="object-cover"
+                  placeholder={<div className="w-full h-full bg-background-tertiary" />}
                 />
               ) : (
                 <div className="w-full h-full bg-background-tertiary" />

@@ -1,8 +1,8 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { CoverImage } from "@/components/CoverImage";
 import { Heart, MessageCircle } from "lucide-react";
 import type { DiaryEntryUI } from "@/app/actions/diary";
 import { toggleDiaryLike } from "@/app/actions/diary";
@@ -121,13 +121,16 @@ export default function ReviewsList({ reviews }: Props) {
           {/* Album Cover - Left side */}
           {review.cover_url && (
             <Link href={`/diary/${review.id}`} className="flex-shrink-0">
-              <Image
-                src={review.cover_url}
-                alt={review.album_title}
-                width={80}
-                height={80}
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-[10px] object-cover"
-              />
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[10px] overflow-hidden bg-background-secondary">
+                <CoverImage
+                  src={review.cover_url}
+                  alt={review.album_title}
+                  width={80}
+                  height={80}
+                  className="w-full h-full object-cover"
+                  placeholder={<div className="w-full h-full bg-background-tertiary" />}
+                />
+              </div>
             </Link>
           )}
 

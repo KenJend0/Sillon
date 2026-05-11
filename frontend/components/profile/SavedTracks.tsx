@@ -1,8 +1,8 @@
 ﻿"use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { CoverImage } from "@/components/CoverImage";
 import type { SavedAlbumUI } from "@/app/actions/saved-albums";
 
 type SortOption = "saved_date" | "release_date";
@@ -79,11 +79,12 @@ export default function SavedTracks({ albums }: Props) {
             className="group relative block aspect-square rounded-[10px] overflow-hidden"
           >
             {album.cover_url ? (
-              <Image
+              <CoverImage
                 src={album.cover_url}
                 alt={album.album_title}
                 fill
                 className="object-cover"
+                placeholder={<div className="w-full h-full bg-background-tertiary" />}
               />
             ) : (
               <div className="w-full h-full bg-background-tertiary" />

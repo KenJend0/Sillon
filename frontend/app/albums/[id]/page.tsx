@@ -6,9 +6,10 @@ import { isAlbumSaved } from "@/app/actions/saved-albums";
 import { getArtistReleases } from "@/app/actions/musicbrainz";
 import { getSimilarAlbums } from "@/app/actions/metadata";
 import { getAlbumReviewsPreview, type AlbumReview } from "@/app/actions/diary";
+import { getAlbumTracksStats } from "@/app/actions/track-diary";
 import Link from "next/link";
-import Image from "next/image";
 import AlbumHero from "@/components/AlbumHero";
+import { CoverImage } from "@/components/CoverImage";
 import AlbumReviewSection from "@/components/AlbumReviewSection";
 import ArtistAlbumsSection from "@/components/ArtistAlbumsSection";
 import ScrollToHashClient from "@/components/ScrollToHashClient";
@@ -97,6 +98,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
         followsResp,
         myEntriesResp,
         reviewsPreview,
+        tracksStats,
     ] = await Promise.all([
         user ? isAlbumSaved(album.id, user.id) : Promise.resolve(false),
         supabase
@@ -137,6 +139,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                 .order("created_at", { ascending: false })
             : Promise.resolve({ data: null }),
         getAlbumReviewsPreview(id, 3),
+        getAlbumTracksStats(id),
     ]);
 
     const genres: string[] = (genresData.data ?? [])
@@ -352,38 +355,54 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                                         <p className="text-[11px] text-text-tertiary uppercase tracking-widest mb-3">
                                             Disque {disc}
                                         </p>
-                                        {discTracks.map((t) => (
-                                            <div key={t.id} className="flex items-baseline gap-4 py-2">
-                                                <span className="text-text-tertiary tabular-nums flex-shrink-0 w-6 text-right text-[12px]">
-                                                    {t.track_no}
-                                                </span>
-                                                <span className="flex-1 text-[14px] text-text-primary">{t.title}</span>
-                                                <span className="text-text-tertiary tabular-nums flex-shrink-0 text-[12px]">
-                                                    {msToMMSS(t.duration_ms)}
-                                                </span>
-                                            </div>
-                                        ))}
+                                        {discTracks.map((t) => {
+                                            const tStat = (tracksStats as Map<string, any>)?.get(t.id);
+                                            return (
+                                                <div key={t.id} className="flex items-baseline gap-4 py-2 group">
+                                                    <span className="text-text-tertiary tabular-nums flex-shrink-0 w-6 text-right text-[12px]">
+                                                        {t.track_no}
+                                                    </span>
+                                                    <Link href={`/tracks/${t.id}`} className="flex-1 text-[14px] text-text-primary hover:text-[#8E6F5E] transition-colors truncate">
+                                                        {t.title}
+                                                    </Link>
+                                                    {tStat?.avg_rating != null && (
+                                                        <span className="text-[12px] text-[#8E6F5E] tabular-nums flex-shrink-0">{tStat.avg_rating}</span>
+                                                    )}
+                                                    <span className="text-text-tertiary tabular-nums flex-shrink-0 text-[12px]">
+                                                        {msToMMSS(t.duration_ms)}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 );
                             })
                         ) : (
                             <div>
-                                {allTracks.map((t, idx) => (
-                                    <div key={t.id}>
-                                        <div className="flex items-baseline gap-4 py-2">
-                                            <span className="text-text-tertiary tabular-nums flex-shrink-0 w-6 text-right text-[12px]">
-                                                {t.track_no ?? idx + 1}
-                                            </span>
-                                            <span className="flex-1 text-[14px] text-text-primary">{t.title}</span>
-                                            <span className="text-text-tertiary tabular-nums flex-shrink-0 text-[12px]">
-                                                {msToMMSS(t.duration_ms)}
-                                            </span>
+                                {allTracks.map((t, idx) => {
+                                    const tStat = (tracksStats as Map<string, any>)?.get(t.id);
+                                    return (
+                                        <div key={t.id}>
+                                            <div className="flex items-baseline gap-4 py-2 group">
+                                                <span className="text-text-tertiary tabular-nums flex-shrink-0 w-6 text-right text-[12px]">
+                                                    {t.track_no ?? idx + 1}
+                                                </span>
+                                                <Link href={`/tracks/${t.id}`} className="flex-1 text-[14px] text-text-primary hover:text-[#8E6F5E] transition-colors truncate">
+                                                    {t.title}
+                                                </Link>
+                                                {tStat?.avg_rating != null && (
+                                                    <span className="text-[12px] text-[#8E6F5E] tabular-nums flex-shrink-0">{tStat.avg_rating}</span>
+                                                )}
+                                                <span className="text-text-tertiary tabular-nums flex-shrink-0 text-[12px]">
+                                                    {msToMMSS(t.duration_ms)}
+                                                </span>
+                                            </div>
+                                            {(idx + 1) % 4 === 0 && idx < allTracks.length - 1 && (
+                                                <div className="my-3" />
+                                            )}
                                         </div>
-                                        {(idx + 1) % 4 === 0 && idx < allTracks.length - 1 && (
-                                            <div className="my-3" />
-                                        )}
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </section>
@@ -416,7 +435,14 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                             <Link key={a.id} href={`/albums/${a.id}`} className="snap-center shrink-0 w-44 sm:w-48 md:w-52 block group">
                                 <div className="rounded-[10px] overflow-hidden bg-background-secondary mb-3">
                                     {a.cover_url ? (
-                                        <Image src={a.cover_url} alt={a.title} width={400} height={400} className="object-cover w-full aspect-square" />
+                                        <CoverImage
+                                            src={a.cover_url}
+                                            alt={a.title}
+                                            width={400}
+                                            height={400}
+                                            className="object-cover w-full aspect-square"
+                                            placeholder={<div className="w-full aspect-square bg-background-tertiary" />}
+                                        />
                                     ) : (
                                         <div className="w-full aspect-square bg-background-tertiary" />
                                     )}

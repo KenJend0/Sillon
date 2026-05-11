@@ -1,8 +1,8 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { CoverImage } from "@/components/CoverImage";
 import { showToast } from "@/components/Toast";
 
 export type FavoriteAlbum = {
@@ -62,15 +62,20 @@ export default function Top3Albums({ userId, isMe, initialAlbums }: Props) {
               {/* Cover */}
               <div className="relative overflow-hidden rounded-[10px] bg-background-secondary aspect-square mb-3">
                 {album.cover_url ? (
-                  <Image
+                  <CoverImage
                     src={album.cover_url}
                     alt={album.title}
                     fill
                     className="object-cover"
+                    placeholder={
+                      <div className="w-full h-full flex items-center justify-center bg-background-tertiary">
+                        <span className="text-[24px] text-text-tertiary">♪</span>
+                      </div>
+                    }
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-background-tertiary">
-                    <span className="text-[24px] text-text-tertiary">â™ª</span>
+                    <span className="text-[24px] text-text-tertiary">♪</span>
                   </div>
                 )}
               </div>

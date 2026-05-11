@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { FeedEvent } from '@/app/actions/feed';
 import { UserAvatar } from '@/components/avatars/DefaultAvatar';
 import { getTimeAgo } from '@/lib/utils/formatDate';
+import { CoverImage } from '@/components/CoverImage';
 
 interface FeedCardUnratedListenProps {
   event: FeedEvent & { type: 'UNRATED_LISTEN' };
@@ -50,13 +50,16 @@ export default function FeedCardUnratedListen({
       <div className="flex gap-4 items-center">
         {event.album?.cover_url && (
           <Link href={entryHref} className="shrink-0">
-            <Image
-              src={event.album.cover_url}
-              alt={event.album.title || 'album'}
-              width={64}
-              height={64}
-              className="w-16 h-16 object-cover rounded-[8px]"
-            />
+            <div className="w-16 h-16 rounded-[8px] overflow-hidden bg-background-secondary">
+              <CoverImage
+                src={event.album.cover_url}
+                alt={event.album.title || 'album'}
+                width={64}
+                height={64}
+                className="w-full h-full object-cover"
+                placeholder={<div className="w-full h-full bg-background-tertiary" />}
+              />
+            </div>
           </Link>
         )}
 

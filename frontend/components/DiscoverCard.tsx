@@ -1,7 +1,7 @@
 ﻿"use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { CoverImage } from "@/components/CoverImage";
 
 type DiscoverItem = {
     id: string;
@@ -22,12 +22,13 @@ export default function DiscoverCard({ item }: { item: DiscoverItem }) {
             {/* Image */}
             <div className="rounded-[10px] overflow-hidden bg-background-secondary mb-3">
                 {item.cover_url ? (
-                    <Image
+                    <CoverImage
                         src={item.cover_url}
                         alt={item.album_title}
                         width={400}
                         height={400}
                         className="object-cover w-full aspect-square"
+                        placeholder={<div className="w-full aspect-square bg-background-tertiary" />}
                     />
                 ) : (
                     <div className="w-full aspect-square bg-background-tertiary" />

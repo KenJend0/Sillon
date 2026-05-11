@@ -1,13 +1,13 @@
-import Image from "next/image";
 import Link from "next/link";
 import { type ForYouAlbum } from "@/app/actions/explore";
+import { CoverImage } from "@/components/CoverImage";
 
 export default function PourToiSection({ albums }: { albums: ForYouAlbum[] }) {
     if (albums.length === 0) return null;
 
     const gridClassName = albums.length === 3
-        ? "grid-cols-1 lg:grid-cols-[repeat(3,minmax(0,15rem))]"
-        : "grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,15rem))]";
+        ? "grid-cols-1 lg:grid-cols-3"
+        : "grid-cols-2 lg:grid-cols-4";
 
     return (
         <section>
@@ -23,13 +23,12 @@ export default function PourToiSection({ albums }: { albums: ForYouAlbum[] }) {
                     >
                         <div className="w-12 h-12 rounded-[6px] overflow-hidden bg-background-secondary flex-shrink-0 relative">
                             {album.cover_url ? (
-                                <Image
+                                <CoverImage
                                     src={album.cover_url}
                                     alt={album.title}
                                     fill
                                     className="object-cover"
-                                    sizes="48px"
-                                    unoptimized
+                                    placeholder={<div className="w-full h-full bg-background-tertiary" />}
                                 />
                             ) : (
                                 <div className="w-full h-full bg-background-tertiary" />

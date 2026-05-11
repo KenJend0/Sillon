@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { CoverImage } from "@/components/CoverImage";
 
 type AlbumCardWithActionsProps = {
   album: {
@@ -28,15 +28,20 @@ export default function AlbumCardWithActions({
         <Link href={`/albums/${album.id}`} className="block">
           <div className="rounded-[10px] overflow-hidden aspect-square bg-background-secondary relative">
             {album.cover_url ? (
-              <Image
+              <CoverImage
                 src={album.cover_url}
                 alt={album.title}
                 fill
                 className="object-cover"
+                placeholder={
+                  <div className="w-full h-full flex items-center justify-center bg-background-secondary text-text-tertiary">
+                    <div className="text-[24px]">♪</div>
+                  </div>
+                }
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-background-secondary text-text-tertiary">
-                <div className="text-[24px]">â™ª</div>
+                <div className="text-[24px]">♪</div>
               </div>
             )}
             {/* Rating Badge */}

@@ -1,10 +1,10 @@
 ﻿'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { FeedEvent } from '@/app/actions/feed';
 import { UserAvatar } from '@/components/avatars/DefaultAvatar';
 import { getTimeAgo } from '@/lib/utils/formatDate';
+import { CoverImage } from '@/components/CoverImage';
 
 interface FeedCardAlbumSavedProps {
   event: FeedEvent & { type: 'ALBUM_SAVED' };
@@ -49,13 +49,16 @@ export default function FeedCardAlbumSaved({
           className="flex gap-4 items-center min-w-0"
         >
           {event.album.cover_url && (
-            <Image
-              src={event.album.cover_url}
-              alt={event.album.title}
-              width={56}
-              height={56}
-              className="w-14 h-14 object-cover shrink-0 rounded-[8px]"
-            />
+            <div className="w-14 h-14 rounded-[8px] overflow-hidden bg-background-secondary flex-shrink-0">
+              <CoverImage
+                src={event.album.cover_url}
+                alt={event.album.title}
+                width={56}
+                height={56}
+                className="w-full h-full object-cover"
+                placeholder={<div className="w-full h-full bg-background-tertiary" />}
+              />
+            </div>
           )}
           <h3 className="text-[16px] font-medium text-text-primary line-clamp-2 leading-snug min-w-0">
             {event.album.title}

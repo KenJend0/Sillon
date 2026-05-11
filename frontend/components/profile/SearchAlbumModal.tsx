@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
-import Image from "next/image";
+import { CoverImage } from "@/components/CoverImage";
 
 type AlbumSuggest = {
   id: string;
@@ -119,11 +119,12 @@ export default function SearchAlbumModal({ position, onSelect, onClose }: Props)
               >
                 <div className="relative w-12 h-12 rounded-[8px] overflow-hidden flex-shrink-0 bg-background-tertiary">
                   {album.cover_url && (
-                    <Image
+                    <CoverImage
                       src={album.cover_url}
                       alt={album.label}
                       fill
                       className="object-cover"
+                      placeholder={<div className="w-full h-full bg-background-tertiary" />}
                     />
                   )}
                 </div>

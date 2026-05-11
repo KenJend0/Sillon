@@ -1,8 +1,9 @@
 ﻿'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
+import { Disc3 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { CoverImage } from '@/components/CoverImage';
 import { Heart, MessageCircle } from 'lucide-react';
 import { FeedEvent } from '@/app/actions/feed';
 import { toggleDiaryLike } from '@/app/actions/diary';
@@ -96,13 +97,16 @@ export default function FeedCardReviewCreated({
       <div className="flex gap-4 items-center mb-4">
         {event.album?.cover_url && (
           <Link href={entryHref} className="shrink-0">
-            <Image
-              src={event.album.cover_url}
-              alt=""
-              width={80}
-              height={80}
-              className="w-20 h-20 object-cover rounded-[10px]"
-            />
+            <div className="w-20 h-20 rounded-[10px] overflow-hidden bg-background-secondary flex-shrink-0">
+              <CoverImage
+                src={event.album.cover_url}
+                alt=""
+                width={80}
+                height={80}
+                className="w-full h-full object-cover"
+                placeholder={<div className="w-full h-full bg-background-tertiary flex items-center justify-center"><Disc3 size={20} className="text-text-disabled" /></div>}
+              />
+            </div>
           </Link>
         )}
 
