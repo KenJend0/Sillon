@@ -2,6 +2,7 @@
 
 import { logAuthedProductEvent } from '@/lib/productEvents';
 import { getAuthUser, createSupabaseServer, createSupabaseAdmin } from '@/lib/supabase/server';
+import { uploadCoverToSupabase } from '@/lib/storage';
 import type { SearchResultUI } from './search';
 
 const MUSICBRAINZ_API = 'https://musicbrainz.org/ws/2';
@@ -890,8 +891,14 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
       createdArtist = true;
     }
 
+    // Upload cover to Supabase Storage synchronously so the album is born with a stable URL
+    let finalCoverUrl: string | null = preview.coverUrl || null;
+    if (preview.coverUrl && canonicalMbid) {
+      const storedUrl = await uploadCoverToSupabase(preview.coverUrl, canonicalMbid, supabaseAdmin);
+      if (storedUrl) finalCoverUrl = storedUrl;
+    }
+
     // Create album
-    // Use cover URL from preview (which uses release-group and is verified)
     const newAlbumId = crypto.randomUUID();
     const { error: albumError } = await supabase
       .from('albums')
@@ -901,7 +908,7 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
         artist_id: artistId,
         mbid: canonicalMbid,
         release_date: normalizeReleaseDate(preview.date),
-        cover_url: preview.coverUrl || null,  // Use actual cover from preview
+        cover_url: finalCoverUrl,
       });
 
     if (albumError) {
@@ -1416,5 +1423,184 @@ export async function searchMusicBrainzPreview(query: string): Promise<SearchRes
   } catch (err) {
     console.error('Error fetching from MusicBrainz:', err);
     return [];
+  }
+}
+
+// ============================================================================
+// RECORDING (TRACK) SEARCH & IMPORT
+// ============================================================================
+
+export type RecordingSearchResult = {
+  mbid: string;          // recording MBID
+  title: string;
+  artistName: string;
+  albumTitle: string;
+  albumMbid: string;     // release-group MBID du premier parent
+  releaseId: string;     // release MBID (pour import)
+  duration: number | null;
+  coverUrl: string | null;
+  score: number;
+};
+
+/**
+ * Search MusicBrainz for individual recordings (songs/tracks).
+ * Uses the /recording endpoint with Lucene query syntax.
+ * Results include parent release info needed for import.
+ */
+export async function searchMusicBrainzRecordings(
+  query: string,
+  limit = 20
+): Promise<{ success: boolean; results?: RecordingSearchResult[]; error?: string }> {
+  if (!query || query.trim().length < 2) {
+    return { success: true, results: [] };
+  }
+
+  const cacheKey = hashCacheKey(query, `recordings_${limit}`);
+  const cached = await getCachedResults<RecordingSearchResult[]>(cacheKey);
+  if (cached) return { success: true, results: cached };
+
+  try {
+    const encoded = encodeURIComponent(`"${query.trim()}"`);
+    const url = `${MUSICBRAINZ_API}/recording?query=${encoded}&limit=${limit}&fmt=json&inc=releases`;
+    const response = await fetchWithRetry(
+      url,
+      { headers: { 'User-Agent': USER_AGENT } },
+      2,
+      MB_SEARCH_TIMEOUT_MS
+    );
+
+    if (!response.ok) {
+      return { success: false, error: `MusicBrainz returned ${response.status}` };
+    }
+
+    const data: any = await response.json();
+    const recordings: any[] = data.recordings || [];
+
+    const results: RecordingSearchResult[] = recordings
+      .filter((r: any) => r.releases && r.releases.length > 0)
+      .map((r: any) => {
+        const artistName = r['artist-credit']?.[0]?.artist?.name || 'Unknown';
+        // Prefer the first non-single release (Albums first, then anything)
+        const release = r.releases.find((rel: any) => {
+          const pt = rel['release-group']?.['primary-type'];
+          return pt === 'Album' || pt === 'EP';
+        }) || r.releases[0];
+        const rgMbid = release?.['release-group']?.id || '';
+        const coverUrl = rgMbid
+          ? `https://coverartarchive.org/release-group/${rgMbid}/front`
+          : null;
+        return {
+          mbid: r.id,
+          title: r.title,
+          artistName,
+          albumTitle: release?.title || 'Unknown',
+          albumMbid: rgMbid,
+          releaseId: release?.id || '',
+          duration: r.length ?? null,
+          coverUrl,
+          score: r.score ?? 0,
+        };
+      });
+
+    await setCachedResults(cacheKey, results);
+    return { success: true, results };
+  } catch (err) {
+    console.error('[searchMusicBrainzRecordings] error:', err);
+    return { success: false, error: 'Une erreur est survenue lors de la recherche' };
+  }
+}
+
+/**
+ * Import a track from MusicBrainz.
+ * - Imports the parent album if not already in DB (via importAlbumFromMusicBrainz)
+ * - Returns the internal track ID matched by recording MBID
+ *
+ * @param recordingMbid - MusicBrainz recording ID of the track
+ * @param releaseId     - MusicBrainz release ID of the parent album
+ */
+export async function importTrackFromMusicBrainz(
+  recordingMbid: string,
+  releaseId: string,
+  trackTitle?: string  // fallback: search by title in album when MBID doesn't match
+): Promise<{ success: boolean; trackId?: string; albumId?: string; artistId?: string; title?: string; error?: string }> {
+  try {
+    const user = await getAuthUser();
+    if (!user) return { success: false, error: 'Not authenticated' };
+
+    const supabase = await createSupabaseServer();
+
+    // Helper: find track by title within an album (case-insensitive)
+    const findByTitle = async (albumId: string, title: string) => {
+      const { data } = await supabase
+        .from('tracks')
+        .select('id, title, album_id, artist_id')
+        .eq('album_id', albumId)
+        .ilike('title', title)
+        .maybeSingle();
+      return data;
+    };
+
+    // 1. Check if the track is already in DB (matched by recording MBID)
+    // Note: stored mbid may be the MB track-position ID, not the recording MBID —
+    // so we also fall through to the title-based lookup below.
+    const { data: existingTrack } = await supabase
+      .from('tracks')
+      .select('id, title, album_id, artist_id')
+      .eq('mbid', recordingMbid)
+      .maybeSingle();
+
+    if (existingTrack) {
+      return {
+        success: true,
+        trackId: existingTrack.id,
+        albumId: existingTrack.album_id,
+        artistId: existingTrack.artist_id,
+        title: existingTrack.title,
+      };
+    }
+
+    // 2. Import the parent album (idempotent — returns existing albumId if already imported)
+    const importResult = await importAlbumFromMusicBrainz(releaseId);
+    if (!importResult.success || !('albumId' in importResult) || !importResult.albumId) {
+      return { success: false, error: importResult.error || 'Échec de l\'import de l\'album parent' };
+    }
+
+    const albumId = importResult.albumId;
+
+    // 3a. Try MBID again (in case the album was just imported and now has tracks)
+    const { data: importedTrack } = await supabase
+      .from('tracks')
+      .select('id, title, album_id, artist_id')
+      .eq('mbid', recordingMbid)
+      .maybeSingle();
+
+    if (importedTrack) {
+      return {
+        success: true,
+        trackId: importedTrack.id,
+        albumId: importedTrack.album_id,
+        artistId: importedTrack.artist_id,
+        title: importedTrack.title,
+      };
+    }
+
+    // 3b. MBID mismatch (track MBID stored vs recording MBID) — fall back to title search
+    if (trackTitle) {
+      const byTitle = await findByTitle(albumId, trackTitle);
+      if (byTitle) {
+        return {
+          success: true,
+          trackId: byTitle.id,
+          albumId: byTitle.album_id,
+          artistId: byTitle.artist_id,
+          title: byTitle.title,
+        };
+      }
+    }
+
+    return { success: false, error: 'Titre introuvable après import de l\'album' };
+  } catch (err) {
+    console.error('[importTrackFromMusicBrainz] error:', err);
+    return { success: false, error: 'Une erreur est survenue' };
   }
 }
