@@ -6,9 +6,10 @@ from pathlib import Path
 from dotenv import load_dotenv
 from supabase import Client, create_client
 
-# Load .env from ml/ directory, then fall back to repo root
+# Load .env from ml/ directory, then repo root, then frontend/.env.local
 load_dotenv(Path(__file__).parent.parent / ".env")
 load_dotenv(Path(__file__).parent.parent.parent / ".env")
+load_dotenv(Path(__file__).parent.parent.parent / "frontend" / ".env.local")
 
 _client: Client | None = None
 
