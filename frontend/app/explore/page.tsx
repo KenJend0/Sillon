@@ -1,4 +1,6 @@
-﻿import { createSupabaseAnon } from "@/lib/supabase/server";
+﻿export const dynamic = 'force-dynamic';
+
+import { createSupabaseAnon } from "@/lib/supabase/server";
 import { getForYouSuggestions, getDiscoveryAlbums, getSimilarUsers, type ForYouAlbum, type DiscoveryAlbum, type SimilarUser } from "@/app/actions/explore";
 import DiscoverCard from "@/components/DiscoverCard";
 import SearchOverlay from "@/components/SearchOverlay";
