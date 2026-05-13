@@ -72,9 +72,6 @@ Rendre les pages albums et artistes vraiment riches.
 - [x] **Bio et tags** — bio Wikipedia déjà fetchée (`fetchArtistMetadata`), l'afficher proprement avec genres et tags ; artistes similaires
 - [ ] **Discographie complète** — filtres par type (Albums, EPs, Singles, Lives), tri par date
 
-### Likes sur les titres (tracks)
-- [ ] **Liker un titre sur la page album** — bouton like par piste (table `track_likes` à créer, RLS, fanout)
-- [ ] **Feed card dédiée** — `FeedCardTrackLiked` : *"X aime [Titre] sur [Album]"*
 
 ---
 

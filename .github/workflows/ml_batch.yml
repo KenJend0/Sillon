@@ -33,8 +33,11 @@ jobs:
       - name: Step 2 — Backfill genres (albums sans données genre)
         run: python ml/scripts/backfill_genres.py --limit 200
 
-      - name: Step 3 — Compute recommendations (cosine CF)
+      - name: Step 3 — Compute album recommendations (cosine CF)
         run: python ml/scripts/compute_recommendations.py --method cosine_cf
+
+      - name: Step 4 — Compute track recommendations (cosine CF)
+        run: python ml/scripts/compute_track_recommendations.py --method cosine_cf
 
   evaluate:
     name: Evaluate metrics

@@ -2,6 +2,16 @@
 
 import { getAuthUser, createSupabaseServer, createSupabaseAnon } from '@/lib/supabase/server';
 
+export type TrendingAlbum = {
+    id: string;
+    album_id: string;
+    album_title: string;
+    artist_name: string;
+    cover_url: string;
+    discover_kind: string;
+    score?: number;
+};
+
 export type DiscoveryAlbum = {
     album_id: string;
     title: string;
@@ -23,12 +33,73 @@ export type SimilarUser = {
     taste_match: number; // 0-100
 };
 
+export type ForYouTrack = {
+    track_id: string;
+    track_title: string;
+    artist: string;
+    album_id: string;
+    cover_url: string | null;
+};
+
+/**
+ * Albums populaires sur Waveform cette semaine (écoutes + sauvegardes agrégées).
+ */
+export async function getTrendingThisWeek(limit = 10): Promise<TrendingAlbum[]> {
+    const supabase = createSupabaseAnon();
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const [{ data: recentEntries }, { data: recentSaves }] = await Promise.all([
+        supabase
+            .from('diary_entries')
+            .select('album_id, albums(id, title, cover_url, artists(name))')
+            .gte('created_at', sevenDaysAgo)
+            .eq('is_public', true)
+            .limit(200),
+        supabase
+            .from('saved_albums')
+            .select('album_id, albums(id, title, cover_url, artists(name))')
+            .gte('saved_at', sevenDaysAgo)
+            .limit(200),
+    ]);
+
+    const albumScores = new Map<string, { score: number; title: string; artist_name: string; cover_url: string | null }>();
+
+    for (const entry of [...(recentEntries || []), ...(recentSaves || [])]) {
+        const album = entry.albums as any;
+        if (!album?.id) continue;
+        const existing = albumScores.get(album.id);
+        if (existing) {
+            existing.score += 1;
+        } else {
+            albumScores.set(album.id, {
+                score: 1,
+                title: album.title || 'Unknown',
+                artist_name: album.artists?.name || 'Unknown',
+                cover_url: album.cover_url,
+            });
+        }
+    }
+
+    return [...albumScores.entries()]
+        .sort((a, b) => b[1].score - a[1].score)
+        .slice(0, limit)
+        .map(([albumId, info]) => ({
+            id: `trending-${albumId}`,
+            album_id: albumId,
+            album_title: info.title,
+            artist_name: info.artist_name,
+            cover_url: info.cover_url || '',
+            discover_kind: 'trending_week',
+            score: info.score,
+        }));
+}
+
 /**
  * Suggestions personnalisées — lit les recommandations pré-calculées par le
  * pipeline ML batch (cosine CF). Fallback sur le Jaccard simplifié si la table
  * est vide (avant le premier run du batch ou pour les nouveaux utilisateurs).
  */
-export async function getForYouSuggestions(): Promise<ForYouAlbum[]> {
+export async function getForYouSuggestions(limit = 6): Promise<ForYouAlbum[]> {
     const user = await getAuthUser();
     if (!user) return [];
 
@@ -41,7 +112,7 @@ export async function getForYouSuggestions(): Promise<ForYouAlbum[]> {
         .eq('user_id', user.id)
         .eq('method', 'cosine_cf')
         .order('rank')
-        .limit(4);
+        .limit(limit);
 
     if (precomputed && precomputed.length > 0) {
         return precomputed.map((row) => {
@@ -132,7 +203,7 @@ export async function getForYouSuggestions(): Promise<ForYouAlbum[]> {
                 b[1].neighborCount - a[1].neighborCount ||
                 b[1].total / b[1].neighborCount - a[1].total / a[1].neighborCount
         )
-        .slice(0, 4)
+        .slice(0, limit)
         .map(([albumId, info]) => ({
             album_id: albumId,
             title: info.title,
@@ -146,7 +217,7 @@ export async function getForYouSuggestions(): Promise<ForYouAlbum[]> {
  * dont l'artiste est inconnu de l'utilisateur.
  * Pour un utilisateur non connecté : retourne les mieux notés sans filtre.
  */
-export async function getDiscoveryAlbums(): Promise<DiscoveryAlbum[]> {
+export async function getDiscoveryAlbums(limit = 6): Promise<DiscoveryAlbum[]> {
     // Récupérer les artist_ids connus de l'utilisateur (optionnel)
     let knownArtistIds = new Set<string>();
     try {
@@ -198,7 +269,7 @@ export async function getDiscoveryAlbums(): Promise<DiscoveryAlbum[]> {
             const rb = statsMap.get(b.id)?.avg_rating ?? 0;
             return rb - ra;
         })
-        .slice(0, 10)
+        .slice(0, limit)
         .map((a) => ({
             album_id: a.id,
             title: a.title,
@@ -260,6 +331,38 @@ export async function getSimilarUsers(limit = 4): Promise<SimilarUser[]> {
             taste_match: Math.round((scoreMap.get(p.id) ?? 0) * 100),
         }))
         .sort((a, b) => b.taste_match - a.taste_match);
+}
+
+/**
+ * Recommandations de titres pré-calculées par le pipeline ML batch (cosine CF).
+ */
+export async function getForYouTracks(limit = 6): Promise<ForYouTrack[]> {
+    const user = await getAuthUser();
+    if (!user) return [];
+
+    const supabase = await createSupabaseServer();
+
+    const { data } = await (supabase as any)
+        .from('user_track_recommendations')
+        .select('track_id, rank, tracks(id, title, album_id, albums(id, title, cover_url, artists(name)))')
+        .eq('user_id', user.id)
+        .eq('method', 'cosine_cf')
+        .order('rank')
+        .limit(limit);
+
+    if (!data || data.length === 0) return [];
+
+    return data.map((row: any) => {
+        const track = row.tracks as any;
+        const album = track?.albums as any;
+        return {
+            track_id: row.track_id,
+            track_title: track?.title || 'Unknown',
+            artist: album?.artists?.name || 'Unknown',
+            album_id: track?.album_id || '',
+            cover_url: album?.cover_url ?? null,
+        };
+    });
 }
 
 /**

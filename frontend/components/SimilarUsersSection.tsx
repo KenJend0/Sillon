@@ -7,7 +7,12 @@ export default function SimilarUsersSection({ users }: { users: SimilarUser[] })
 
     return (
         <section>
-            <h2 className="text-h2 text-text-primary mb-5">Goûts similaires</h2>
+            <div className="mb-5">
+                <h2 className="text-h2 text-text-primary mb-1">Goûts similaires</h2>
+                <p className="text-[13px] text-text-secondary">
+                    Des profils avec des affinités musicales proches des tiennes.
+                </p>
+            </div>
             <div className="grid grid-cols-4 gap-3">
                 {users.map((user) => (
                     <Link
