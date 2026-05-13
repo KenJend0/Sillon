@@ -737,7 +737,8 @@ export async function toggleTrackDiaryLike(entryId: string): Promise<void> {
       .eq('type', 'track_like')
       .eq('actor_id', user.id)
       .eq('payload->>trackEntryId', entryId)
-      .then(() => {}).catch(() => {});
+      .execute()
+      .catch(() => {});
   } else {
     await (supabase as any).from('track_diary_likes').insert({ entry_id: entryId, user_id: user.id });
     // Fanout like event
