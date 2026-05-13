@@ -14,6 +14,7 @@ type Album = {
     title: string;
     cover_url: string | null;
     release_date: string | null;
+    mbid?: string | null;
     track_count: number;
     avg_rating?: number | null;
     reviews_count?: number;
@@ -63,6 +64,7 @@ type DiscographyItem = {
     reviewsCount?: number;
     listenersCount?: number;
     mbid?: string;
+    releaseType?: 'Album' | 'EP' | 'Single' | null;
 };
 
 type ArtistPageContentProps = {
@@ -106,6 +108,9 @@ export function ArtistPageContent({
     const artistName = artist?.name || previewName || '';
 
     const discography = useMemo(() => {
+        // Build a map from release-group MBID → MB type for DB albums
+        const mbTypeByRgMbid = new Map(mbReleases.map(r => [r.releaseGroupMbid, r.type as 'Album' | 'EP' | 'Single' | null]));
+        const existingRgMbids = new Set(albums.filter(a => a.mbid).map(a => a.mbid as string));
         const existingTitles = new Set(albums.map(a => a.title.toLowerCase()));
 
         const baseAlbums: DiscographyItem[] = albums.map(a => ({
@@ -117,10 +122,12 @@ export function ArtistPageContent({
             avgRating: a.avg_rating,
             reviewsCount: a.reviews_count,
             listenersCount: a.listeners_count,
+            // Determine release type from MB data (matched by release-group MBID)
+            releaseType: a.mbid ? (mbTypeByRgMbid.get(a.mbid) ?? null) : null,
         }));
 
         const missingReleases: DiscographyItem[] = mbReleases
-            .filter(r => !existingTitles.has(r.title.toLowerCase()))
+            .filter(r => !existingRgMbids.has(r.releaseGroupMbid) && !existingTitles.has(r.title.toLowerCase()))
             .map(r => ({
                 title: r.title,
                 date: r.date,
@@ -130,6 +137,7 @@ export function ArtistPageContent({
                 href: `/albums/preview/${r.mbid}`,
                 inDatabase: false,
                 mbid: r.mbid,
+                releaseType: r.type as 'Album' | 'EP' | 'Single' | null,
             }));
 
         return [...baseAlbums, ...missingReleases].sort((a, b) => {
@@ -201,7 +209,14 @@ export function ArtistPageContent({
                             {artistName}
                         </h1>
                         <div className="text-[14px] text-text-secondary mt-1">
-                            {discography.length} {discography.length > 1 ? 'albums' : 'album'}
+                            {(() => {
+                                const mainCount = discography.filter(d => d.releaseType !== 'Single').length;
+                                const singlesCount = discography.filter(d => d.releaseType === 'Single').length;
+                                const parts: string[] = [];
+                                if (mainCount > 0) parts.push(`${mainCount} ${mainCount > 1 ? 'albums' : 'album'}`);
+                                if (singlesCount > 0) parts.push(`${singlesCount} ${singlesCount > 1 ? 'singles' : 'single'}`);
+                                return parts.join(' · ') || `${discography.length} release${discography.length > 1 ? 's' : ''}`;
+                            })()}
                             {previewType && ` · ${previewType}`}
                         </div>
                         {previewCountry && (
@@ -302,69 +317,99 @@ export function ArtistPageContent({
             )}
 
             {/* ========== DISCOGRAPHIE ========== */}
-            <section className={topAlbums.length === 0 ? '' : ''}>
-                <h2 className="text-h2 text-text-primary mb-6">Discographie</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {discography.map((album) => {
-                        const isImporting = importingMbid === album.mbid;
-                        const isDisabled = !!importingMbid && !isImporting;
-                        const cardClass = `group rounded-[12px] overflow-hidden bg-background-secondary hover:bg-background-tertiary transition-colors duration-150 text-left w-full ${isDisabled ? 'opacity-50' : ''}`;
+            {(() => {
+                const mainReleases = discography.filter(a => a.releaseType !== 'Single');
+                const singles = discography.filter(a => a.releaseType === 'Single');
 
-                        const cardContent = (
-                            <>
-                                <AlbumCover album={album} />
-                                <div className="px-3 py-2.5">
-                                    {isImporting ? (
-                                        <div className="flex items-center gap-2 py-1">
-                                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-[#8E6F5E] flex-shrink-0" />
-                                            <span className="text-[13px] text-text-secondary">Import en cours…</span>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-start justify-between gap-2">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="text-[14px] font-medium text-text-primary truncate">{album.title}</div>
-                                                {album.date && (
-                                                    <span className="text-[12px] text-text-secondary">{year(album.date)}</span>
+                const renderGrid = (items: DiscographyItem[]) => (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {items.map((album) => {
+                            const isImporting = importingMbid === album.mbid;
+                            const isDisabled = !!importingMbid && !isImporting;
+                            const cardClass = `group rounded-[12px] overflow-hidden bg-background-secondary hover:bg-background-tertiary transition-colors duration-150 text-left w-full ${isDisabled ? 'opacity-50' : ''}`;
+
+                            const cardContent = (
+                                <>
+                                    <AlbumCover album={album} />
+                                    <div className="px-3 py-2.5">
+                                        {isImporting ? (
+                                            <div className="flex items-center gap-2 py-1">
+                                                <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-[#8E6F5E] flex-shrink-0" />
+                                                <span className="text-[13px] text-text-secondary">Import en cours…</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-[14px] font-medium text-text-primary truncate">{album.title}</div>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        {album.date && (
+                                                            <span className="text-[12px] text-text-secondary">{year(album.date)}</span>
+                                                        )}
+                                                        {album.releaseType === 'EP' && (
+                                                            <span className="text-[10px] text-text-disabled font-medium uppercase tracking-wide">EP</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                {album.avgRating != null && (
+                                                    <span className="text-[12px] text-text-primary flex-shrink-0 whitespace-nowrap">
+                                                        {album.avgRating.toFixed(1)}/10
+                                                    </span>
                                                 )}
                                             </div>
-                                            {album.avgRating != null && (
-                                                <span className="text-[12px] text-text-primary flex-shrink-0 whitespace-nowrap">
-                                                    {album.avgRating.toFixed(1)}/10
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </>
-                        );
-
-                        if (album.inDatabase) {
-                            return (
-                                <Link key={`db-${album.href}`} href={album.href} className={cardClass}>
-                                    {cardContent}
-                                </Link>
+                                        )}
+                                    </div>
+                                </>
                             );
-                        }
 
-                        return (
-                            <button
-                                key={`mb-${album.mbid}`}
-                                onClick={() => album.mbid && !importingMbid && handleImportAlbum(album.mbid)}
-                                disabled={!!importingMbid}
-                                className={cardClass}
-                            >
-                                {cardContent}
-                            </button>
-                        );
-                    })}
-                </div>
+                            if (album.inDatabase) {
+                                return (
+                                    <Link key={`db-${album.href}`} href={album.href} className={cardClass}>
+                                        {cardContent}
+                                    </Link>
+                                );
+                            }
 
-                {discography.length === 0 && (
-                    <div className="text-center text-text-tertiary text-[14px] py-12">
-                        Aucun album trouvé pour cet artiste
+                            return (
+                                <button
+                                    key={`mb-${album.mbid}`}
+                                    onClick={() => album.mbid && !importingMbid && handleImportAlbum(album.mbid)}
+                                    disabled={!!importingMbid}
+                                    className={cardClass}
+                                >
+                                    {cardContent}
+                                </button>
+                            );
+                        })}
                     </div>
-                )}
-            </section>
+                );
+
+                return (
+                    <>
+                        {mainReleases.length > 0 && (
+                            <section>
+                                <h2 className="text-h2 text-text-primary mb-6">Discographie</h2>
+                                {renderGrid(mainReleases)}
+                            </section>
+                        )}
+
+                        {singles.length > 0 && (
+                            <section className="border-t border-border-divider pt-10 mt-12">
+                                <h2 className="text-h2 text-text-primary mb-6">Singles</h2>
+                                {renderGrid(singles)}
+                            </section>
+                        )}
+
+                        {discography.length === 0 && (
+                            <section>
+                                <h2 className="text-h2 text-text-primary mb-6">Discographie</h2>
+                                <div className="text-center text-text-tertiary text-[14px] py-12">
+                                    Aucun album trouvé pour cet artiste
+                                </div>
+                            </section>
+                        )}
+                    </>
+                );
+            })()}
 
             {/* ========== ARTISTES SIMILAIRES ========== */}
             {similarArtists.filter(a => a.id !== null).length > 0 && (

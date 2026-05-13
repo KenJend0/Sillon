@@ -22,7 +22,6 @@ type Props = {
   };
   stats?: {
     reviews_count: number;
-    albums_count: number;
   };
   onFollowClick?: () => void;
 };
@@ -146,14 +145,9 @@ export default function ProfileHeader({ user, stats, onFollowClick }: Props) {
         {/* Stats row */}
         <div className="flex gap-6 text-[12px] text-text-tertiary mt-6">
           {stats && (
-            <>
-              <span>
-                <span className="font-medium text-text-primary">{stats.albums_count}</span> écoute{stats.albums_count !== 1 ? 's' : ''}
-              </span>
-              <span>
-                <span className="font-medium text-text-primary">{stats.reviews_count}</span> revue{stats.reviews_count !== 1 ? 's' : ''}
-              </span>
-            </>
+            <span>
+              <span className="font-medium text-text-primary">{stats.reviews_count}</span> revue{stats.reviews_count !== 1 ? 's' : ''}
+            </span>
           )}
           <Link href={`/u/${user.username}/followers`} className="hover:text-text-primary transition-colors duration-150">
             <span className="font-medium text-text-primary">{user.followers_count || 0}</span> abonné{(user.followers_count || 0) !== 1 ? 's' : ''}

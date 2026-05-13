@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { importAlbumFromMusicBrainz } from "@/app/actions/musicbrainz";
 import { showToast } from "@/components/Toast";
 import { CoverImage } from "@/components/CoverImage";
+import { coverSrcWithFallback } from "@/lib/cover";
 
 type DbAlbum = {
     id: string;
     title: string;
     cover_url: string | null;
+    mbid: string | null;
     release_date: string | null;
 };
 
@@ -32,9 +34,10 @@ const CoverPlaceholder = () => (
     </div>
 );
 
-function AlbumCard({ title, coverSrc, year, onClick, href, importing }: {
+function AlbumCard({ title, coverSrc, coverFallback, year, onClick, href, importing }: {
     title: string;
     coverSrc: string | null;
+    coverFallback?: string;
     year: number | null;
     onClick?: () => void;
     href?: string;
@@ -46,6 +49,7 @@ function AlbumCard({ title, coverSrc, year, onClick, href, importing }: {
                 {coverSrc ? (
                     <CoverImage
                         src={coverSrc}
+                        fallback={coverFallback}
                         alt={title}
                         width={300}
                         height={300}
@@ -128,27 +132,38 @@ export default function ArtistAlbumsSection({ dbAlbums, mbAlbums }: Props) {
         <section className="border-t border-border-divider pt-10 mb-20">
             <h2 className="text-h2 text-text-primary mb-8">Du même artiste</h2>
             <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2">
-                {dbAlbums.map((a) => (
+                {dbAlbums.map((a) => {
+                    const { src, fallback } = coverSrcWithFallback(a.mbid, a.cover_url);
+                    return (
                     <div key={a.id} className="snap-center shrink-0 w-44 sm:w-48 md:w-52">
                         <AlbumCard
                             href={`/albums/${a.id}`}
                             title={a.title}
-                            coverSrc={a.cover_url}
+                            coverSrc={src}
+                            coverFallback={fallback}
                             year={a.release_date ? new Date(a.release_date).getFullYear() : null}
                         />
                     </div>
-                ))}
-                {mbAlbums.map((a) => (
+                    );
+                })}
+                {mbAlbums.map((a) => {
+                    const { src: mbSrc, fallback: mbFallback } = coverSrcWithFallback(
+                        a.mbid,
+                        `https://coverartarchive.org/release-group/${a.mbid}/front`,
+                    );
+                    return (
                     <div key={a.mbid} className="snap-center shrink-0 w-44 sm:w-48 md:w-52">
                         <AlbumCard
                             title={a.title}
-                            coverSrc={`https://coverartarchive.org/release-group/${a.mbid}/front`}
+                            coverSrc={mbSrc}
+                            coverFallback={mbFallback}
                             year={a.date ? new Date(a.date).getFullYear() : null}
                             onClick={() => handleImport(a.mbid)}
                             importing={importing === a.mbid}
                         />
                     </div>
-                ))}
+                    );
+                })}
             </div>
         </section>
     );

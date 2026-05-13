@@ -3,10 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { searchInternal, type SearchResultUI } from "@/app/actions/search";
-import { searchMusicBrainzAlbums, searchMusicBrainzArtists, importAlbumFromMusicBrainz } from "@/app/actions/musicbrainz";
+import { searchMusicBrainzAlbums, searchMusicBrainzArtists, importAlbumFromMusicBrainz, searchMusicBrainzRecordings, importTrackFromMusicBrainz } from "@/app/actions/musicbrainz";
 import { getArtistImagesByMbids } from "@/app/actions/artists";
 import { showToast } from "@/components/Toast";
-import { Clock, X, Disc3, User, Search, ArrowRight } from "lucide-react";
+import { Clock, X, Disc3, User, Search, ArrowRight, Music } from "lucide-react";
 import { CoverImage } from "@/components/CoverImage";
 import {
   getRecentSearches,
@@ -14,7 +14,7 @@ import {
   removeRecentSearch,
 } from '@/lib/recentSearches';
 
-type SearchTab = "all" | "albums" | "artists" | "users";
+type SearchTab = "all" | "albums" | "artists" | "tracks" | "users";
 
 // ---------------------------------------------------------------------------
 // Ranking helpers
@@ -136,9 +136,11 @@ function ResultRow({
 }) {
   const isRound = item.kind === "artist" || item.kind === "user";
   const hasImage = !!item.coverUrl;
-  const placeholderIcon = item.kind === "album"
+  const placeholderIcon = item.kind === "album" || item.kind === "track"
     ? <Disc3 size={16} className="text-text-disabled" />
-    : <User size={16} className="text-text-disabled" />;
+    : item.kind === "user" || item.kind === "artist"
+    ? <User size={16} className="text-text-disabled" />
+    : <Music size={16} className="text-text-disabled" />;
 
   return (
     <button
@@ -269,6 +271,9 @@ export default function SearchOverlay() {
             activeTab === "all" || activeTab === "artists"
               ? searchMusicBrainzArtists(q, 5)
               : Promise.resolve(null),
+            activeTab === "tracks"
+              ? searchMusicBrainzRecordings(q, 20)
+              : Promise.resolve(null),
           ])
         : null;
 
@@ -293,7 +298,7 @@ export default function SearchOverlay() {
       // ── PHASE 2 — merge MB results (non-blocking update) ────────────────────
       if (mbPromise) {
         try {
-          const [mbAlbumsRes, mbArtistsRes] = await mbPromise;
+          const [mbAlbumsRes, mbArtistsRes, mbRecordingsRes] = await mbPromise;
           if (aborted) return;
 
           const mbList: SearchResultUI[] = [];
@@ -324,6 +329,25 @@ export default function SearchOverlay() {
                 kind: "artist",
                 source: "musicbrainz",
                 score: artist.score,
+              })
+            );
+          }
+
+          if (mbRecordingsRes?.success && mbRecordingsRes.results) {
+            const recordingsToShow = activeTab === "all"
+              ? mbRecordingsRes.results.slice(0, 2)
+              : mbRecordingsRes.results;
+            recordingsToShow.forEach((rec) =>
+              mbList.push({
+                id: rec.mbid,
+                recordingMbid: rec.mbid,
+                releaseId: rec.releaseId,
+                title: rec.title,
+                subtitle: `${rec.artistName} · ${rec.albumTitle}`,
+                kind: "track",
+                coverUrl: rec.coverUrl || null,
+                source: "musicbrainz",
+                score: rec.score,
               })
             );
           }
@@ -400,12 +424,38 @@ export default function SearchOverlay() {
         return;
       }
 
+      if (item.kind === "track" && item.source === "musicbrainz") {
+        setImportingId(item.id);
+        try {
+          const result = await importTrackFromMusicBrainz(
+            item.recordingMbid || item.id,
+            item.releaseId || "",
+            item.title
+          );
+          if (result.success && result.trackId) {
+            setIsOpen(false);
+            setResults([]);
+            setQ("");
+            router.push(`/tracks/${result.trackId}`);
+          } else {
+            showToast("Erreur lors de l'import du titre", "error");
+          }
+        } catch {
+          showToast("Erreur lors de l'import du titre", "error");
+        } finally {
+          setImportingId(null);
+        }
+        return;
+      }
+
       setIsOpen(false);
       setResults([]);
       setQ("");
 
       if (item.kind === "album") {
         router.push(`/albums/${item.id}`);
+      } else if (item.kind === "track") {
+        router.push(`/tracks/${item.id}`);
       } else if (item.kind === "artist") {
         router.push(
           item.source === "musicbrainz"
@@ -430,6 +480,7 @@ export default function SearchOverlay() {
     all: "Tout",
     albums: "Albums",
     artists: "Artistes",
+    tracks: "Titres",
     users: "Profils",
   };
 
@@ -465,7 +516,7 @@ export default function SearchOverlay() {
                 <input
                   ref={inputRef}
                   type="text"
-                  placeholder="Rechercher un album, un artiste..."
+                  placeholder="Rechercher un album, un titre, un artiste..."
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   className="flex-1 bg-transparent text-[15px] text-text-primary placeholder-text-tertiary focus:outline-none"
@@ -492,7 +543,7 @@ export default function SearchOverlay() {
 
               {/* Tabs — toujours visibles dès l'ouverture */}
               <div className="flex gap-5">
-                {(["all", "albums", "artists", "users"] as SearchTab[]).map((tab) => (
+                {(["all", "albums", "tracks", "artists", "users"] as SearchTab[]).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -582,7 +633,7 @@ export default function SearchOverlay() {
                   )}
 
                   {/* See all results */}
-                  {q.trim() && activeTab !== "users" && (
+                  {q.trim() && activeTab !== "users" && activeTab !== "tracks" && (
                     <button
                       onClick={handleSeeAll}
                       className="flex items-center gap-1.5 px-3 py-2.5 mt-2 w-full text-[13px] text-text-tertiary hover:text-[#8E6F5E] transition-colors duration-150 group"

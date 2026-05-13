@@ -6,9 +6,10 @@ import { showToast } from '@/components/Toast';
 
 interface ShareButtonProps {
   entryId: string;
+  basePath?: string;
 }
 
-export default function ShareButton({ entryId }: ShareButtonProps) {
+export default function ShareButton({ entryId, basePath = 'diary' }: ShareButtonProps) {
   const [loading, setLoading] = useState(false);
   const blobRef = useRef<Blob | null>(null);
   const prefetchPromiseRef = useRef<Promise<Blob | null> | null>(null);
@@ -74,7 +75,7 @@ export default function ShareButton({ entryId }: ShareButtonProps) {
       }
 
       const file = new File([blob], 'waveform-story.png', { type: 'image/png' });
-      const pageUrl = `${window.location.origin}/diary/${entryId}`;
+      const pageUrl = `${window.location.origin}/${basePath}/${entryId}`;
       const linkCopied = await copyTextToClipboard(pageUrl);
 
       if (

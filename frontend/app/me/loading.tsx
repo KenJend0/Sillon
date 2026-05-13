@@ -19,9 +19,9 @@ export default function Loading() {
                         <div className="h-3.5 bg-background-tertiary rounded-[6px] w-2/3" />
                     </div>
 
-                    {/* Stats: écoutes · revues · abonnés · abonnements */}
+                    {/* Stats: revues · abonnés · abonnements */}
                     <div className="flex gap-6 mt-6">
-                        {[44, 40, 52, 76].map((w, i) => (
+                        {[44, 52, 76].map((w, i) => (
                             <div key={i} className="h-3.5 bg-background-tertiary rounded-[6px]" style={{ width: w }} />
                         ))}
                     </div>

@@ -32,10 +32,10 @@ export default async function FollowersList({
 
       <div className="mt-6 mb-8">
         <h1 className="text-[22px] font-medium text-text-primary tracking-[-0.01em] leading-[1.3]">
-          Abonnés
+          @{username}
         </h1>
         <p className="text-[14px] text-text-secondary mt-1">
-          @{username} · {users.length} {users.length <= 1 ? "abonné" : "abonnés"}
+          {users.length} {users.length <= 1 ? "abonné" : "abonnés"}
         </p>
       </div>
 

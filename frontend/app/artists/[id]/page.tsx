@@ -51,10 +51,10 @@ export default async function ArtistPage({ params }: PageProps) {
 
     if (!artist) notFound();
 
-    // 2. Fetch albums
+    // 2. Fetch albums (mbid needed to match with MB release type)
     const { data: albums } = await supabase
         .from("albums")
-        .select("id, title, cover_url, release_date")
+        .select("id, title, cover_url, release_date, mbid")
         .eq("artist_id", id)
         .order("release_date", { ascending: false, nullsFirst: true })
         .order("title", { ascending: true });
@@ -105,20 +105,33 @@ export default async function ArtistPage({ params }: PageProps) {
     const globalAvgRating = ratedAlbums.length > 0
         ? ratedAlbums.reduce((s, a) => s + (a.avg_rating ?? 0), 0) / ratedAlbums.length
         : null;
-    const totalReviews = Object.values(statsMap).reduce((s, v) => s + (v.reviews_count ?? 0), 0);
+    const albumReviewsFromStats = Object.values(statsMap).reduce((s, v) => s + (v.reviews_count ?? 0), 0);
 
     // Fetch everything in parallel
-    const [meta, relResult, user, similarArtistsRaw, allListenerRows] = await Promise.all([
+    const [meta, relResult, user, similarArtistsRaw, allListenerRows, trackStatsRows] = await Promise.all([
         cachedGetOrFetchArtistMeta(artist.id, artist.mbid),
         artist.mbid ? getArtistReleases(artist.mbid) : Promise.resolve(null),
         getAuthUser(),
         getSimilarArtists(artist.name, artist.mbid),
         albumIds.length > 0
-            ? supabase.from("diary_entries").select("user_id").in("album_id", albumIds)
+            ? supabase.from("diary_entries").select("user_id, review_body").in("album_id", albumIds)
             : Promise.resolve({ data: [] }),
+        // Track listeners & reviews for this artist
+        (supabase as any)
+            .from("track_diary_entries")
+            .select("user_id, review_body")
+            .eq("artist_id", id),
     ]);
 
-    const totalListeners = new Set((allListenerRows.data ?? []).map((r: { user_id: string }) => r.user_id)).size;
+    // Merge album listeners + track listeners (deduplicated)
+    const albumListenerIds = new Set((allListenerRows.data ?? []).map((r: any) => r.user_id));
+    const trackListenerIds = new Set((trackStatsRows.data ?? []).map((r: any) => r.user_id));
+    const allListenerIds = new Set([...albumListenerIds, ...trackListenerIds]);
+    const totalListeners = allListenerIds.size;
+
+    // Merge album reviews + track reviews
+    const albumReviewsCount = (allListenerRows.data ?? []).filter((r: any) => r.review_body).length;
+    const trackReviewsCount = (trackStatsRows.data ?? []).filter((r: any) => r.review_body).length;
 
     let mbReleases: Array<{ mbid: string; releaseGroupMbid: string; title: string; date: string | null; type: string | null }> = [];
     if (relResult?.success && relResult.releases) {
@@ -173,7 +186,7 @@ export default async function ArtistPage({ params }: PageProps) {
                 albums={albumsWithStats}
                 mbReleases={mbReleases}
                 imageUrl={meta.imageUrl}
-                artistStats={{ totalListeners, globalAvgRating, totalReviews }}
+                artistStats={{ totalListeners, globalAvgRating, totalReviews: albumReviewsFromStats + trackReviewsCount }}
                 networkListeners={networkListeners}
                 similarArtists={similarArtists}
                 userId={user?.id}

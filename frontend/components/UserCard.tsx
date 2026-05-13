@@ -35,9 +35,6 @@ export default function UserCard({
                 )}
                 <div className="min-w-0">
                     <p className="text-[14px] font-medium text-text-primary truncate">
-                        {user.username}
-                    </p>
-                    <p className="text-[12px] text-text-secondary truncate">
                         @{user.username}
                     </p>
                 </div>

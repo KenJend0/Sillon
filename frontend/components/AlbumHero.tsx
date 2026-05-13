@@ -2,10 +2,10 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
+import { CoverImage } from "@/components/CoverImage";
 import MyActivitiesModal from "@/components/MyActivitiesModal";
-import SaveAlbumButton from "@/components/SaveAlbumButton";
+import AddToListButton from "@/components/AddToListButton";
 import AddToDiaryButton from "@/components/AddToDiaryButton";
 import EditDiaryEntryButton from "@/components/EditDiaryEntryButton";
 import GenrePills from "@/components/GenrePills";
@@ -31,13 +31,15 @@ type AlbumHeroProps = {
         artist: string;
         artistId?: string;
         coverUrl?: string | null;
+        coverFallback?: string | null;
         year?: number | null;
         trackCount?: number;
         totalDurationMs?: number;
     };
     albumId?: string;
-    isSaved?: boolean;
     userId?: string;
+    userLists?: Array<{ id: string; title: string; is_default: boolean }>;
+    listsContaining?: string[];
     stats?: {
         reviews_count: number;
         avg_rating: number | null;
@@ -62,8 +64,9 @@ type AlbumHeroProps = {
 export default function AlbumHero({
     album,
     albumId,
-    isSaved = false,
     userId,
+    userLists = [],
+    listsContaining = [],
     stats,
     myLatestEntry,
     myEntriesCount = 0,
@@ -74,9 +77,14 @@ export default function AlbumHero({
     streamingLinks,
     networkListeners = [],
 }: AlbumHeroProps) {
-    const [coverError, setCoverError] = useState(false);
     const [isMyActivitiesOpen, setIsMyActivitiesOpen] = useState(false);
     const [isNetworkOpen, setIsNetworkOpen] = useState(false);
+
+    const coverPlaceholder = (
+        <div className="rounded-[10px] bg-background-secondary aspect-square w-full max-w-48 mx-auto md:mx-0 flex items-center justify-center">
+            <span className="text-text-tertiary text-[12px]">Pas de couverture</span>
+        </div>
+    );
 
     return (
         <>
@@ -84,21 +92,18 @@ export default function AlbumHero({
             <div className="flex flex-col md:flex-row md:gap-section-md md:items-start">
                 {/* Cover */}
                 <div className="flex-shrink-0 w-full md:w-48 mb-2 md:mb-0">
-                    {album.coverUrl && !coverError ? (
+                    {album.coverUrl ? (
                         <div className="rounded-[10px] overflow-hidden aspect-square w-full max-w-48 mx-auto md:mx-0 relative">
-                            <Image
+                            <CoverImage
                                 src={album.coverUrl}
+                                fallback={album.coverFallback ?? undefined}
                                 alt={album.title}
                                 fill
                                 className="object-cover"
-                                onError={() => setCoverError(true)}
+                                placeholder={coverPlaceholder}
                             />
                         </div>
-                    ) : (
-                        <div className="rounded-[10px] bg-background-secondary aspect-square w-full max-w-48 mx-auto md:mx-0 flex items-center justify-center">
-                            <span className="text-text-tertiary text-[12px]">Pas de couverture</span>
-                        </div>
-                    )}
+                    ) : coverPlaceholder}
                 </div>
 
                 {/* Right: Title + Artist + Year + Stats */}
@@ -266,13 +271,18 @@ export default function AlbumHero({
                 <AddToDiaryButton
                     albumId={albumId || album.id}
                     userId={userId}
-                    initialSaved={isSaved}
+                    initialSaved={listsContaining.some((id) => userLists.find((l) => l.id === id)?.is_default)}
                     existingEntriesCount={myEntriesCount}
                     autoOpen={autoOpenDiary}
                     albumHasGenres={albumHasGenres}
                     onSuccess={() => setIsMyActivitiesOpen(myEntriesCount > 0)}
                 />
-                <SaveAlbumButton albumId={albumId || album.id} initialSaved={isSaved} userId={userId} />
+                <AddToListButton
+                    albumId={albumId || album.id}
+                    userId={userId}
+                    userLists={userLists}
+                    initialListsContaining={listsContaining}
+                />
             </div>
 
             {/* My Activities Modal */}

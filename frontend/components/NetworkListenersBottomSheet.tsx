@@ -19,15 +19,17 @@ type Props = {
     listeners: Listener[];
     isOpen: boolean;
     onClose: () => void;
+    title?: string;
+    entryPrefix?: string;
 };
 
-export default function NetworkListenersBottomSheet({ listeners, isOpen, onClose }: Props) {
+export default function NetworkListenersBottomSheet({ listeners, isOpen, onClose, title = "Ont écouté cet album", entryPrefix = "/diary/" }: Props) {
     return (
-        <BottomSheet isOpen={isOpen} onClose={onClose} title="Ont écouté cet album" maxHeight="h-[50vh]">
+        <BottomSheet isOpen={isOpen} onClose={onClose} title={title} maxHeight="h-[50vh]">
             <div className="px-6 py-2">
                 {listeners.map((l) => {
                     const name = l.username;
-                    const href = l.entryId ? `/diary/${l.entryId}` : `/u/${l.username}`;
+                    const href = l.entryId ? `${entryPrefix}${l.entryId}` : `/u/${l.username}`;
                     return (
                         <Link
                             key={l.userId}

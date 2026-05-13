@@ -2,13 +2,16 @@ import { notFound } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import { msToMMSS, msToDuration } from "@/lib/time";
 import { createSupabaseServer, getAuthUser } from "@/lib/supabase/server";
-import { isAlbumSaved } from "@/app/actions/saved-albums";
+import { getUserListsContaining, getUserLists, getPublicListsContaining } from "@/app/actions/lists";
+import AppearsInLists from "@/components/AppearsInLists";
 import { getArtistReleases } from "@/app/actions/musicbrainz";
 import { getSimilarAlbums } from "@/app/actions/metadata";
 import { getAlbumReviewsPreview, type AlbumReview } from "@/app/actions/diary";
+import { getAlbumTracksStats } from "@/app/actions/track-diary";
 import Link from "next/link";
 import AlbumHero from "@/components/AlbumHero";
 import { CoverImage } from "@/components/CoverImage";
+import { coverSrcWithFallback } from "@/lib/cover";
 import AlbumReviewSection from "@/components/AlbumReviewSection";
 import ArtistAlbumsSection from "@/components/ArtistAlbumsSection";
 import ScrollToHashClient from "@/components/ScrollToHashClient";
@@ -89,7 +92,9 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
 
     // [3] Grand batch parallèle — tout ce qui dépend de album.id ou user.id
     const [
-        albumSaved,
+        listsContaining,
+        userLists,
+        publicListsContaining,
         genresData,
         albumMeta,
         similarAlbums,
@@ -98,8 +103,11 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
         followsResp,
         myEntriesResp,
         reviewsPreview,
+        tracksStats,
     ] = await Promise.all([
-        user ? isAlbumSaved(album.id, user.id) : Promise.resolve(false),
+        user ? getUserListsContaining(album.id) : Promise.resolve([]),
+        user ? getUserLists(user.id) : Promise.resolve([]),
+        getPublicListsContaining(album.id, 5),
         supabase
             .from("album_genres")
             .select("weight, source, genres(name)")
@@ -138,6 +146,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                 .order("created_at", { ascending: false })
             : Promise.resolve({ data: null }),
         getAlbumReviewsPreview(id, 3),
+        getAlbumTracksStats(id),
     ]);
 
     const genres: string[] = (genresData.data ?? [])
@@ -265,12 +274,15 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
 
     const year = album.release_date ? new Date(album.release_date).getFullYear() : undefined;
 
+    const { src: heroCoverSrc, fallback: heroCoverFallback } = coverSrcWithFallback(album.mbid, album.cover_url);
+
     const albumHeroData = {
         id: album.id,
         title: album.title,
         artist: artist?.name || "Artiste inconnu",
         artistId: artist?.id,
-        coverUrl: album.cover_url,
+        coverUrl: heroCoverSrc,
+        coverFallback: heroCoverFallback,
         year,
         trackCount: trackCount > 0 ? trackCount : undefined,
         totalDurationMs: totalDurationMs > 0 ? totalDurationMs : undefined,
@@ -296,8 +308,9 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                 <AlbumHero
                     album={albumHeroData}
                     albumId={album.id}
-                    isSaved={albumSaved}
                     userId={user?.id}
+                    userLists={userLists}
+                    listsContaining={listsContaining}
                     stats={stats}
                     myLatestEntry={myLatestEntry}
                     myEntriesCount={myEntries.length}
@@ -358,6 +371,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                                             Disque {disc}
                                         </p>
                                         {discTracks.map((t) => {
+                                            const tStat = (tracksStats as Map<string, any>)?.get(t.id);
                                             return (
                                                 <div key={t.id} className="flex items-baseline gap-4 py-2 group">
                                                     <span className="text-text-tertiary tabular-nums flex-shrink-0 w-6 text-right text-[12px]">
@@ -378,6 +392,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                         ) : (
                             <div>
                                 {allTracks.map((t, idx) => {
+                                    const tStat = (tracksStats as Map<string, any>)?.get(t.id);
                                     return (
                                         <div key={t.id}>
                                             <div className="flex items-baseline gap-4 py-2 group">
@@ -410,6 +425,11 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                     reviewsCount={stats.reviews_count}
                     initialReviews={reviewsPreview}
                 />
+                {publicListsContaining.length > 0 && (
+                    <div className="mt-8">
+                        <AppearsInLists lists={publicListsContaining} />
+                    </div>
+                )}
             </section>
 
             {/* ========== 4. DU MÊME ARTISTE ========== */}

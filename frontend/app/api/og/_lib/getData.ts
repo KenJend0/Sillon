@@ -63,24 +63,80 @@ export function formatDate(dateStr: string): string {
 export async function getOgEntryData(entryId: string): Promise<OgEntryData | null> {
   const supabase = createSupabaseAdmin();
 
+  // ── Essaye d'abord diary_entries ──────────────────────────────────────────
   const { data: entry } = await supabase
     .from('diary_entries')
     .select('rating, review_title, review_body, listened_at, re_listen, is_public, user_id, album_id')
     .eq('id', entryId)
     .maybeSingle();
 
-  if (!entry || !entry.is_public) return null;
+  if (entry && entry.is_public) {
+    // ── Entrée album diary trouvée ─────────────────────────────────────────
+    const [{ data: album }, { data: profile }] = await Promise.all([
+      supabase
+        .from('albums')
+        .select('title, cover_url, release_date, artist_id, mbid')
+        .eq('id', entry.album_id)
+        .maybeSingle(),
+      supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', entry.user_id)
+        .maybeSingle(),
+    ]);
 
-  const [{ data: album }, { data: profile }] = await Promise.all([
+    let artistName = '';
+    if (album?.artist_id) {
+      const { data: artist } = await supabase
+        .from('artists')
+        .select('name')
+        .eq('id', album.artist_id)
+        .maybeSingle();
+      artistName = artist?.name ?? '';
+    }
+
+    const coverDataUri = await fetchCoverDataUri(album?.mbid ?? null, album?.cover_url ?? null);
+    const year = album?.release_date ? new Date(album.release_date).getFullYear() : null;
+    const authorName = profile?.username ? `@${profile.username}` : 'Quelqu\u2019un';
+
+    return {
+      albumTitle: album?.title ?? 'Album inconnu',
+      artistName,
+      year,
+      coverDataUri,
+      authorName,
+      reviewBody: entry.review_body ?? null,
+      reviewTitle: entry.review_title ?? null,
+      rating: entry.rating,
+      listenedAt: entry.listened_at,
+      reListenLabel: entry.re_listen ? '\u00a0· ré-écoute' : null,
+    };
+  }
+
+  // ── Fallback : track_diary_entries ────────────────────────────────────────
+  const { data: trackEntry } = await (supabase as any)
+    .from('track_diary_entries')
+    .select('rating, review_title, review_body, listened_at, is_public, user_id, track_id, album_id')
+    .eq('id', entryId)
+    .maybeSingle();
+
+  if (!trackEntry || !trackEntry.is_public) return null;
+
+  const [{ data: track }, { data: album }, { data: profile }] = await Promise.all([
+    supabase
+      .from('tracks')
+      .select('title')
+      .eq('id', trackEntry.track_id)
+      .maybeSingle(),
     supabase
       .from('albums')
       .select('title, cover_url, release_date, artist_id, mbid')
-      .eq('id', entry.album_id)
+      .eq('id', trackEntry.album_id)
       .maybeSingle(),
     supabase
       .from('profiles')
       .select('username')
-      .eq('id', entry.user_id)
+      .eq('id', trackEntry.user_id)
       .maybeSingle(),
   ]);
 
@@ -94,18 +150,30 @@ export async function getOgEntryData(entryId: string): Promise<OgEntryData | nul
     artistName = artist?.name ?? '';
   }
 
-  // Fetch cover → data URI pour éviter les redirects 307 CoverArt dans Satori
-  // Priorité : CoverArt Archive 1200px (via mbid) > cover_url en DB (souvent 500px)
-  let coverDataUri: string | null = null;
-  const coverUrls: string[] = [];
-  if (album?.mbid) {
-    coverUrls.push(`https://coverartarchive.org/release-group/${album.mbid}/front-1200`);
-  }
-  if (album?.cover_url) {
-    coverUrls.push(album.cover_url);
-  }
+  const coverDataUri = await fetchCoverDataUri(album?.mbid ?? null, album?.cover_url ?? null);
+  const year = album?.release_date ? new Date(album.release_date).getFullYear() : null;
+  const authorName = profile?.username ? `@${profile.username}` : 'Quelqu\u2019un';
 
-  for (const url of coverUrls) {
+  return {
+    albumTitle: track?.title ?? 'Titre inconnu',
+    artistName,
+    year,
+    coverDataUri,
+    authorName,
+    reviewBody: trackEntry.review_body ?? null,
+    reviewTitle: trackEntry.review_title ?? null,
+    rating: trackEntry.rating,
+    listenedAt: trackEntry.listened_at,
+    reListenLabel: null,
+  };
+}
+
+async function fetchCoverDataUri(mbid: string | null, coverUrl: string | null): Promise<string | null> {
+  const urls: string[] = [];
+  if (mbid) urls.push(`https://coverartarchive.org/release-group/${mbid}/front-1200`);
+  if (coverUrl) urls.push(coverUrl);
+
+  for (const url of urls) {
     try {
       const res = await fetch(url, {
         redirect: 'follow',
@@ -114,27 +182,11 @@ export async function getOgEntryData(entryId: string): Promise<OgEntryData | nul
       if (res.ok) {
         const contentType = res.headers.get('content-type') ?? 'image/jpeg';
         const buffer = await res.arrayBuffer();
-        coverDataUri = `data:${contentType};base64,${Buffer.from(buffer).toString('base64')}`;
-        break;
+        return `data:${contentType};base64,${Buffer.from(buffer).toString('base64')}`;
       }
     } catch {
       // essaie l'URL suivante
     }
   }
-
-  const year = album?.release_date ? new Date(album.release_date).getFullYear() : null;
-  const authorName = profile?.username ? `@${profile.username}` : 'Quelqu\u2019un';
-
-  return {
-    albumTitle: album?.title ?? 'Album inconnu',
-    artistName,
-    year,
-    coverDataUri,
-    authorName,
-    reviewBody: entry.review_body ?? null,
-    reviewTitle: entry.review_title ?? null,
-    rating: entry.rating,
-    listenedAt: entry.listened_at,
-    reListenLabel: entry.re_listen ? '\u00a0· ré-écoute' : null,
-  };
+  return null;
 }

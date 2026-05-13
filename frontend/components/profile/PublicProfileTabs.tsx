@@ -6,27 +6,30 @@ import Image from "next/image";
 import Link from "next/link";
 import { Heart, MessageCircle } from "lucide-react";
 import Top3Albums, { type FavoriteAlbum } from "./Top3Albums";
-import type { DiaryEntryUI } from "@/app/actions/diary";
+import TracksList from "./TracksList";
+import ReviewsList from "./ReviewsList";
+import type { DiaryEntryUI, UnifiedReview } from "@/app/actions/diary";
 import { toggleDiaryLike, getUserDiary } from "@/app/actions/diary";
-import type { SavedAlbumUI } from "@/app/actions/saved-albums";
+import type { TrackDiaryEntryUI } from "@/app/actions/track-diary";
+import type { UserList } from "@/app/actions/lists";
+import ListsTab from "./ListsTab";
 
 const PAGE_SIZE = 50;
 
-type Tab = "journal" | "revues" | "ecouter";
+type Tab = "journal" | "revues" | "titres" | "listes";
 type ListenFilter = "all" | "listened" | "undiscovered";
-type SavedFilter = "all" | "in_list" | "not_in_list";
 type EcoutesSort = "date_listened" | "release_date" | "their_rating" | "my_rating";
-type EnviesSort = "saved_date" | "release_date";
 
 type Props = {
   profileUserId: string;
   username: string;
   diaryEntries: DiaryEntryUI[];
-  savedAlbums: SavedAlbumUI[];
+  publicLists: UserList[];
   myListenedAlbums: Record<string, number | null>;
-  mySavedAlbumIds: string[];
   isLoggedIn: boolean;
   favoriteAlbums?: FavoriteAlbum[];
+  trackEntries?: TrackDiaryEntryUI[];
+  unifiedReviews?: UnifiedReview[];
 };
 
 // ─── Ghost filter toggle (charte : minimal, éditorial) ───────────────────────
@@ -111,18 +114,20 @@ function SortDropdown<T extends string>({
 export default function PublicProfileTabs({
   profileUserId,
   diaryEntries,
-  savedAlbums,
+  publicLists,
   myListenedAlbums,
-  mySavedAlbumIds,
   isLoggedIn,
   favoriteAlbums,
+  trackEntries = [],
+  unifiedReviews = [],
 }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
   const resolveTab = (raw: string | null): Tab => {
-    if (raw === "revues" || raw === "ecouter") return raw;
+    if (raw === "revues" || raw === "listes" || raw === "titres") return raw;
+    if (raw === "ecouter") return "listes";
     return "journal";
   };
 
@@ -143,9 +148,7 @@ export default function PublicProfileTabs({
     router.replace(`${pathname}${query ? `?${query}` : ""}`, { scroll: false });
   };
   const [listenFilter, setListenFilter] = useState<ListenFilter>("all");
-  const [savedFilter, setSavedFilter] = useState<SavedFilter>("all");
   const [ecoutesSort, setEcoutesSort] = useState<EcoutesSort>("date_listened");
-  const [enviesSort, setEnviesSort] = useState<EnviesSort>("saved_date");
   const [likeState, setLikeState] = useState<Record<string, { liked: boolean; count: number }>>(() =>
     Object.fromEntries(diaryEntries.map((e) => [e.id, { liked: e.is_liked, count: e.likes_count }]))
   );
@@ -171,8 +174,6 @@ export default function PublicProfileTabs({
     await toggleDiaryLike(entryId);
   };
 
-  const mySavedSet = new Set(mySavedAlbumIds);
-
   // Deduplicate diary by album (keep latest)
   const uniqueDiary = Array.from(
     new Map(allEntries.map((e) => [e.album_id, e])).values()
@@ -185,8 +186,9 @@ export default function PublicProfileTabs({
 
   const TABS = [
     { id: "journal" as Tab, label: "Journal", count: uniqueDiary.length },
-    { id: "revues" as Tab, label: "Revues", count: reviews.length },
-    { id: "ecouter" as Tab, label: "À écouter", count: savedAlbums.length },
+    { id: "titres" as Tab, label: "Titres", count: trackEntries.length },
+    { id: "revues" as Tab, label: "Revues", count: unifiedReviews.length },
+    { id: "listes" as Tab, label: "Listes", count: publicLists.length },
   ];
 
   const LISTEN_FILTER_OPTIONS: { id: ListenFilter; label: string }[] = [
@@ -199,16 +201,6 @@ export default function PublicProfileTabs({
       : []),
   ];
 
-  const SAVED_FILTER_OPTIONS: { id: SavedFilter; label: string }[] = [
-    { id: "all", label: "Tout" },
-    ...(isLoggedIn
-      ? [
-          { id: "in_list" as SavedFilter, label: "Dans ma liste" },
-          { id: "not_in_list" as SavedFilter, label: "Pas encore" },
-        ]
-      : []),
-  ];
-
   const ECOUTES_SORT_OPTIONS: { id: EcoutesSort; label: string }[] = [
     { id: "date_listened", label: "Date d'écoute" },
     { id: "release_date", label: "Parution" },
@@ -216,22 +208,11 @@ export default function PublicProfileTabs({
     ...(isLoggedIn ? [{ id: "my_rating" as EcoutesSort, label: "Ma note" }] : []),
   ];
 
-  const ENVIES_SORT_OPTIONS: { id: EnviesSort; label: string }[] = [
-    { id: "saved_date", label: "Date d'ajout" },
-    { id: "release_date", label: "Parution" },
-  ];
-
   // ── Filters ──
   const applyListenFilter = (entries: DiaryEntryUI[]) => {
     if (listenFilter === "listened") return entries.filter((e) => e.album_id in myListenedAlbums);
     if (listenFilter === "undiscovered") return entries.filter((e) => !(e.album_id in myListenedAlbums));
     return entries;
-  };
-
-  const applyEnviesFilter = (albums: SavedAlbumUI[]) => {
-    if (savedFilter === "in_list") return albums.filter((a) => mySavedSet.has(a.album_id));
-    if (savedFilter === "not_in_list") return albums.filter((a) => !mySavedSet.has(a.album_id));
-    return albums;
   };
 
   // ── Sorts ──
@@ -249,16 +230,8 @@ export default function PublicProfileTabs({
       }
     });
 
-  const sortSaved = (albums: SavedAlbumUI[]) =>
-    [...albums].sort((a, b) =>
-      enviesSort === "release_date"
-        ? (new Date(b.release_date || 0).getTime()) - (new Date(a.release_date || 0).getTime())
-        : new Date(b.saved_at).getTime() - new Date(a.saved_at).getTime()
-    );
-
   const filteredDiary = sortDiary(applyListenFilter(uniqueDiary));
   const filteredReviews = sortDiary(applyListenFilter(reviews));
-  const filteredSaved = sortSaved(applyEnviesFilter(savedAlbums));
 
   return (
     <div className="max-w-page mx-auto px-4 sm:px-6">
@@ -378,176 +351,17 @@ export default function PublicProfileTabs({
 
         {/* ── Revues ── */}
         {tab === "revues" && (
-          <div>
-            <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-              {isLoggedIn && (
-                <FilterToggle
-                  value={listenFilter}
-                  onChange={setListenFilter}
-                  options={LISTEN_FILTER_OPTIONS}
-                />
-              )}
-              <div className={isLoggedIn ? "" : "ml-auto"}>
-                <SortDropdown
-                  value={ecoutesSort}
-                  onChange={setEcoutesSort}
-                  options={ECOUTES_SORT_OPTIONS}
-                />
-              </div>
-            </div>
-
-            {filteredReviews.length === 0 ? (
-              <p className="text-center text-text-tertiary py-12 text-[14px]">
-                {listenFilter === "listened"
-                  ? "Aucune revue sur des albums que vous avez aussi écoutés"
-                  : listenFilter === "undiscovered"
-                  ? "Toutes les revues portent sur des albums que vous connaissez"
-                  : "Aucune revue pour l'instant"}
-              </p>
-            ) : (
-              <>
-              <div className="space-y-6">
-                {filteredReviews.map((review) => {
-                  const myRating = myListenedAlbums[review.album_id];
-                  return (
-                    <article
-                      key={review.id}
-                      className="p-4 border border-border hover:border-[#8E6F5E] transition-colors duration-150 flex gap-4 bg-background-secondary rounded-[12px]"
-                    >
-                      {review.cover_url && (
-                        <Link href={`/diary/${review.id}`} className="flex-shrink-0">
-                          <Image
-                            src={review.cover_url}
-                            alt={review.album_title}
-                            width={80}
-                            height={80}
-                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-[10px] object-cover"
-                          />
-                        </Link>
-                      )}
-                      <div className="flex-1 min-w-0 flex flex-col justify-between">
-                        <div className="mb-3">
-                          <Link href={`/diary/${review.id}`} className="hover:text-[#8E6F5E] transition-colors duration-150 block">
-                            <h3 className="font-medium text-[14px] text-text-primary truncate">{review.album_title}</h3>
-                          </Link>
-                          <Link href={`/artists/${review.artist_id}`} className="text-text-tertiary text-[12px] hover:text-[#8E6F5E] transition-colors duration-150">
-                            {review.artist_name}
-                          </Link>
-                        </div>
-                        {review.review_body && (
-                          <p className="text-[14px] leading-[1.6] text-text-secondary line-clamp-3 mb-3">
-                            {review.review_body}
-                          </p>
-                        )}
-                        <div className="flex items-center justify-between pt-3 border-t border-border-divider">
-                          <div className="flex flex-col gap-0.5">
-                            {review.rating != null && (
-                              <span className="text-[#8E6F5E] font-medium text-[12px]">
-                                {Math.round(review.rating)}/10
-                              </span>
-                            )}
-                            {myRating != null && (
-                              <span className="text-[11px] text-text-disabled">
-                                Ma note : {Math.round(myRating)}/10
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-[12px] text-text-tertiary ml-auto">
-                            <button
-                              onClick={() => handleLike(review.id)}
-                              disabled={!isLoggedIn}
-                              className="flex items-center gap-1 hover:text-[#C86C6C] transition-colors duration-150 disabled:cursor-default"
-                            >
-                              <Heart size={14} className={likeState[review.id]?.liked ? "fill-[#C86C6C] text-[#C86C6C]" : ""} />
-                              <span>{likeState[review.id]?.count ?? 0}</span>
-                            </button>
-                            <Link
-                              href={`/diary/${review.id}`}
-                              className="flex items-center gap-1 hover:text-text-secondary transition-colors duration-150"
-                            >
-                              <MessageCircle size={14} />
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-              {hasMore && (
-                <div className="mt-8 text-center">
-                  <button
-                    onClick={loadMore}
-                    disabled={loadingMore}
-                    className="text-[13px] text-text-tertiary hover:text-text-primary transition-colors duration-150 disabled:opacity-50"
-                  >
-                    {loadingMore ? "Chargement…" : "Charger plus"}
-                  </button>
-                </div>
-              )}
-              </>
-            )}
-          </div>
+          <ReviewsList reviews={unifiedReviews} />
         )}
 
-        {/* ── À écouter ── */}
-        {tab === "ecouter" && (
-          <div>
-            <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-              {isLoggedIn && (
-                <FilterToggle
-                  value={savedFilter}
-                  onChange={setSavedFilter}
-                  options={SAVED_FILTER_OPTIONS}
-                />
-              )}
-              <div className={isLoggedIn ? "" : "ml-auto"}>
-                <SortDropdown
-                  value={enviesSort}
-                  onChange={setEnviesSort}
-                  options={ENVIES_SORT_OPTIONS}
-                />
-              </div>
-            </div>
+        {/* ── Titres ── */}
+        {tab === "titres" && (
+          <TracksList userId={profileUserId} initialEntries={trackEntries} />
+        )}
 
-            {filteredSaved.length === 0 ? (
-              <p className="text-center text-text-tertiary py-12 text-[14px]">
-                {savedFilter === "in_list"
-                  ? "Aucun album en commun dans vos listes"
-                  : savedFilter === "not_in_list"
-                  ? "Tous ses albums sont déjà dans votre liste !"
-                  : "Aucun album sauvegardé"}
-              </p>
-            ) : (
-              <div className="grid grid-cols-3 md:grid-cols-4 gap-6">
-                {filteredSaved.map((album) => (
-                  <div key={album.id}>
-                    <Link
-                      href={`/albums/${album.album_id}`}
-                      className="group relative block aspect-square rounded-[10px] overflow-hidden"
-                    >
-                      {album.cover_url ? (
-                        <Image
-                          src={album.cover_url}
-                          alt={album.album_title}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-background-tertiary" />
-                      )}
-                    </Link>
-                    <div className="mt-2">
-                      <p className="text-[12px] font-medium text-text-primary truncate">
-                        {album.album_title}
-                      </p>
-                      <p className="text-[10px] text-text-tertiary truncate">{album.artist_name}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        {/* ── Listes ── */}
+        {tab === "listes" && (
+          <ListsTab lists={publicLists} isOwner={false} />
         )}
       </div>
     </div>

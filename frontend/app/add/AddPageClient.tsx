@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AlbumSearchForDiary from "@/components/AlbumSearchForDiary";
+import TrackSearchForDiary, { type TrackUI } from "@/components/TrackSearchForDiary";
 import StarRating from "@/components/StarRating";
 import { CoverImage } from "@/components/CoverImage";
 import { upsertDiaryEntry, getLatestDiaryEntryForAlbum } from "@/app/actions/diary";
-import { saveAlbumOnce } from "@/app/actions/saved-albums";
-import { type SavedAlbumUI } from "@/app/actions/saved-albums";
+import { upsertTrackDiaryEntry, getLatestTrackDiaryEntry } from "@/app/actions/track-diary";
+import { type ListAlbumItem, type ListTrackItem } from "@/app/actions/lists";
 import { type ForYouAlbum, type DiscoveryAlbum } from "@/app/actions/explore";
 import { showToast } from "@/components/Toast";
 
@@ -22,7 +23,7 @@ const CLASSIC_ALBUMS: { id: string; title: string; artist: string; coverUrl: str
     { id: "b2207a0f-2b1c-4357-b6f2-5ae7dc032e0c", title: "folklore", artist: "Taylor Swift", coverUrl: "https://archive.org/download/mbid-0ca6db69-0719-4a00-99be-f87ef1cff6cb/mbid-0ca6db69-0719-4a00-99be-f87ef1cff6cb-26803653721.jpg" },
 ];
 
-type Mode = "diary" | "save";
+type EntityType = "album" | "track";
 
 type SelectedAlbum = {
     id: string;
@@ -32,13 +33,24 @@ type SelectedAlbum = {
     year?: number | null;
 };
 
+type SelectedTrack = {
+    id: string;
+    title: string;
+    artist_name: string;
+    album_id: string;
+    album_title: string;
+    artist_id: string;
+    coverUrl?: string | null;
+};
+
 type PreviousEntry = {
     rating: number | null;
     listenedAt: string;
 };
 
 type Props = {
-    initialSavedAlbums: SavedAlbumUI[];
+    defaultListItems: ListAlbumItem[];
+    defaultListTracks: ListTrackItem[];
     initialSuggestions: ForYouAlbum[];
     initialDiscovery: DiscoveryAlbum[];
 };
@@ -98,46 +110,55 @@ function getGridItemClass(index: number, itemCount: number) {
     return itemCount !== 3 && itemCount % 2 !== 0 && index === itemCount - 1 ? "col-span-2" : "";
 }
 
-export default function AddPageClient({ initialSavedAlbums, initialSuggestions, initialDiscovery }: Props) {
+export default function AddPageClient({ defaultListItems, defaultListTracks, initialSuggestions, initialDiscovery }: Props) {
     const router = useRouter();
     const today = new Date().toISOString().split("T")[0];
 
-    const [mode, setMode] = useState<Mode>("diary");
+    const [entityType, setEntityType] = useState<EntityType>("album");
     const [step, setStep] = useState<"select" | "form">("select");
     const [selectedAlbum, setSelectedAlbum] = useState<SelectedAlbum | null>(null);
+    const [selectedTrack, setSelectedTrack] = useState<SelectedTrack | null>(null);
     const [previousEntry, setPreviousEntry] = useState<PreviousEntry | null>(null);
     const [rating, setRating] = useState<number | null>(null);
     const [listenedAt, setListenedAt] = useState(today);
     const [comment, setComment] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleModeChange = (newMode: Mode) => {
-        setMode(newMode);
+    const resetForm = () => {
         setStep("select");
         setSelectedAlbum(null);
+        setSelectedTrack(null);
         setPreviousEntry(null);
         setRating(null);
         setListenedAt(today);
         setComment("");
     };
 
+    const handleEntityTypeChange = (newType: EntityType) => {
+        setEntityType(newType);
+        resetForm();
+    };
+
     const handleAlbumSelect = async (album: SelectedAlbum) => {
-        if (mode === "save") {
-            setIsLoading(true);
-            try {
-                await saveAlbumOnce(album.id);
-                showToast("Album mis de côté", "success");
-                router.push("/me?tab=saved");
-            } catch {
-                showToast("Erreur lors de la sauvegarde", "error");
-                setIsLoading(false);
-            }
-        } else {
-            const prev = await getLatestDiaryEntryForAlbum(album.id);
-            setPreviousEntry(prev);
-            setSelectedAlbum(album);
-            setStep("form");
-        }
+        const prev = await getLatestDiaryEntryForAlbum(album.id);
+        setPreviousEntry(prev);
+        setSelectedAlbum(album);
+        setStep("form");
+    };
+
+    const handleTrackSelect = async (track: TrackUI) => {
+        const prev = await getLatestTrackDiaryEntry(track.id);
+        setPreviousEntry(prev ? { rating: prev.rating, listenedAt: prev.listenedAt } : null);
+        setSelectedTrack({
+            id: track.id,
+            title: track.title,
+            artist_name: track.artist_name,
+            album_id: track.album_id,
+            album_title: track.album_title,
+            artist_id: track.artist_id,
+            coverUrl: track.coverUrl,
+        });
+        setStep("form");
     };
 
     const handleSubmitDiary = async () => {
@@ -166,7 +187,35 @@ export default function AddPageClient({ initialSavedAlbums, initialSuggestions, 
         }
     };
 
-    const hasSaved = initialSavedAlbums.length > 0;
+    const handleSubmitTrackDiary = async () => {
+        if (!selectedTrack || !listenedAt) return;
+        setIsLoading(true);
+        try {
+            const result = await upsertTrackDiaryEntry({
+                trackId: selectedTrack.id,
+                albumId: selectedTrack.album_id,
+                artistId: selectedTrack.artist_id,
+                listenedAt,
+                rating: rating ?? undefined,
+                reviewBody: comment.trim() || undefined,
+                isPublic: true,
+            });
+
+            if (result.success) {
+                showToast("Écoute enregistrée", "success");
+                router.replace(`/track-diary/${result.data.id}`);
+            } else {
+                showToast(result.error || "Erreur lors de l'enregistrement", "error");
+                setIsLoading(false);
+            }
+        } catch {
+            showToast("Erreur lors de l'enregistrement", "error");
+            setIsLoading(false);
+        }
+    };
+
+    const hasDefaultItems = defaultListItems.length > 0;
+    const hasDefaultTracks = defaultListTracks.length > 0;
     const hasSuggestions = initialSuggestions.length > 0;
     const hasDiscovery = initialDiscovery.length > 0;
 
@@ -176,27 +225,29 @@ export default function AddPageClient({ initialSavedAlbums, initialSuggestions, 
                 <div className="max-w-page lg:max-w-5xl mx-auto">
                     <h1 className="text-h1 text-text-primary mb-2">Ajouter</h1>
                     <p className="text-[14px] text-text-secondary mb-6">
-                        {mode === "diary"
-                            ? "Cherche un album que tu as écouté pour l'ajouter à ton journal."
-                            : "Garde un album de côté pour l'écouter plus tard."}
+                        Cherche un album ou un titre que tu as écouté pour l&apos;ajouter à ton journal.
                     </p>
 
-                    <div className="flex bg-background-secondary rounded-[10px] p-1">
+                    <div className="flex gap-4 mt-4">
                         <button
-                            onClick={() => handleModeChange("diary")}
-                            className={`flex-1 py-2 text-[14px] font-medium rounded-[8px] transition-colors duration-150 ${
-                                mode === "diary" ? "bg-background text-text-primary" : "text-text-secondary hover:text-text-primary"
+                            onClick={() => handleEntityTypeChange("album")}
+                            className={`text-[13px] font-medium pb-1 border-b-2 transition-colors duration-150 ${
+                                entityType === "album"
+                                    ? "text-text-primary border-[#8E6F5E]"
+                                    : "text-text-tertiary border-transparent hover:text-text-secondary"
                             }`}
                         >
-                            J'ai écouté
+                            Album
                         </button>
                         <button
-                            onClick={() => handleModeChange("save")}
-                            className={`flex-1 py-2 text-[14px] font-medium rounded-[8px] transition-colors duration-150 ${
-                                mode === "save" ? "bg-background text-text-primary" : "text-text-secondary hover:text-text-primary"
+                            onClick={() => handleEntityTypeChange("track")}
+                            className={`text-[13px] font-medium pb-1 border-b-2 transition-colors duration-150 ${
+                                entityType === "track"
+                                    ? "text-text-primary border-[#8E6F5E]"
+                                    : "text-text-tertiary border-transparent hover:text-text-secondary"
                             }`}
                         >
-                            Je veux écouter
+                            Titre
                         </button>
                     </div>
                 </div>
@@ -204,20 +255,18 @@ export default function AddPageClient({ initialSavedAlbums, initialSuggestions, 
 
             <main className="p-6 pb-20 lg:pb-12">
                 <div className="max-w-page lg:max-w-5xl mx-auto">
-                    {isLoading && mode === "save" && (
-                        <div className="text-center pt-10">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8E6F5E] mx-auto" />
-                        </div>
-                    )}
-
-                    {/* ── MODE DIARY ── */}
-                    {mode === "diary" && !isLoading && (
+                    {!isLoading && (
                         <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-start">
                             {/* Colonne gauche : search + form */}
                             <div>
-                                <AlbumSearchForDiary onSelectAlbum={handleAlbumSelect} />
+                                {entityType === "album" && (
+                                    <AlbumSearchForDiary onSelectAlbum={handleAlbumSelect} />
+                                )}
+                                {entityType === "track" && (
+                                    <TrackSearchForDiary onSelectTrack={handleTrackSelect} />
+                                )}
 
-                                {step === "form" && selectedAlbum && (
+                                {step === "form" && selectedAlbum && entityType === "album" && (
                                     <div className="space-y-section-md mt-8 lg:mt-6">
                                         <div className="pb-6 border-b border-border">
                                             <div className="flex items-start gap-4 mb-4">
@@ -302,20 +351,106 @@ export default function AddPageClient({ initialSavedAlbums, initialSuggestions, 
                                         </button>
                                     </div>
                                 )}
+
+                                {step === "form" && selectedTrack && entityType === "track" && (
+                                    <div className="space-y-section-md mt-8 lg:mt-6">
+                                        <div className="pb-6 border-b border-border">
+                                            <div className="flex items-start gap-4 mb-4">
+                                                <div className="relative w-20 h-20 rounded-[8px] overflow-hidden flex-shrink-0 bg-background-secondary">
+                                                    {selectedTrack.coverUrl ? (
+                                                        <CoverImage
+                                                            src={selectedTrack.coverUrl}
+                                                            alt={selectedTrack.title}
+                                                            fill
+                                                            className="object-cover"
+                                                            placeholder={<div className="w-full h-full bg-background-tertiary" />}
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full bg-background-tertiary" />
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0 pt-1">
+                                                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                        <h2 className="text-h2 font-medium text-text-primary leading-tight">
+                                                            {selectedTrack.title}
+                                                        </h2>
+                                                        {previousEntry !== null && (
+                                                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-background-secondary text-text-secondary whitespace-nowrap">
+                                                                Ré-écoute{previousEntry.rating !== null ? ` · ${previousEntry.rating}/10` : ""}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-meta text-text-secondary">
+                                                        {selectedTrack.artist_name}
+                                                        {selectedTrack.album_title && <span className="text-text-tertiary"> · {selectedTrack.album_title}</span>}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => { setStep("select"); setSelectedTrack(null); setPreviousEntry(null); }}
+                                                className="text-label text-text-tertiary underline hover:text-text-primary transition-colors duration-150"
+                                            >
+                                                Changer
+                                            </button>
+                                        </div>
+
+                                        <div>
+                                            <div className="flex items-center justify-between mb-4">
+                                                <label className="text-meta text-text-secondary">Note</label>
+                                                <span className="text-text-primary font-medium text-[13px]">{rating !== null ? `${rating} / 10` : "–"}</span>
+                                            </div>
+                                            <StarRating value={rating} onChange={setRating} />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-meta text-text-secondary mb-2">Date d'écoute</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="date"
+                                                    value={listenedAt}
+                                                    max={today}
+                                                    onChange={(e) => setListenedAt(e.target.value)}
+                                                    className="w-full px-4 py-3 pr-10 bg-background-secondary border border-border rounded-[10px] text-text-primary focus:outline-none focus:border-[#8E6F5E] focus:ring-0 appearance-none"
+                                                />
+                                                <svg aria-hidden="true" viewBox="0 0 24 24" className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary pointer-events-none">
+                                                    <path fill="currentColor" d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1Zm12 8H5v9h14v-9ZM5 6v2h14V6H5Z" />
+                                                </svg>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-meta text-text-secondary mb-2">Quelques mots</label>
+                                            <textarea
+                                                value={comment}
+                                                onChange={(e) => setComment(e.target.value)}
+                                                placeholder="Ce que tu as ressenti, si tu en as envie."
+                                                className="w-full px-4 py-3 bg-background-secondary border border-border rounded-[10px] text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] focus:ring-0 resize-none h-32"
+                                            />
+                                        </div>
+
+                                        <button
+                                            onClick={handleSubmitTrackDiary}
+                                            disabled={isLoading}
+                                            className="w-full px-6 py-3 bg-[#1C1C1C] hover:opacity-85 disabled:bg-[#D8D3CB] disabled:text-text-disabled text-[#F5F3EF] font-medium rounded-[8px] transition-opacity disabled:cursor-not-allowed"
+                                        >
+                                            {isLoading ? "Enregistrement..." : "Enregistrer"}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Colonne droite : suggestions (step=select uniquement) */}
-                            {step === "select" && hasSaved && (
+                            {/* Colonne droite : suggestions (step=select, mode album uniquement) */}
+                            {step === "select" && hasDefaultItems && entityType === "album" && (
                                 <div className="mt-6 lg:mt-0">
-                                    <SectionTitle>Dans ta liste</SectionTitle>
+                                    <SectionTitle>À noter depuis ta liste</SectionTitle>
                                     <div className="grid gap-3 grid-cols-2 lg:grid-cols-1">
-                                        {initialSavedAlbums.map((s, idx) => (
+                                        {defaultListItems.map((s, idx) => (
                                             <AlbumCard
                                                 key={s.id}
                                                 title={s.album_title}
                                                 artist={s.artist_name}
                                                 coverUrl={s.cover_url}
-                                                className={getGridItemClass(idx, initialSavedAlbums.length)}
+                                                className={getGridItemClass(idx, defaultListItems.length)}
                                                 onClick={() =>
                                                     handleAlbumSelect({
                                                         id: s.album_id,
@@ -330,7 +465,35 @@ export default function AddPageClient({ initialSavedAlbums, initialSuggestions, 
                                 </div>
                             )}
 
-                            {step === "select" && !hasSaved && (
+                            {step === "select" && hasDefaultTracks && entityType === "track" && (
+                                <div className="mt-6 lg:mt-0">
+                                    <SectionTitle>À noter depuis ta liste</SectionTitle>
+                                    <div className="grid gap-3 grid-cols-2 lg:grid-cols-1">
+                                        {defaultListTracks.map((t, idx) => (
+                                            <AlbumCard
+                                                key={t.id}
+                                                title={t.track_title}
+                                                artist={t.artist_name}
+                                                coverUrl={t.cover_url}
+                                                className={getGridItemClass(idx, defaultListTracks.length)}
+                                                onClick={() =>
+                                                    handleTrackSelect({
+                                                        id: t.track_id,
+                                                        title: t.track_title,
+                                                        artist_name: t.artist_name,
+                                                        album_id: t.album_id,
+                                                        album_title: t.album_title,
+                                                        artist_id: t.artist_id,
+                                                        coverUrl: t.cover_url,
+                                                    })
+                                                }
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === "select" && !hasDefaultItems && entityType === "album" && (
                                 <div className="mt-6 lg:mt-0">
                                     <SectionTitle>Par où commencer ?</SectionTitle>
                                     <div className="grid gap-3 grid-cols-2 lg:grid-cols-1">
@@ -357,70 +520,6 @@ export default function AddPageClient({ initialSavedAlbums, initialSuggestions, 
                         </div>
                     )}
 
-                    {/* ── MODE SAVE ── */}
-                    {mode === "save" && !isLoading && (
-                        <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-start">
-                            {/* Colonne gauche : search */}
-                            <div>
-                                <AlbumSearchForDiary onSelectAlbum={handleAlbumSelect} />
-                            </div>
-
-                            {/* Colonne droite : suggestions */}
-                            {(hasSuggestions || hasDiscovery) && (
-                                <div className="mt-6 lg:mt-0 space-y-8">
-                                    {hasSuggestions && (
-                                        <div>
-                                            <SectionTitle>Pour toi</SectionTitle>
-                                            <div className="grid gap-3 grid-cols-2 lg:grid-cols-1">
-                                                {initialSuggestions.map((s, idx) => (
-                                                    <AlbumCard
-                                                        key={s.album_id}
-                                                        title={s.title}
-                                                        artist={s.artist}
-                                                        coverUrl={s.cover_url}
-                                                        className={getGridItemClass(idx, initialSuggestions.length)}
-                                                        onClick={() =>
-                                                            handleAlbumSelect({
-                                                                id: s.album_id,
-                                                                title: s.title,
-                                                                artist_name: s.artist,
-                                                                coverUrl: s.cover_url,
-                                                            })
-                                                        }
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {hasDiscovery && (
-                                        <div>
-                                            <SectionTitle>{initialDiscovery.length > 1 ? "Découvertes" : "Découverte"}</SectionTitle>
-                                            <div className="grid gap-3 grid-cols-2 lg:grid-cols-1">
-                                                {initialDiscovery.slice(0, 8).map((d, idx) => (
-                                                    <AlbumCard
-                                                        key={d.album_id}
-                                                        title={d.title}
-                                                        artist={d.artist}
-                                                        coverUrl={d.cover_url}
-                                                        className={getGridItemClass(idx, Math.min(initialDiscovery.length, 8))}
-                                                        onClick={() =>
-                                                            handleAlbumSelect({
-                                                                id: d.album_id,
-                                                                title: d.title,
-                                                                artist_name: d.artist,
-                                                                coverUrl: d.cover_url,
-                                                            })
-                                                        }
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
                 </div>
             </main>
         </>

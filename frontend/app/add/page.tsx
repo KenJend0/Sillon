@@ -1,5 +1,5 @@
 import { getAuthUser } from "@/lib/supabase/server";
-import { getUserSavedAlbums } from "@/app/actions/saved-albums";
+import { getDefaultListAlbums, getDefaultListTracks } from "@/app/actions/lists";
 import { getForYouSuggestions, getDiscoveryAlbums } from "@/app/actions/explore";
 import AddPageClient from "./AddPageClient";
 
@@ -29,15 +29,17 @@ export default async function AddPage() {
         );
     }
 
-    const [savedAlbums, suggestions, discovery] = await Promise.all([
-        getUserSavedAlbums(user.id, 8),
+    const [defaultListItems, defaultListTracks, suggestions, discovery] = await Promise.all([
+        getDefaultListAlbums(8),
+        getDefaultListTracks(8),
         getForYouSuggestions(),
         getDiscoveryAlbums(),
     ]);
 
     return (
         <AddPageClient
-            initialSavedAlbums={savedAlbums}
+            defaultListItems={defaultListItems}
+            defaultListTracks={defaultListTracks}
             initialSuggestions={suggestions}
             initialDiscovery={discovery}
         />

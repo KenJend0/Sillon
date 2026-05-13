@@ -4,8 +4,9 @@ import { ensureProfile } from "@/app/actions/profile";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileTabs from "@/components/profile/ProfileTabs";
 import Top3Albums from "@/components/profile/Top3Albums";
-import { getUserDiary } from "@/app/actions/diary";
-import { getUserSavedAlbums } from "@/app/actions/saved-albums";
+import { getUserDiary, getUserReviewsUnified } from "@/app/actions/diary";
+import { getUserLists, getOrCreateDefaultList } from "@/app/actions/lists";
+import { getUserTrackDiary } from "@/app/actions/track-diary";
 
 export const revalidate = 0; // Pas de cache, recharger à chaque accès
 
@@ -39,8 +40,9 @@ export default async function MyProfilePage() {
         );
     }
 
-    // Créer le profil s'il n'existe pas (première connexion)
+    // Créer le profil + liste "À écouter" par défaut si première connexion
     await ensureProfile();
+    await getOrCreateDefaultList();
 
     // Fetch user profile
     const { data: profile } = await supabase
@@ -54,10 +56,11 @@ export default async function MyProfilePage() {
         followersResult,
         followingResult,
         diaryEntries,
-        diaryTotalResult,
         reviewsTotalResult,
-        savedAlbums,
+        userLists,
         favoriteAlbumsResult,
+        trackEntries,
+        unifiedReviews,
     ] = await Promise.all([
         supabase
             .from("follows")
@@ -71,19 +74,17 @@ export default async function MyProfilePage() {
         supabase
             .from("diary_entries")
             .select("*", { count: "exact", head: true })
-            .eq("user_id", user.id),
-        supabase
-            .from("diary_entries")
-            .select("*", { count: "exact", head: true })
             .eq("user_id", user.id)
             .not("review_body", "is", null),
-        getUserSavedAlbums(user.id),
+        getUserLists(user.id),
         supabase
             .from("user_favorite_albums")
             .select("position, album_id, albums (id, title, cover_url, artists (name))")
             .eq("user_id", user.id)
             .order("position", { ascending: true })
             .limit(3),
+        getUserTrackDiary(user.id),
+        getUserReviewsUnified(user.id),
     ]);
 
     const favoriteAlbums = (favoriteAlbumsResult.data || []).map((item: any) => ({
@@ -97,8 +98,6 @@ export default async function MyProfilePage() {
     const followersCount = followersResult.count || 0;
     const followingCount = followingResult.count || 0;
 
-    // Compute stats from exact counts (not from paginated entries)
-    const albumsCount = diaryTotalResult.count ?? 0;
     const reviewsCount = reviewsTotalResult.count ?? 0;
 
     const username = profile?.username || user.email?.split("@")[0] || "user";
@@ -117,7 +116,6 @@ export default async function MyProfilePage() {
 
     const stats = {
         reviews_count: reviewsCount,
-        albums_count: albumsCount,
     };
 
     return (
@@ -136,7 +134,9 @@ export default async function MyProfilePage() {
                     isMe={true}
                     userId={user.id}
                     diaryEntries={diaryEntries}
-                    savedAlbums={savedAlbums}
+                    userLists={userLists}
+                    trackEntries={trackEntries}
+                    unifiedReviews={unifiedReviews}
                 />
             </div>
         </div>
