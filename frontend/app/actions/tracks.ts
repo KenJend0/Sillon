@@ -2,6 +2,14 @@
 
 import { createSupabaseServer } from '@/lib/supabase/server';
 
+export type AlbumTrackItem = {
+  id: string;
+  title: string;
+  track_no: number | null;
+  disc_no: number | null;
+  duration_ms: number | null;
+};
+
 export type TrackDetail = {
   id: string;
   title: string;
@@ -64,4 +72,18 @@ export async function getTrack(id: string): Promise<TrackDetail | null> {
     artist_id: artist?.id || album?.artist_id || '',
     artist_name: artist?.name || 'Inconnu',
   };
+}
+
+export async function getAlbumTracks(albumId: string): Promise<AlbumTrackItem[]> {
+  const supabase = await createSupabaseServer();
+
+  const { data, error } = await supabase
+    .from('tracks')
+    .select('id, title, track_no, disc_no, duration_ms')
+    .eq('album_id', albumId)
+    .order('disc_no', { ascending: true, nullsFirst: true })
+    .order('track_no', { ascending: true, nullsFirst: true });
+
+  if (error || !data) return [];
+  return data as AlbumTrackItem[];
 }
