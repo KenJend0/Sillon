@@ -528,7 +528,7 @@ export async function createList(data: {
 
     if (error) throw error;
 
-    return { ...list, item_count: 0, cover_urls: [] };
+    return { ...list, item_count: 0, cover_urls: [], likes_count: 0 };
 }
 
 /**
