@@ -13,6 +13,9 @@ const CACHE_TTL_SECONDS = 24 * 60 * 60; // 24 heures
 // 800ms gives comfortable headroom in both environments.
 const MB_SEARCH_TIMEOUT_MS = 800;
 
+// Recording search is slower than album/artist search — give more time.
+const MB_RECORDING_SEARCH_TIMEOUT_MS = 2000;
+
 // Secondary types that indicate non-studio releases (live, compilation, etc.)
 const EXCLUDED_SECONDARY_TYPES = new Set([
   'Live', 'Compilation', 'Remix', 'Demo',
@@ -1152,7 +1155,7 @@ export async function getArtistReleases(mbid: string): Promise<{
     const releaseGroups: any[] = data['release-groups'] || [];
     console.log(`[getArtistReleases] MB returned ${releaseGroups.length} release-groups for mbid="${mbid}"`);
 
-    const ALLOWED_PRIMARY_TYPES = new Set(['Album', 'EP']);
+    const ALLOWED_PRIMARY_TYPES = new Set(['Album', 'EP', 'Single']);
     const filtered = releaseGroups.filter(rg => {
       const primary: string | null = rg['primary-type'] || null;
       if (primary && !ALLOWED_PRIMARY_TYPES.has(primary)) {
@@ -1424,7 +1427,7 @@ export async function searchMusicBrainzRecordings(
       url,
       { headers: { 'User-Agent': USER_AGENT } },
       2,
-      MB_SEARCH_TIMEOUT_MS
+      MB_RECORDING_SEARCH_TIMEOUT_MS
     );
 
     if (!response.ok) {

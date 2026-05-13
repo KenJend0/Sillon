@@ -9,6 +9,9 @@ import FeedCardReviewLiked from './cards/FeedCardReviewLiked';
 import FeedCardCommentCreated from './cards/FeedCardCommentCreated';
 import FeedCardUnratedListen from './cards/FeedCardUnratedListen';
 import FeedCardCommentReply from './cards/FeedCardCommentReply';
+import FeedCardTrackReviewCreated from './cards/FeedCardTrackReviewCreated';
+import FeedCardTrackReviewLiked from './cards/FeedCardTrackReviewLiked';
+import FeedCardTrackCommentCreated from './cards/FeedCardTrackCommentCreated';
 import { showToast } from '@/components/Toast';
 
 interface FeedInfiniteListProps {
@@ -47,6 +50,8 @@ function getDedupKey(event: FeedEvent): string {
       return `follow-${event.actor.id}-${event.followee?.id}`;
     case 'ALBUM_SAVED':
       return `saved-${event.actor.id}-${event.album?.id}`;
+    case 'TRACK_REVIEW_CREATED':
+      return `track-review-${event.actor.id}-${event.entry_id}`;
     default:
       return event.id;
   }
@@ -121,6 +126,30 @@ function renderEvent(event: FeedEvent, currentUserId?: string) {
     return (
       <FeedCardCommentReply
         event={event as typeof event & { type: 'COMMENT_REPLY' }}
+      />
+    );
+  }
+  if (event.type === 'TRACK_REVIEW_CREATED') {
+    return (
+      <FeedCardTrackReviewCreated
+        event={event as typeof event & { type: 'TRACK_REVIEW_CREATED' }}
+        currentUserId={currentUserId}
+      />
+    );
+  }
+  if (event.type === 'TRACK_REVIEW_LIKED') {
+    return (
+      <FeedCardTrackReviewLiked
+        event={event as typeof event & { type: 'TRACK_REVIEW_LIKED' }}
+        currentUserId={currentUserId}
+      />
+    );
+  }
+  if (event.type === 'TRACK_COMMENT_CREATED') {
+    return (
+      <FeedCardTrackCommentCreated
+        event={event as typeof event & { type: 'TRACK_COMMENT_CREATED' }}
+        currentUserId={currentUserId}
       />
     );
   }
@@ -216,7 +245,7 @@ export default function FeedInfiniteList({ initialEvents, initialCursor, current
     if (!anchor) return;
     try {
       const url = new URL(anchor.href, window.location.origin);
-      if (url.pathname.startsWith('/diary/')) {
+      if (url.pathname.startsWith('/diary/') || url.pathname.startsWith('/track-diary/')) {
         sessionStorage.setItem(storageKey, JSON.stringify({
           scrollY: window.scrollY,
           events: eventsRef.current,

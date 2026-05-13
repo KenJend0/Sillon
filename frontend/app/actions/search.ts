@@ -6,15 +6,19 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 export type SearchResultUI = {
   id: string;
   releaseId?: string;    // MB release MBID when source=musicbrainz+kind=album (for import & cover fallback)
+  recordingMbid?: string; // MB recording MBID when source=musicbrainz+kind=track (for import)
   title: string;
   subtitle?: string;
   slug?: string;         // for users: actual username used in URLs (≠ display_name)
-  kind: "album" | "artist" | "user";
+  kind: "album" | "artist" | "user" | "track";
   coverUrl?: string | null;
   releaseDate?: string | null;
   source: "internal" | "musicbrainz";
   score?: number;        // MB relevance score 0-100 — used for client-side re-ranking
   releaseCount?: number; // number of MB releases — proxy for album popularity
+  // For kind="track" internal results — needed to submit diary entry
+  trackAlbumId?: string;
+  trackArtistId?: string;
 };
 
 /**
@@ -27,7 +31,7 @@ function escapeILike(str: string): string {
 
 export async function searchInternal(
   q: string,
-  kind: "all" | "albums" | "artists" | "users" = "all"
+  kind: "all" | "albums" | "artists" | "users" | "tracks" = "all"
 ): Promise<SearchResultUI[]> {
   if (!q.trim()) return [];
 
@@ -77,8 +81,18 @@ export async function searchInternal(
       .limit(5);
   };
 
+  // Tracks: ILIKE on title, joined with album cover and artist name
+  const tracksQuery = async () => {
+    if (kind !== "tracks") return { data: null };
+    return supabase
+      .from("tracks")
+      .select("id, title, mbid, albums(id, title, cover_url, artists(id, name))")
+      .ilike("title", `%${escapedQuery}%`)
+      .limit(10) as any;
+  };
+
   // Run all needed queries in parallel
-  const [albumsData, artistsData, usersData] = await Promise.all([
+  const [albumsData, artistsData, usersData, tracksData] = await Promise.all([
     albumsQuery(),
     artistsQuery(),
     // Users — always ILIKE (no tsvector on profiles yet, username rarely has accents)
@@ -89,6 +103,7 @@ export async function searchInternal(
           .ilike("username", `%${escapedQuery}%`)
           .limit(5)
       : Promise.resolve({ data: null }),
+    tracksQuery(),
   ]);
 
   const results: SearchResultUI[] = [];
@@ -127,6 +142,21 @@ export async function searchInternal(
         source: "internal",
       });
     }
+  });
+
+  (tracksData.data || []).forEach((t: any) => {
+    const album = t.albums as any;
+    const artist = album?.artists as any;
+    results.push({
+      id: t.id,
+      title: t.title,
+      subtitle: `${artist?.name || 'Unknown'} · ${album?.title || 'Unknown'}`,
+      kind: "track",
+      coverUrl: album?.cover_url || null,
+      source: "internal",
+      trackAlbumId: album?.id || '',
+      trackArtistId: artist?.id || '',
+    });
   });
 
   // Client-side similarity ranking: exact > starts-with > contains

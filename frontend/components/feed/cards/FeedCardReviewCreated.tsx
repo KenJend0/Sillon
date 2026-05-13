@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Disc3 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { CoverImage } from '@/components/CoverImage';
 import { Heart, MessageCircle } from 'lucide-react';
 import { FeedEvent } from '@/app/actions/feed';
@@ -22,6 +23,7 @@ export default function FeedCardReviewCreated({
 }: FeedCardReviewCreatedProps) {
   const timeAgo = getTimeAgo(event.created_at);
   const hasWords = !!event.review_excerpt;
+  const router = useRouter();
 
   const [isLiked, setIsLiked] = useState(event.is_liked ?? false);
   const [likesCount, setLikesCount] = useState(event.likes_count ?? 0);
@@ -67,9 +69,32 @@ export default function FeedCardReviewCreated({
   const entryHref = event.entry_id
     ? `/diary/${event.entry_id}`
     : `/albums/${event.album?.id}`;
+  const artistHref = event.album?.artist_id
+    ? `/artists/${event.album.artist_id}`
+    : null;
+
+  const handleCardNavigation = (target: EventTarget | null) => {
+    if (!entryHref) return;
+
+    const element = target instanceof HTMLElement ? target : null;
+    if (element?.closest('a, button')) return;
+
+    router.push(entryHref);
+  };
 
   return (
-    <div className="w-full relative rounded-[12px] px-6 py-6 bg-background-tertiary">
+    <div
+      className="w-full relative rounded-[12px] px-6 py-6 bg-background-tertiary cursor-pointer"
+      onClick={(e) => handleCardNavigation(e.target)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleCardNavigation(e.target);
+        }
+      }}
+      role="link"
+      tabIndex={0}
+    >
       <time className="absolute top-5 right-6 text-[12px] text-text-disabled">
         {timeAgo}
       </time>
@@ -117,6 +142,20 @@ export default function FeedCardReviewCreated({
                 {event.album.title}
               </h3>
             </Link>
+          )}
+          {event.album?.artist_name && (
+            artistHref ? (
+              <Link
+                href={artistHref}
+                className="mt-0.5 block truncate text-[12px] text-text-tertiary transition-colors duration-150 hover:text-text-primary"
+              >
+                {event.album.artist_name}
+              </Link>
+            ) : (
+              <p className="text-[12px] text-text-tertiary mt-0.5 truncate">
+                {event.album.artist_name}
+              </p>
+            )
           )}
           {event.rating && (
             <div className="text-[#8E6F5E] font-medium text-[12px] mt-1">

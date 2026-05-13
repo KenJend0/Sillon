@@ -7,7 +7,7 @@ import { getAuthUser } from '@/lib/supabase/server';
  * Frontend event types (MVP, no DB change)
  * Mapped from DB types: diary/follow/discover/like/comment
  */
-export type FeedEventType = 'REVIEW_CREATED' | 'UNRATED_LISTEN' | 'REVIEW_LIKED' | 'ALBUM_SAVED' | 'USER_FOLLOWED' | 'COMMENT_CREATED' | 'COMMENT_REPLY';
+export type FeedEventType = 'REVIEW_CREATED' | 'UNRATED_LISTEN' | 'REVIEW_LIKED' | 'ALBUM_SAVED' | 'USER_FOLLOWED' | 'COMMENT_CREATED' | 'COMMENT_REPLY' | 'TRACK_REVIEW_CREATED' | 'TRACK_REVIEW_LIKED' | 'TRACK_COMMENT_CREATED';
 
 export type FeedActor = {
   id: string;
@@ -27,6 +27,8 @@ export interface FeedEvent {
     id: string;
     title: string;
     cover_url: string | null;
+    artist_id?: string;
+    artist_name?: string;
   };
   rating?: number;
   review_excerpt?: string;
@@ -39,6 +41,15 @@ export interface FeedEvent {
   entry_owner_id?: string; // Owner of the liked/commented diary entry
   current_user_also_commented?: boolean; // For COMMENT_CREATED: current user has also commented on same entry
   comment_id?: string; // For COMMENT_REPLY: ID of the reply comment (used for deep-linking)
+  track?: {
+    id: string;
+    title: string;
+    album_id: string;
+    album_title: string;
+    cover_url: string | null;
+    artist_id?: string;
+    artist_name?: string;
+  };
   created_at: string;
   _dedup_key?: string; // For client-side deduplication
   // Aggregation: set when multiple actors performed the same action on the same target
@@ -95,6 +106,7 @@ export async function getMyFeed({
         entry_id,
         album_id,
         comment_id,
+        payload,
         created_at,
         actor:profiles!actor_id (
           id,
@@ -109,7 +121,11 @@ export async function getMyFeed({
         album:albums (
           id,
           title,
-          cover_url
+          cover_url,
+          artist_id,
+          artist:artists (
+            name
+          )
         ),
         entry:diary_entries (
           id,
@@ -122,7 +138,11 @@ export async function getMyFeed({
           album:albums (
             id,
             title,
-            cover_url
+            cover_url,
+            artist_id,
+            artist:artists (
+              name
+            )
           )
         )
       `
@@ -195,16 +215,40 @@ export async function getMyFeed({
 
     const commentedEntryIds = new Set((commentedData || []).map((c: any) => c.entry_id));
 
+    // Track diary entry stats (for TRACK_REVIEW_CREATED events)
+    const trackEntryIds = (rawEvents || [])
+      .filter((e: any) => e.type === 'track_diary_entry' && e.payload?.trackEntryId)
+      .map((e: any) => e.payload.trackEntryId);
+
+    const [{ data: trackStatsData }, { data: trackLikedData }] = await Promise.all([
+      trackEntryIds.length > 0
+        ? (supabase as any).from('track_diary_entry_stats').select('entry_id, likes_count, comments_count').in('entry_id', trackEntryIds)
+        : Promise.resolve({ data: [] }),
+      trackEntryIds.length > 0
+        ? (supabase as any).from('track_diary_likes').select('entry_id').in('entry_id', trackEntryIds).eq('user_id', user.id)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const trackStatsMap = new Map((trackStatsData || []).map((s: any) => [s.entry_id, s]));
+    const trackLikedIds = new Set((trackLikedData || []).map((l: any) => l.entry_id));
+
     // Map DB events to frontend types
     const events: FeedEvent[] = (rawEvents || [])
       .map((raw: any) => {
         const mapped = mapFeedEvent(raw);
-        // Attach fresh counts + is_liked for reviews
+        // Attach fresh counts + is_liked for album reviews
         if (mapped && mapped.type === 'REVIEW_CREATED' && mapped.entry_id) {
           const stats = statsMap.get(mapped.entry_id);
           mapped.likes_count = stats?.likes_count ?? 0;
           mapped.comments_count = stats?.comments_count ?? 0;
           mapped.is_liked = likedEntryIds.has(mapped.entry_id);
+        }
+        // Attach fresh counts + is_liked for track reviews
+        if (mapped && mapped.type === 'TRACK_REVIEW_CREATED' && mapped.entry_id) {
+          const stats = trackStatsMap.get(mapped.entry_id) as any;
+          mapped.likes_count = stats?.likes_count ?? 0;
+          mapped.comments_count = stats?.comments_count ?? 0;
+          mapped.is_liked = trackLikedIds.has(mapped.entry_id);
         }
         // Attach "also commented" flag for comment events from other users
         if (mapped && mapped.type === 'COMMENT_CREATED' && mapped.entry_id && mapped.actor.id !== user.id) {
@@ -365,6 +409,8 @@ function mapFeedEvent(raw: any): FeedEvent | null {
             id: raw.album.id,
             title: raw.album.title,
             cover_url: raw.album.cover_url,
+            artist_id: raw.album.artist_id ?? undefined,
+            artist_name: raw.album.artist?.name ?? undefined,
           } : undefined,
           rating: raw.entry.rating,
           review_excerpt: raw.entry.review_body ?? undefined,
@@ -380,6 +426,8 @@ function mapFeedEvent(raw: any): FeedEvent | null {
             id: raw.album.id,
             title: raw.album.title,
             cover_url: raw.album.cover_url,
+            artist_id: raw.album.artist_id ?? undefined,
+            artist_name: raw.album.artist?.name ?? undefined,
           } : undefined,
         };
       }
@@ -404,6 +452,8 @@ function mapFeedEvent(raw: any): FeedEvent | null {
           id: raw.album.id,
           title: raw.album.title,
           cover_url: raw.album.cover_url,
+          artist_id: raw.album.artist_id ?? undefined,
+          artist_name: raw.album.artist?.name ?? undefined,
         } : undefined,
       };
 
@@ -421,6 +471,8 @@ function mapFeedEvent(raw: any): FeedEvent | null {
             id: likeAlbum.id,
             title: likeAlbum.title,
             cover_url: likeAlbum.cover_url,
+            artist_id: likeAlbum.artist_id ?? raw.album?.artist_id ?? undefined,
+            artist_name: likeAlbum.artist?.name ?? raw.album?.artist?.name ?? undefined,
           },
           _dedup_key: `like-${raw.actor.id}-${raw.entry.id}`,
         };
@@ -442,10 +494,40 @@ function mapFeedEvent(raw: any): FeedEvent | null {
             id: commentAlbum.id,
             title: commentAlbum.title,
             cover_url: commentAlbum.cover_url,
+            artist_id: commentAlbum.artist_id ?? raw.album?.artist_id ?? undefined,
+            artist_name: commentAlbum.artist?.name ?? raw.album?.artist?.name ?? undefined,
           },
         };
       }
       return null;
+    }
+
+    case 'track_diary_entry': {
+      const p = raw.payload;
+      if (!p || !p.trackId) return null;
+      return {
+        ...baseEvent,
+        type: 'TRACK_REVIEW_CREATED',
+        entry_id: p.trackEntryId ?? undefined,
+        track: {
+          id: p.trackId,
+          title: p.trackTitle || '',
+          album_id: p.albumId || '',
+          album_title: p.albumTitle || '',
+          cover_url: p.coverUrl ?? null,
+          artist_id: p.artistId ?? raw.album?.artist_id ?? undefined,
+          artist_name: p.artistName ?? raw.album?.artist?.name ?? undefined,
+        },
+        album: p.albumId ? {
+          id: p.albumId,
+          title: p.albumTitle || '',
+          cover_url: p.coverUrl ?? null,
+          artist_id: p.artistId ?? raw.album?.artist_id ?? undefined,
+        } : undefined,
+        rating: p.rating ?? undefined,
+        review_excerpt: p.reviewBody ?? undefined,
+        review_is_long: (p.reviewBody?.length ?? 0) > 300,
+      };
     }
 
     case 'comment_reply': {
@@ -461,10 +543,50 @@ function mapFeedEvent(raw: any): FeedEvent | null {
             id: replyAlbum.id,
             title: replyAlbum.title,
             cover_url: replyAlbum.cover_url,
+            artist_id: replyAlbum.artist_id ?? raw.album?.artist_id ?? undefined,
+            artist_name: replyAlbum.artist?.name ?? raw.album?.artist?.name ?? undefined,
           },
         };
       }
       return null;
+    }
+
+    case 'track_like': {
+      const p = raw.payload;
+      if (!p || !p.trackEntryId) return null;
+      return {
+        ...baseEvent,
+        type: 'TRACK_REVIEW_LIKED',
+        entry_id: p.trackEntryId ?? undefined,
+        liked_entry_id: p.trackEntryId ?? undefined,
+        entry_owner_id: p.entryOwnerId ?? undefined,
+        track: {
+          id: p.trackId || '',
+          title: p.trackTitle || '',
+          album_id: p.albumId || '',
+          album_title: p.albumTitle || '',
+          cover_url: p.coverUrl ?? null,
+        },
+        _dedup_key: `track-like-${raw.actor?.id}-${p.trackEntryId}`,
+      };
+    }
+
+    case 'track_comment': {
+      const p = raw.payload;
+      if (!p || !p.trackEntryId) return null;
+      return {
+        ...baseEvent,
+        type: 'TRACK_COMMENT_CREATED',
+        entry_id: p.trackEntryId ?? undefined,
+        entry_owner_id: p.entryOwnerId ?? undefined,
+        track: {
+          id: p.trackId || '',
+          title: p.trackTitle || '',
+          album_id: p.albumId || '',
+          album_title: p.albumTitle || '',
+          cover_url: p.coverUrl ?? null,
+        },
+      };
     }
 
     default:
@@ -568,7 +690,7 @@ export async function backfillFolloweeEvents(followerId: string, followeeId: str
 }
 
 export async function fanoutEvent(
-  type: 'diary_entry' | 'like' | 'comment' | 'comment_reply' | 'follow' | 'discover',
+  type: 'diary_entry' | 'like' | 'comment' | 'comment_reply' | 'follow' | 'discover' | 'track_diary_entry' | 'track_like' | 'track_comment',
   payload: Record<string, unknown>,
   targets?: string[]
 ) {
@@ -635,13 +757,29 @@ export async function fanoutEvent(
       payload: ev.payload ? JSON.parse(JSON.stringify(ev.payload)) : null,
     }));
 
-    const { error: insertError } = await supabaseAdmin
+    // Utilise le client user-level (session authentifiée) pour l'insert.
+    // La policy RLS "feed_insert_as_actor" autorise les inserts où actor_id = auth.uid(),
+    // ce qui permet à l'acteur d'écrire dans les feeds de ses followers.
+    // Fallback sur supabaseAdmin si le client user-level n'a pas de session.
+    const insertClient = supabase ?? supabaseAdmin;
+    const { error: insertError } = await (insertClient as any)
       .from('feed_events')
       .insert(safeEvents as any[]);
 
     if (insertError) {
-      console.error('fanoutEvent insert error:', insertError.message, { type, code: insertError.code });
-      return { success: false, error: 'An error occurred' };
+      // Retry avec supabaseAdmin si le client user-level échoue (ex: pas de session)
+      if (insertClient !== supabaseAdmin) {
+        const { error: adminError } = await supabaseAdmin
+          .from('feed_events')
+          .insert(safeEvents as any[]);
+        if (adminError) {
+          console.error('fanoutEvent insert error (admin):', adminError.message, { type, code: adminError.code });
+          return { success: false, error: 'An error occurred' };
+        }
+      } else {
+        console.error('fanoutEvent insert error:', insertError.message, { type, code: insertError.code });
+        return { success: false, error: 'An error occurred' };
+      }
     }
 
     return { success: true, fanned: recipientIds.length };

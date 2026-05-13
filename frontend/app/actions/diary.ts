@@ -810,6 +810,133 @@ export async function getUserReviews(userId: string): Promise<DiaryEntryUI[]> {
 }
 
 // ============================================================================
+// REVUES UNIFIÉES (albums + titres avec review_body)
+// ============================================================================
+
+export type UnifiedReview = {
+  id: string;
+  type: 'album' | 'track';
+  href: string;          // /diary/[id] ou /track-diary/[id]
+  title: string;         // album_title ou track_title
+  subtitle: string;      // artist_name (+ album pour tracks)
+  artist_id: string;
+  cover_url: string | null;
+  rating: number | null;
+  review_body: string;
+  listened_at: string;
+  created_at: string;
+  likes_count: number;
+  comments_count: number;
+  is_liked: boolean;
+};
+
+export async function getUserReviewsUnified(userId: string): Promise<UnifiedReview[]> {
+  const supabase = await createSupabaseServer();
+  const currentUser = await getAuthUser();
+
+  const [albumReviews, trackReviews] = await Promise.all([
+    // Album reviews
+    supabase
+      .from('diary_entries')
+      .select(`id, rating, review_body, listened_at, created_at, album_id, albums(id, title, cover_url, artist_id, artists(id, name))`)
+      .eq('user_id', userId)
+      .not('review_body', 'is', null)
+      .neq('review_body', '')
+      .order('created_at', { ascending: false })
+      .limit(100),
+    // Track reviews
+    (supabase as any)
+      .from('track_diary_entries')
+      .select(`id, rating, review_body, listened_at, created_at, track_id, album_id, tracks(id, title, albums(id, title, cover_url, artist_id, artists(id, name)))`)
+      .eq('user_id', userId)
+      .not('review_body', 'is', null)
+      .neq('review_body', '')
+      .order('created_at', { ascending: false })
+      .limit(100),
+  ]);
+
+  const allIds = (albumReviews.data ?? []).map((e: any) => e.id);
+  let likedIds = new Set<string>();
+  if (currentUser && allIds.length > 0) {
+    const { data: likes } = await supabase
+      .from('diary_likes')
+      .select('entry_id')
+      .eq('user_id', currentUser.id)
+      .in('entry_id', allIds);
+    likedIds = new Set((likes ?? []).map((l: any) => l.entry_id));
+  }
+
+  const { data: statsData } = allIds.length > 0
+    ? await supabase.from('diary_entry_stats').select('entry_id, likes_count, comments_count').in('entry_id', allIds)
+    : { data: [] };
+  const statsMap = new Map((statsData ?? []).map((s: any) => [s.entry_id, s]));
+
+  const albumItems: UnifiedReview[] = (albumReviews.data ?? []).map((e: any) => {
+    const album = e.albums as any;
+    const artist = album?.artists as any;
+    const stats = statsMap.get(e.id);
+    return {
+      id: e.id,
+      type: 'album',
+      href: `/diary/${e.id}`,
+      title: album?.title || 'Inconnu',
+      subtitle: artist?.name || 'Inconnu',
+      artist_id: artist?.id || album?.artist_id || '',
+      cover_url: album?.cover_url || null,
+      rating: e.rating,
+      review_body: e.review_body,
+      listened_at: e.listened_at,
+      created_at: e.created_at,
+      likes_count: stats?.likes_count ?? 0,
+      comments_count: stats?.comments_count ?? 0,
+      is_liked: likedIds.has(e.id),
+    };
+  });
+
+  const trackIds = (trackReviews.data ?? []).map((e: any) => e.id);
+  let trackLikedIds = new Set<string>();
+  if (currentUser && trackIds.length > 0) {
+    const { data: trackLikes } = await (supabase as any)
+      .from('track_diary_likes')
+      .select('entry_id')
+      .eq('user_id', currentUser.id)
+      .in('entry_id', trackIds);
+    trackLikedIds = new Set((trackLikes ?? []).map((l: any) => l.entry_id));
+  }
+  const { data: trackStatsData } = trackIds.length > 0
+    ? await (supabase as any).from('track_diary_entry_stats').select('entry_id, likes_count, comments_count').in('entry_id', trackIds)
+    : { data: [] };
+  const trackStatsMap = new Map((trackStatsData ?? []).map((s: any) => [s.entry_id, s]));
+
+  const trackItems: UnifiedReview[] = (trackReviews.data ?? []).map((e: any) => {
+    const track = e.tracks as any;
+    const album = track?.albums as any;
+    const artist = album?.artists as any;
+    const stats = trackStatsMap.get(e.id) as any;
+    return {
+      id: e.id,
+      type: 'track',
+      href: `/track-diary/${e.id}`,
+      title: track?.title || 'Inconnu',
+      subtitle: artist?.name || 'Inconnu',
+      artist_id: artist?.id || '',
+      cover_url: album?.cover_url || null,
+      rating: e.rating,
+      review_body: e.review_body,
+      listened_at: e.listened_at,
+      created_at: e.created_at,
+      likes_count: stats?.likes_count ?? 0,
+      comments_count: stats?.comments_count ?? 0,
+      is_liked: trackLikedIds.has(e.id),
+    };
+  });
+
+  return [...albumItems, ...trackItems].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+}
+
+// ============================================================================
 // ALBUM REVIEWS (for album page + reviews modal)
 // ============================================================================
 

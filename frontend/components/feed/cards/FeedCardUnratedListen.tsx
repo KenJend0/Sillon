@@ -71,6 +71,11 @@ export default function FeedCardUnratedListen({
               </h3>
             </Link>
           )}
+          {event.album?.artist_name && (
+            <p className="text-[12px] text-text-tertiary mt-0.5 truncate">
+              {event.album.artist_name}
+            </p>
+          )}
         </div>
       </div>
 

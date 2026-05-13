@@ -16,6 +16,8 @@ export default function FeedCardAlbumSaved({
   currentUserId,
 }: FeedCardAlbumSavedProps) {
   const timeAgo = getTimeAgo(event.created_at);
+  const albumHref = event.album ? `/albums/${event.album.id}` : null;
+  const artistHref = event.album?.artist_id ? `/artists/${event.album.artist_id}` : null;
 
   return (
     <div className="w-full relative border border-border rounded-[12px] py-5 px-6">
@@ -44,11 +46,9 @@ export default function FeedCardAlbumSaved({
 
       {/* Ligne compacte — cover + titre */}
       {event.album && (
-        <Link
-          href={`/albums/${event.album.id}`}
-          className="flex gap-4 items-center min-w-0"
-        >
-          {event.album.cover_url && (
+        <div className="flex gap-4 items-center min-w-0">
+          {event.album.cover_url && albumHref && (
+            <Link href={albumHref} className="shrink-0">
             <div className="w-14 h-14 rounded-[8px] overflow-hidden bg-background-secondary flex-shrink-0">
               <CoverImage
                 src={event.album.cover_url}
@@ -59,11 +59,36 @@ export default function FeedCardAlbumSaved({
                 placeholder={<div className="w-full h-full bg-background-tertiary" />}
               />
             </div>
+            </Link>
           )}
-          <h3 className="text-[16px] font-medium text-text-primary line-clamp-2 leading-snug min-w-0">
-            {event.album.title}
-          </h3>
-        </Link>
+          <div className="flex-1 min-w-0">
+            {albumHref ? (
+              <Link href={albumHref}>
+                <h3 className="text-[16px] font-medium text-text-primary line-clamp-2 leading-snug">
+                  {event.album.title}
+                </h3>
+              </Link>
+            ) : (
+              <h3 className="text-[16px] font-medium text-text-primary line-clamp-2 leading-snug">
+                {event.album.title}
+              </h3>
+            )}
+            {event.album.artist_name && (
+              artistHref ? (
+                <Link
+                  href={artistHref}
+                  className="mt-0.5 block truncate text-[12px] text-text-tertiary transition-colors duration-150 hover:text-text-primary"
+                >
+                  {event.album.artist_name}
+                </Link>
+              ) : (
+                <p className="text-[12px] text-text-tertiary mt-0.5 truncate">
+                  {event.album.artist_name}
+                </p>
+              )
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
