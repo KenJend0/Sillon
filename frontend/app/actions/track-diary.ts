@@ -731,14 +731,14 @@ export async function toggleTrackDiaryLike(entryId: string): Promise<void> {
   if (existing) {
     await (supabase as any).from('track_diary_likes').delete().eq('entry_id', entryId).eq('user_id', user.id);
     // Remove like event from feeds
-    createSupabaseAdmin()
-      .from('feed_events')
-      .delete()
-      .eq('type', 'track_like')
-      .eq('actor_id', user.id)
-      .eq('payload->>trackEntryId', entryId)
-      .execute()
-      .catch(() => {});
+    void Promise.resolve(
+      createSupabaseAdmin()
+        .from('feed_events')
+        .delete()
+        .eq('type', 'track_like')
+        .eq('actor_id', user.id)
+        .eq('payload->>trackEntryId', entryId)
+    ).catch(() => {});
   } else {
     await (supabase as any).from('track_diary_likes').insert({ entry_id: entryId, user_id: user.id });
     // Fanout like event

@@ -52,7 +52,7 @@ export default function TrackDiaryInline({ trackId, albumId, artistId, existingE
             if (result.success) {
                 showToast(existingEntry ? "Note mise à jour" : "Écoute enregistrée", "success");
                 setOpen(false);
-                router.push(`/track-diary/${result.data.id}`);
+                router.push(`/track-diary/${result.data!.id}`);
             } else {
                 showToast(result.error || "Erreur lors de l'enregistrement", "error");
             }

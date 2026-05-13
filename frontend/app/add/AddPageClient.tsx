@@ -203,7 +203,7 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
 
             if (result.success) {
                 showToast("Écoute enregistrée", "success");
-                router.replace(`/track-diary/${result.data.id}`);
+                router.replace(`/track-diary/${result.data!.id}`);
             } else {
                 showToast(result.error || "Erreur lors de l'enregistrement", "error");
                 setIsLoading(false);
