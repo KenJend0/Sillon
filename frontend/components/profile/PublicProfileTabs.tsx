@@ -303,11 +303,7 @@ export default function PublicProfileTabs({
             {media === "albums" && (
               filteredDiary.length === 0 ? (
                 <p className="text-center text-text-tertiary py-12 text-[14px]">
-                  {listenFilter === "listened"
-                    ? "Aucun album en commun avec cet utilisateur"
-                    : listenFilter === "undiscovered"
-                    ? "Vous avez tout découvert — beau palmarès !"
-                    : "Aucune écoute pour l'instant"}
+                  {"Aucune écoute pour l'instant"}
                 </p>
               ) : (
                 <>
