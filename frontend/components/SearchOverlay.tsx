@@ -92,7 +92,7 @@ function mergeAndRank(
 ): SearchResultUI[] {
   const internalIds = new Set(internal.map((r) => r.id));
 
-  // Deduplicate MB vs internal: albums by title+artist, artists by name
+  // Deduplicate MB vs internal: albums by title+artist, artists by name, tracks by title+artist
   const internalAlbumKeys = new Set(
     internal
       .filter((r) => r.kind === "album")
@@ -103,6 +103,15 @@ function mergeAndRank(
       .filter((r) => r.kind === "artist")
       .map((r) => r.title.toLowerCase().trim())
   );
+  // For tracks: dedup key = title ||| artist (first part of subtitle before " · ")
+  const internalTrackKeys = new Set(
+    internal
+      .filter((r) => r.kind === "track")
+      .map((r) => {
+        const artist = (r.subtitle || "").split(" · ")[0].toLowerCase().trim();
+        return `${r.title.toLowerCase().trim()}|||${artist}`;
+      })
+  );
 
   const dedupedExternal = external.filter((ext) => {
     if (internalIds.has(ext.id)) return false;
@@ -112,6 +121,11 @@ function mergeAndRank(
     }
     if (ext.kind === "artist") {
       if (internalArtistNames.has(ext.title.toLowerCase().trim())) return false;
+    }
+    if (ext.kind === "track") {
+      const artist = (ext.subtitle || "").split(" · ")[0].toLowerCase().trim();
+      const key = `${ext.title.toLowerCase().trim()}|||${artist}`;
+      if (internalTrackKeys.has(key)) return false;
     }
     return true;
   });

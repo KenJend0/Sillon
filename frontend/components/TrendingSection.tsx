@@ -9,7 +9,7 @@ import { type TrackWithStats } from "@/app/actions/track-diary";
 
 function TrackCard({ track }: { track: TrackWithStats }) {
     return (
-        <Link href={`/tracks/${track.track_id}`} className="group flex-shrink-0 w-36 sm:w-40">
+        <Link href={`/tracks/${track.track_id}`} className="group block w-full">
             <div className="aspect-square rounded-[8px] overflow-hidden bg-background-secondary relative mb-2">
                 {track.cover_url ? (
                     <CoverImage
@@ -98,7 +98,7 @@ export default function TrendingSection({ albums, tracks }: Props) {
                 tracks.length > 0 ? (
                     <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide">
                         {tracks.map((track) => (
-                            <div key={track.track_id} className="snap-center">
+                            <div key={track.track_id} className="snap-center shrink-0 w-44 sm:w-48 md:w-52 lg:w-60">
                                 <TrackCard track={track} />
                             </div>
                         ))}

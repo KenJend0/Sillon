@@ -1463,8 +1463,18 @@ export async function searchMusicBrainzRecordings(
         };
       });
 
-    await setCachedResults(cacheKey, results);
-    return { success: true, results };
+    // Deduplicate by (title, artistName) — a single can have multiple versions
+    // of the same track (main, instrumental, feat.). Keep the best-scored one.
+    const seen = new Set<string>();
+    const deduped = results.filter((r) => {
+      const key = `${r.title.toLowerCase().trim()}|||${r.artistName.toLowerCase().trim()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    await setCachedResults(cacheKey, deduped);
+    return { success: true, results: deduped };
   } catch (err) {
     console.error('[searchMusicBrainzRecordings] error:', err);
     return { success: false, error: 'Une erreur est survenue lors de la recherche' };

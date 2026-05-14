@@ -144,9 +144,14 @@ export async function searchInternal(
     }
   });
 
+  const seenTrackKeys = new Set<string>();
   (tracksData.data || []).forEach((t: any) => {
     const album = t.albums as any;
     const artist = album?.artists as any;
+    // Deduplicate tracks with same title + artist (different versions on same single)
+    const dedupeKey = `${t.title.toLowerCase().trim()}|||${(artist?.name || '').toLowerCase().trim()}`;
+    if (seenTrackKeys.has(dedupeKey)) return;
+    seenTrackKeys.add(dedupeKey);
     results.push({
       id: t.id,
       title: t.title,
