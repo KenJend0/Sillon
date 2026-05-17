@@ -4,6 +4,7 @@ import { ensureProfile } from "@/app/actions/profile";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileTabs from "@/components/profile/ProfileTabs";
 import Top3Albums from "@/components/profile/Top3Albums";
+import RatingDistribution from "@/components/profile/RatingDistribution";
 import { getUserDiary, getUserReviewsUnified } from "@/app/actions/diary";
 import { getUserLists, getOrCreateDefaultList } from "@/app/actions/lists";
 import { getUserTrackDiary } from "@/app/actions/track-diary";
@@ -18,7 +19,7 @@ export default async function MyProfilePage() {
 
     if (!user) {
         return (
-            <div className="mx-auto max-w-page lg:max-w-5xl px-4 md:px-6 pb-28 lg:pb-12">
+            <div className="px-4 md:px-6 lg:px-8 pb-28 lg:pb-12">
                 <div className="pt-8 pb-6">
                     <h1 className="text-h1 text-text-primary mb-2">Mon profil</h1>
                     <p className="text-[14px] text-text-tertiary">Ton journal, tes stats, tes albums favoris.</p>
@@ -119,17 +120,20 @@ export default async function MyProfilePage() {
     };
 
     return (
-        <div className="lg:flex lg:items-start lg:gap-12 lg:max-w-5xl lg:mx-auto lg:px-8 lg:pt-8">
+        <div className="lg:flex lg:items-start lg:gap-12 lg:px-8">
             {/* Sidebar gauche (desktop) / Layout empilé (mobile) */}
-            <aside className="lg:w-64 lg:flex-shrink-0 lg:sticky lg:top-[72px]">
+            <aside className="lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-[72px]">
                 <ProfileHeader user={userData} stats={stats} />
                 <div className="max-w-page mx-auto px-4 sm:px-6 lg:max-w-none lg:px-0 lg:mt-4">
                     <Top3Albums userId={user.id} isMe={true} initialAlbums={favoriteAlbums} />
+                    <div className="hidden lg:block mt-8">
+                        <RatingDistribution ratings={diaryEntries.map((e) => e.rating)} />
+                    </div>
                 </div>
             </aside>
 
             {/* Contenu principal : tabs */}
-            <div className="lg:flex-1 lg:min-w-0 mt-8 lg:mt-0">
+            <div className="lg:flex-1 lg:min-w-0 mt-8 lg:pt-8 lg:mt-0">
                 <ProfileTabs
                     isMe={true}
                     userId={user.id}

@@ -45,8 +45,8 @@ export default function ProfileHeader({ user, stats, onFollowClick }: Props) {
   };
 
   return (
-    <div className="bg-background-secondary border-b border-border-divider">
-      <div className="max-w-page mx-auto px-4 sm:px-6 py-8 relative">
+    <div className="bg-background-secondary border-b border-border-divider lg:bg-transparent lg:border-0">
+      <div className="max-w-page mx-auto px-4 sm:px-6 py-8 lg:px-0 lg:py-6 relative">
         {/* Hamburger Menu — top right, hidden on desktop (already in Header) */}
         {user.is_me && (
           <div className="absolute top-4 right-4 z-50 md:hidden">
@@ -108,13 +108,13 @@ export default function ProfileHeader({ user, stats, onFollowClick }: Props) {
         {/* Avatar + Name inline */}
         <div className={`flex gap-5 ${alignIdentityToAvatar ? 'items-center' : 'items-start'}`}>
           <div className="flex-shrink-0 rounded-full border border-border overflow-hidden">
-            <div style={{ width: '80px', height: '80px' }}>
-              <UserAvatar userId={user.id} src={user.picture_url} size={80} />
+            <div className="w-[80px] h-[80px] lg:w-[96px] lg:h-[96px]">
+              <UserAvatar userId={user.id} src={user.picture_url} size={96} />
             </div>
           </div>
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-[24px] font-medium text-text-primary tracking-[-0.02em] leading-[1.2]">
+            <h1 className="text-[24px] lg:text-[22px] font-medium text-text-primary tracking-[-0.02em] leading-[1.2]">
               {user.username}
             </h1>
 
@@ -143,17 +143,20 @@ export default function ProfileHeader({ user, stats, onFollowClick }: Props) {
         )}
 
         {/* Stats row */}
-        <div className="flex gap-6 text-[12px] text-text-tertiary mt-6">
+        <div className="flex gap-8 mt-6">
           {stats && (
-            <span>
-              <span className="font-medium text-text-primary">{stats.reviews_count}</span> revue{stats.reviews_count !== 1 ? 's' : ''}
-            </span>
+            <div className="flex flex-col">
+              <span className="text-[18px] font-semibold text-text-primary leading-none">{stats.reviews_count}</span>
+              <span className="text-[11px] text-text-tertiary mt-1">revue{stats.reviews_count !== 1 ? 's' : ''}</span>
+            </div>
           )}
-          <Link href={`/u/${user.username}/followers`} className="hover:text-text-primary transition-colors duration-150">
-            <span className="font-medium text-text-primary">{user.followers_count || 0}</span> abonné{(user.followers_count || 0) !== 1 ? 's' : ''}
+          <Link href={`/u/${user.username}/followers`} className="flex flex-col hover:opacity-75 transition-opacity duration-150">
+            <span className="text-[18px] font-semibold text-text-primary leading-none">{user.followers_count || 0}</span>
+            <span className="text-[11px] text-text-tertiary mt-1">abonné{(user.followers_count || 0) !== 1 ? 's' : ''}</span>
           </Link>
-          <Link href={`/u/${user.username}/following`} className="hover:text-text-primary transition-colors duration-150">
-            <span className="font-medium text-text-primary">{user.following_count || 0}</span> abonnements
+          <Link href={`/u/${user.username}/following`} className="flex flex-col hover:opacity-75 transition-opacity duration-150">
+            <span className="text-[18px] font-semibold text-text-primary leading-none">{user.following_count || 0}</span>
+            <span className="text-[11px] text-text-tertiary mt-1">abonnements</span>
           </Link>
         </div>
       </div>

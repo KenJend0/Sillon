@@ -64,7 +64,6 @@ export function CoverImage({
         fill
         className={className}
         loading={loading}
-        unoptimized
         onError={handleError}
       />
     );
@@ -79,7 +78,6 @@ export function CoverImage({
       height={height ?? 0}
       className={className}
       loading={loading}
-      unoptimized
       onError={handleError}
     />
   );

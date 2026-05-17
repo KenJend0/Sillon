@@ -24,10 +24,23 @@ CREATE INDEX IF NOT EXISTS idx_product_events_user_id_created_at
 
 ALTER TABLE product_events ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "product_events_read_own" ON product_events
-  FOR SELECT TO authenticated
-  USING (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'product_events' AND policyname = 'product_events_read_own'
+  ) THEN
+    CREATE POLICY "product_events_read_own" ON product_events
+      FOR SELECT TO authenticated
+      USING (auth.uid() = user_id);
+  END IF;
 
-CREATE POLICY IF NOT EXISTS "product_events_insert_authenticated" ON product_events
-  FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'product_events' AND policyname = 'product_events_insert_authenticated'
+  ) THEN
+    CREATE POLICY "product_events_insert_authenticated" ON product_events
+      FOR INSERT TO authenticated
+      WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+  END IF;
+END $$;

@@ -166,7 +166,7 @@ export default function DiaryList({ entries, isMe, trackEntries, userId }: Props
           <div className="text-center text-text-tertiary py-12">Aucune entrée dans le journal</div>
         ) : (
           <>
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-6">
               {sortedAlbums.map((entry) => (
                 <div key={entry.id} className="flex flex-col">
                   <Link
@@ -222,7 +222,7 @@ export default function DiaryList({ entries, isMe, trackEntries, userId }: Props
           <div className="text-center text-text-tertiary py-12">Aucun titre noté pour le moment</div>
         ) : (
           <>
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-6">
               {sortedTracks.map((entry) => (
                 <Link key={entry.id} href={`/tracks/${entry.track_id}`} className="group">
                   <div className="aspect-square rounded-[10px] overflow-hidden bg-background-secondary relative">

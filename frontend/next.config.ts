@@ -5,7 +5,6 @@ const nextConfig = {
     },
   },
   images: {
-    unoptimized: true,
     remotePatterns: [
       { protocol: 'https', hostname: 'coverartarchive.org' },
       { protocol: 'https', hostname: 'archive.org' },

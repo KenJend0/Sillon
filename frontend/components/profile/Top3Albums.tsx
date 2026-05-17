@@ -46,39 +46,38 @@ export default function Top3Albums({ userId, isMe, initialAlbums }: Props) {
   if (loading) return null;
 
   return (
-    <div className="mt-10">
-      <h3 className="text-[16px] font-medium mb-5 text-text-primary">{albums.length === 1 ? "Album favori" : "Albums favoris"}</h3>
+    <div className="mt-6">
+      <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-3">
+        {albums.length === 1 ? "Album favori" : "Albums favoris"}
+      </p>
 
       {albums.length === 0 ? (
-        <p className="text-[14px] text-text-tertiary">Aucun album favori</p>
+        <p className="text-[13px] text-text-tertiary">Aucun album favori</p>
       ) : (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-2">
           {albums.map((album) => (
             <Link
               key={album.id}
               href={`/albums/${album.id}`}
-              className="group"
+              className="group relative aspect-square block rounded-[8px] overflow-hidden hover:opacity-85 transition-opacity duration-150"
             >
-              {/* Cover */}
-              <div className="relative overflow-hidden rounded-[10px] bg-background-secondary aspect-square mb-3">
-                {album.cover_url ? (
-                  <CoverImage
-                    src={album.cover_url}
-                    alt={album.title}
-                    fill
-                    className="object-cover"
-                    placeholder={
-                      <div className="w-full h-full flex items-center justify-center bg-background-tertiary">
-                        <span className="text-[24px] text-text-tertiary">♪</span>
-                      </div>
-                    }
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-background-tertiary">
-                    <span className="text-[24px] text-text-tertiary">♪</span>
-                  </div>
-                )}
-              </div>
+              {album.cover_url ? (
+                <CoverImage
+                  src={album.cover_url}
+                  alt={album.title}
+                  fill
+                  className="object-cover"
+                  placeholder={
+                    <div className="w-full h-full flex items-center justify-center bg-background-tertiary">
+                      <span className="text-[24px] text-text-tertiary">♪</span>
+                    </div>
+                  }
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-background-tertiary">
+                  <span className="text-[24px] text-text-tertiary">♪</span>
+                </div>
+              )}
             </Link>
           ))}
         </div>

@@ -82,13 +82,20 @@ export default function TrendingSection({ albums, tracks }: Props) {
 
             {tab === "albums" && (
                 albums.length > 0 ? (
-                    <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide">
-                        {albums.map((item) => (
-                            <div key={item.id} className="snap-center shrink-0 w-44 sm:w-48 md:w-52 lg:w-60">
-                                <DiscoverCard item={item} />
-                            </div>
-                        ))}
-                    </div>
+                    <>
+                        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide lg:hidden">
+                            {albums.map((item) => (
+                                <div key={item.id} className="snap-center shrink-0 w-44 sm:w-48 md:w-52">
+                                    <DiscoverCard item={item} />
+                                </div>
+                            ))}
+                        </div>
+                        <div className="hidden lg:grid lg:grid-cols-5 gap-4">
+                            {albums.slice(0, 5).map((item) => (
+                                <DiscoverCard key={item.id} item={item} />
+                            ))}
+                        </div>
+                    </>
                 ) : (
                     <p className="text-text-tertiary text-[14px]">Rien pour le moment.</p>
                 )
@@ -96,13 +103,20 @@ export default function TrendingSection({ albums, tracks }: Props) {
 
             {tab === "titres" && (
                 tracks.length > 0 ? (
-                    <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide">
-                        {tracks.map((track) => (
-                            <div key={track.track_id} className="snap-center shrink-0 w-44 sm:w-48 md:w-52 lg:w-60">
-                                <TrackCard track={track} />
-                            </div>
-                        ))}
-                    </div>
+                    <>
+                        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide lg:hidden">
+                            {tracks.map((track) => (
+                                <div key={track.track_id} className="snap-center shrink-0 w-44 sm:w-48 md:w-52">
+                                    <TrackCard track={track} />
+                                </div>
+                            ))}
+                        </div>
+                        <div className="hidden lg:grid lg:grid-cols-5 gap-4">
+                            {tracks.slice(0, 5).map((track) => (
+                                <TrackCard key={track.track_id} track={track} />
+                            ))}
+                        </div>
+                    </>
                 ) : (
                     <p className="text-text-tertiary text-[14px]">Rien pour le moment.</p>
                 )

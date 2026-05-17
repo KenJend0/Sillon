@@ -55,25 +55,23 @@ type Props = {
     initialDiscovery: DiscoveryAlbum[];
 };
 
-function AlbumCard({
+function CoverTile({
     title,
     artist,
     coverUrl,
     onClick,
-    className,
 }: {
     title: string;
     artist: string;
     coverUrl: string | null;
     onClick: () => void;
-    className?: string;
 }) {
     return (
         <button
             onClick={onClick}
-            className={`group flex w-full items-center gap-3 text-left transition-opacity duration-150 hover:opacity-75 ${className ?? ""}`}
+            className="group block w-full text-left transition-opacity duration-150 hover:opacity-75"
         >
-            <div className="relative w-12 h-12 rounded-[6px] overflow-hidden flex-shrink-0 bg-background-secondary">
+            <div className="relative aspect-square rounded-[10px] overflow-hidden bg-background-secondary mb-2">
                 {coverUrl ? (
                     <CoverImage
                         src={coverUrl}
@@ -86,10 +84,8 @@ function AlbumCard({
                     <div className="w-full h-full bg-background-tertiary" />
                 )}
             </div>
-            <div className="min-w-0">
-                <p className="text-[13px] font-medium text-text-primary leading-snug line-clamp-2">{title}</p>
-                <p className="mt-0.5 truncate text-[11px] text-text-secondary">{artist}</p>
-            </div>
+            <p className="text-[12px] font-medium text-text-primary leading-snug line-clamp-2 group-hover:text-[#8E6F5E] transition-colors">{title}</p>
+            <p className="mt-0.5 truncate text-[11px] text-text-secondary">{artist}</p>
         </button>
     );
 }
@@ -100,14 +96,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
             {children}
         </h2>
     );
-}
-
-function getTwoColumnGridClass(itemCount: number) {
-    return `grid gap-3 ${itemCount === 3 ? "grid-cols-1" : "grid-cols-2"}`;
-}
-
-function getGridItemClass(index: number, itemCount: number) {
-    return itemCount !== 3 && itemCount % 2 !== 0 && index === itemCount - 1 ? "col-span-2" : "";
 }
 
 export default function AddPageClient({ defaultListItems, defaultListTracks, initialSuggestions, initialDiscovery }: Props) {
@@ -221,8 +209,8 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
 
     return (
         <>
-            <div className="p-6 pb-0">
-                <div className="max-w-page lg:max-w-5xl mx-auto">
+            <div className="p-6 lg:px-8 pb-0">
+                <div>
                     <h1 className="text-h1 text-text-primary mb-2">Ajouter</h1>
                     <p className="text-[14px] text-text-secondary mb-6">
                         Cherche un album ou un titre que tu as écouté pour l&apos;ajouter à ton journal.
@@ -253,17 +241,17 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                 </div>
             </div>
 
-            <main className="p-6 pb-20 lg:pb-12">
-                <div className="max-w-page lg:max-w-5xl mx-auto">
+            <main className="p-6 lg:px-8 pb-20 lg:pb-12">
+                <div>
                     {!isLoading && (
                         <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-start">
                             {/* Colonne gauche : search + form */}
                             <div>
                                 {entityType === "album" && (
-                                    <AlbumSearchForDiary onSelectAlbum={handleAlbumSelect} />
+                                    <AlbumSearchForDiary key={selectedAlbum?.id ?? "none"} onSelectAlbum={handleAlbumSelect} />
                                 )}
                                 {entityType === "track" && (
-                                    <TrackSearchForDiary onSelectTrack={handleTrackSelect} />
+                                    <TrackSearchForDiary key={selectedTrack?.id ?? "none"} onSelectTrack={handleTrackSelect} />
                                 )}
 
                                 {step === "form" && selectedAlbum && entityType === "album" && (
@@ -273,6 +261,7 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                                                 <div className="relative w-20 h-20 rounded-[8px] overflow-hidden flex-shrink-0 bg-background-secondary">
                                                     {selectedAlbum.coverUrl ? (
                                                         <CoverImage
+                                                            key={selectedAlbum.coverUrl}
                                                             src={selectedAlbum.coverUrl}
                                                             alt={selectedAlbum.title}
                                                             fill
@@ -359,6 +348,7 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                                                 <div className="relative w-20 h-20 rounded-[8px] overflow-hidden flex-shrink-0 bg-background-secondary">
                                                     {selectedTrack.coverUrl ? (
                                                         <CoverImage
+                                                            key={selectedTrack.coverUrl}
                                                             src={selectedTrack.coverUrl}
                                                             alt={selectedTrack.title}
                                                             fill
@@ -439,84 +429,81 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                                 )}
                             </div>
 
-                            {/* Colonne droite : suggestions (step=select, mode album uniquement) */}
-                            {step === "select" && hasDefaultItems && entityType === "album" && (
-                                <div className="mt-6 lg:mt-0">
-                                    <SectionTitle>À noter depuis ta liste</SectionTitle>
-                                    <div className="grid gap-3 grid-cols-2 lg:grid-cols-1">
-                                        {defaultListItems.map((s, idx) => (
-                                            <AlbumCard
-                                                key={s.id}
-                                                title={s.album_title}
-                                                artist={s.artist_name}
-                                                coverUrl={s.cover_url}
-                                                className={getGridItemClass(idx, defaultListItems.length)}
-                                                onClick={() =>
-                                                    handleAlbumSelect({
-                                                        id: s.album_id,
-                                                        title: s.album_title,
-                                                        artist_name: s.artist_name,
-                                                        coverUrl: s.cover_url,
-                                                    })
-                                                }
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {step === "select" && hasDefaultTracks && entityType === "track" && (
-                                <div className="mt-6 lg:mt-0">
-                                    <SectionTitle>À noter depuis ta liste</SectionTitle>
-                                    <div className="grid gap-3 grid-cols-2 lg:grid-cols-1">
-                                        {defaultListTracks.map((t, idx) => (
-                                            <AlbumCard
-                                                key={t.id}
-                                                title={t.track_title}
-                                                artist={t.artist_name}
-                                                coverUrl={t.cover_url}
-                                                className={getGridItemClass(idx, defaultListTracks.length)}
-                                                onClick={() =>
-                                                    handleTrackSelect({
-                                                        id: t.track_id,
-                                                        title: t.track_title,
-                                                        artist_name: t.artist_name,
-                                                        album_id: t.album_id,
-                                                        album_title: t.album_title,
-                                                        artist_id: t.artist_id,
-                                                        coverUrl: t.cover_url,
-                                                    })
-                                                }
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {step === "select" && !hasDefaultItems && entityType === "album" && (
-                                <div className="mt-6 lg:mt-0">
-                                    <SectionTitle>Par où commencer ?</SectionTitle>
-                                    <div className="grid gap-3 grid-cols-2 lg:grid-cols-1">
-                                        {CLASSIC_ALBUMS.map((album, idx) => (
-                                            <AlbumCard
-                                                key={album.id}
-                                                title={album.title}
-                                                artist={album.artist}
-                                                coverUrl={album.coverUrl}
-                                                className={getGridItemClass(idx, CLASSIC_ALBUMS.length)}
-                                                onClick={() =>
-                                                    handleAlbumSelect({
-                                                        id: album.id,
-                                                        title: album.title,
-                                                        artist_name: album.artist,
-                                                        coverUrl: album.coverUrl,
-                                                    })
-                                                }
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                            {/* Colonne droite : suggestions — toujours visibles sur desktop */}
+                            <div className={`mt-6 lg:mt-0 ${step === "form" ? "hidden lg:block" : ""}`}>
+                                {hasDefaultItems && entityType === "album" && (
+                                    <>
+                                        <SectionTitle>À noter depuis ta liste</SectionTitle>
+                                        <div className="grid gap-4 grid-cols-3">
+                                            {defaultListItems.map((s) => (
+                                                <CoverTile
+                                                    key={s.id}
+                                                    title={s.album_title}
+                                                    artist={s.artist_name}
+                                                    coverUrl={s.cover_url}
+                                                    onClick={() =>
+                                                        handleAlbumSelect({
+                                                            id: s.album_id,
+                                                            title: s.album_title,
+                                                            artist_name: s.artist_name,
+                                                            coverUrl: s.cover_url,
+                                                        })
+                                                    }
+                                                />
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                                {hasDefaultTracks && entityType === "track" && (
+                                    <>
+                                        <SectionTitle>À noter depuis ta liste</SectionTitle>
+                                        <div className="grid gap-4 grid-cols-3">
+                                            {defaultListTracks.map((t) => (
+                                                <CoverTile
+                                                    key={t.id}
+                                                    title={t.track_title}
+                                                    artist={t.artist_name}
+                                                    coverUrl={t.cover_url}
+                                                    onClick={() =>
+                                                        handleTrackSelect({
+                                                            id: t.track_id,
+                                                            title: t.track_title,
+                                                            artist_name: t.artist_name,
+                                                            album_id: t.album_id,
+                                                            album_title: t.album_title,
+                                                            artist_id: t.artist_id,
+                                                            coverUrl: t.cover_url,
+                                                        })
+                                                    }
+                                                />
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                                {!hasDefaultItems && entityType === "album" && (
+                                    <>
+                                        <SectionTitle>Par où commencer ?</SectionTitle>
+                                        <div className="grid gap-4 grid-cols-3">
+                                            {CLASSIC_ALBUMS.map((album) => (
+                                                <CoverTile
+                                                    key={album.id}
+                                                    title={album.title}
+                                                    artist={album.artist}
+                                                    coverUrl={album.coverUrl}
+                                                    onClick={() =>
+                                                        handleAlbumSelect({
+                                                            id: album.id,
+                                                            title: album.title,
+                                                            artist_name: album.artist,
+                                                            coverUrl: album.coverUrl,
+                                                        })
+                                                    }
+                                                />
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     )}
 

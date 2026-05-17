@@ -23,12 +23,12 @@ export default async function ExplorePage() {
 
     try {
         [trending, forYou, forYouTracks, discovery, similarUsers, trendingTracks, communityLists] = await Promise.all([
-            getTrendingThisWeek(6),
+            getTrendingThisWeek(10),
             getForYouSuggestions(6),
             getForYouTracks(6),
-            getDiscoveryAlbums(6),
+            getDiscoveryAlbums(10),
             getSimilarUsers(4),
-            getTrendingTracks(6),
+            getTrendingTracks(10),
             getPublicLists(6),
         ]);
     } catch (err) {
@@ -39,7 +39,7 @@ export default async function ExplorePage() {
 
     return (
         <>
-            <section className="px-6 pt-safe pb-6 max-w-page lg:max-w-5xl mx-auto">
+            <section className="px-6 lg:px-8 pt-safe pb-6">
                 <h1 className="text-h1 text-text-primary mb-2">
                     Explorer
                 </h1>
@@ -49,12 +49,12 @@ export default async function ExplorePage() {
             </section>
 
             <div className="bg-background border-b border-border-divider">
-                <div className="px-6 pb-3 max-w-page lg:max-w-5xl mx-auto">
+                <div className="px-6 lg:px-8 pb-3">
                     <SearchOverlay />
                 </div>
             </div>
 
-            <main className="p-6 pb-28 lg:pb-10 max-w-page lg:max-w-5xl mx-auto">
+            <main className="p-6 lg:px-8 pb-28 lg:pb-10">
                 {isEmpty ? (
                     <div className="text-center py-16 space-y-6">
                         <div className="space-y-3">

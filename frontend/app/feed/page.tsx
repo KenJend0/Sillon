@@ -8,6 +8,9 @@ import type { SuggestedUser } from '@/app/actions/social';
 import FollowButton from '@/components/social/FollowButton';
 import { UserAvatar } from '@/components/avatars/DefaultAvatar';
 import PublicFeedCard from '@/components/feed/PublicFeedCard';
+import { getTrendingThisWeek } from '@/app/actions/explore';
+import type { TrendingAlbum } from '@/app/actions/explore';
+import { CoverImage } from '@/components/CoverImage';
 
 /**
  * Feed state machine — calculé une seule fois, drive fetches ET rendu.
@@ -32,7 +35,7 @@ export default async function FeedPage() {
     const publicEntries = await getPublicFeed(30);
 
     return (
-      <div className="mx-auto max-w-page lg:max-w-5xl px-4 md:px-6 pb-28 lg:pb-12">
+      <div className="px-4 md:px-6 lg:px-8 pb-28 lg:pb-12">
         <div className="pt-8 pb-6">
           <h1 className="text-h1 text-text-primary mb-2">Feed</h1>
           <p className="text-[14px] text-text-tertiary">Ce qui se passe autour de toi.</p>
@@ -100,9 +103,10 @@ export default async function FeedPage() {
 
   const following = followingCount ?? 0;
 
-  const [feedResult, suggestedUsers] = await Promise.all([
+  const [feedResult, suggestedUsers, trendingAlbums] = await Promise.all([
     getMyFeed({ limit: 20 }),
-    following < 5 ? getSuggestedUsers(5) : Promise.resolve([] as SuggestedUser[]),
+    getSuggestedUsers(4),
+    getTrendingThisWeek(4),
   ]);
 
   if (!feedResult.success) console.error('Feed error:', feedResult.error);
@@ -144,17 +148,66 @@ export default async function FeedPage() {
     </Link>
   );
 
-  return (
-    <div className="mx-auto max-w-page lg:max-w-5xl px-4 md:px-6 pb-28 lg:pb-12">
-      <div className="pt-8 pb-6">
-        <h1 className="text-h1 text-text-primary mb-2">Feed</h1>
-        <p className="text-[14px] text-text-tertiary">Ce qui se passe autour de toi.</p>
+  const TrendingMini = () => (
+    <div>
+      <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-3">
+        Tendances
+      </p>
+      <div className="space-y-3">
+        {trendingAlbums.map((album: TrendingAlbum) => (
+          <Link
+            key={album.id}
+            href={`/albums/${album.album_id}`}
+            className="flex items-center gap-3 hover:opacity-75 transition-opacity duration-150"
+          >
+            <div className="relative w-10 h-10 rounded-[6px] overflow-hidden flex-shrink-0 bg-background-secondary">
+              {album.cover_url && (
+                <CoverImage
+                  src={album.cover_url}
+                  alt={album.album_title}
+                  fill
+                  className="object-cover"
+                  placeholder={<div className="w-full h-full bg-background-tertiary" />}
+                />
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-text-primary truncate">{album.album_title}</p>
+              <p className="text-[11px] text-text-secondary truncate">{album.artist_name}</p>
+            </div>
+          </Link>
+        ))}
       </div>
+    </div>
+  );
 
-      {/* ── empty ────────────────────────────────────────────────────────────── */}
-      {state === 'empty' && (
-        <div className="lg:flex lg:gap-12 lg:items-start">
-          <div className="py-4 lg:flex-1">
+  const Sidebar = () => (
+    <div className="space-y-8">
+      {trendingAlbums.length > 0 && <TrendingMini />}
+      {suggestedUsers.length > 0 && (
+        <div>
+          <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-3">
+            Personnes à suivre
+          </p>
+          <SuggestedUsersSection />
+        </div>
+      )}
+      <AddAlbumCTA />
+    </div>
+  );
+
+  return (
+    <div className="px-4 md:px-6 lg:px-8 pb-28 lg:pb-12 lg:flex lg:gap-12 lg:items-start">
+      {/* Colonne principale */}
+      <div className="lg:flex-1 lg:min-w-0">
+        <div className="pt-8 pb-6">
+          <h1 className="text-h1 text-text-primary mb-2">Feed</h1>
+          <p className="text-[14px] text-text-tertiary">Ce qui se passe autour de toi.</p>
+        </div>
+
+        {/* ── empty ──────────────────────────────────────────────────────────── */}
+        {state === 'empty' && (
+          <div className="py-4">
             <p className="text-[16px] text-text-secondary mb-2">Le fil est calme pour l&apos;instant.</p>
             <p className="text-[14px] text-text-tertiary mb-8 leading-relaxed">
               Suis des gens pour voir leurs écoutes ici, ou commence par noter un album.
@@ -182,21 +235,11 @@ export default async function FeedPage() {
               </div>
             )}
           </div>
-          {suggestedUsers.length > 0 && (
-            <aside className="lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-[72px]">
-              <p className="text-[12px] text-text-secondary font-medium uppercase tracking-[0.08em] mb-4">
-                Personnes à suivre
-              </p>
-              <SuggestedUsersSection />
-            </aside>
-          )}
-        </div>
-      )}
+        )}
 
-      {/* ── sparse ───────────────────────────────────────────────────────────── */}
-      {state === 'sparse' && (
-        <div className="lg:flex lg:gap-12 lg:items-start">
-          <div className="lg:flex-1">
+        {/* ── sparse ─────────────────────────────────────────────────────────── */}
+        {state === 'sparse' && (
+          <div>
             <FeedInfiniteList
               initialEvents={events}
               initialCursor={feedResult.nextCursor ?? null}
@@ -215,28 +258,24 @@ export default async function FeedPage() {
               </div>
             )}
           </div>
-          {suggestedUsers.length > 0 && (
-            <aside className="mt-12 lg:mt-0 lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-[72px]">
-              <p className="text-[12px] text-text-secondary font-medium uppercase tracking-[0.08em] mb-4">
-                Personnes à suivre
-              </p>
-              <SuggestedUsersSection />
-              <div className="mt-6">
-                <AddAlbumCTA />
-              </div>
-            </aside>
-          )}
-        </div>
-      )}
+        )}
 
-      {/* ── normal ───────────────────────────────────────────────────────────── */}
-      {state === 'normal' && (
-        <FeedInfiniteList
-          initialEvents={events}
-          initialCursor={feedResult.nextCursor ?? null}
-          currentUserId={user.id}
-        />
-      )}
+        {/* ── normal ─────────────────────────────────────────────────────────── */}
+        {state === 'normal' && (
+          <FeedInfiniteList
+            initialEvents={events}
+            initialCursor={feedResult.nextCursor ?? null}
+            currentUserId={user.id}
+          />
+        )}
+      </div>
+
+      {/* Sidebar unique — sticky depuis le haut */}
+      <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-[72px]">
+        <div className="pt-8">
+          <Sidebar />
+        </div>
+      </aside>
     </div>
   );
 }

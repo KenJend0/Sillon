@@ -19,7 +19,6 @@ export function coverSrcWithFallback(
 
   if (mbid) {
     const storageSrc = storageUrl(mbid);
-    // If cover_url is already the supabase URL (post-backfill), no need for fallback
     const fallback = coverUrl && !isSupabase(coverUrl) ? coverUrl : undefined;
     return { src: storageSrc, fallback };
   }

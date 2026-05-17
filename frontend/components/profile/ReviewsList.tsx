@@ -89,7 +89,7 @@ export default function ReviewsList({ reviews }: Props) {
         )}
       </div>
 
-      <div className="space-y-6">
+      <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
         {sorted.map((review) => (
           <article
             key={`${review.type}-${review.id}`}

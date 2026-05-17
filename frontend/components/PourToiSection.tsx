@@ -5,13 +5,10 @@ import Link from "next/link";
 import { type ForYouAlbum, type ForYouTrack } from "@/app/actions/explore";
 import { CoverImage } from "@/components/CoverImage";
 
-function AlbumRow({ album }: { album: ForYouAlbum }) {
+function AlbumCard({ album }: { album: ForYouAlbum }) {
     return (
-        <Link
-            href={`/albums/${album.album_id}`}
-            className="group flex items-center gap-3 hover:opacity-75 transition-opacity duration-150"
-        >
-            <div className="w-12 h-12 rounded-[6px] overflow-hidden bg-background-secondary flex-shrink-0 relative">
+        <Link href={`/albums/${album.album_id}`} className="block group">
+            <div className="rounded-[10px] overflow-hidden bg-background-secondary mb-2 aspect-square relative">
                 {album.cover_url ? (
                     <CoverImage
                         src={album.cover_url}
@@ -24,25 +21,20 @@ function AlbumRow({ album }: { album: ForYouAlbum }) {
                     <div className="w-full h-full bg-background-tertiary" />
                 )}
             </div>
-            <div className="min-w-0">
-                <p className="text-[13px] text-text-primary font-medium leading-snug line-clamp-2">
-                    {album.title}
-                </p>
-                <p className="text-[11px] text-text-secondary truncate mt-0.5">
-                    {album.artist}
-                </p>
-            </div>
+            <p className="text-[13px] text-text-primary font-medium leading-snug line-clamp-2 group-hover:text-[#8E6F5E] transition-colors duration-150">
+                {album.title}
+            </p>
+            <p className="text-[11px] text-text-secondary truncate mt-0.5">
+                {album.artist}
+            </p>
         </Link>
     );
 }
 
-function TrackRow({ track }: { track: ForYouTrack }) {
+function TrackCard({ track }: { track: ForYouTrack }) {
     return (
-        <Link
-            href={`/tracks/${track.track_id}`}
-            className="group flex items-center gap-3 hover:opacity-75 transition-opacity duration-150"
-        >
-            <div className="w-12 h-12 rounded-[6px] overflow-hidden bg-background-secondary flex-shrink-0 relative">
+        <Link href={`/tracks/${track.track_id}`} className="block group">
+            <div className="rounded-[10px] overflow-hidden bg-background-secondary mb-2 aspect-square relative">
                 {track.cover_url ? (
                     <CoverImage
                         src={track.cover_url}
@@ -51,24 +43,22 @@ function TrackRow({ track }: { track: ForYouTrack }) {
                         className="object-cover"
                         placeholder={
                             <div className="w-full h-full bg-background-tertiary flex items-center justify-center">
-                                <span className="text-text-disabled text-lg">♪</span>
+                                <span className="text-text-disabled text-2xl">♪</span>
                             </div>
                         }
                     />
                 ) : (
                     <div className="w-full h-full bg-background-tertiary flex items-center justify-center">
-                        <span className="text-text-disabled text-lg">♪</span>
+                        <span className="text-text-disabled text-2xl">♪</span>
                     </div>
                 )}
             </div>
-            <div className="min-w-0">
-                <p className="text-[13px] text-text-primary font-medium leading-snug line-clamp-2">
-                    {track.track_title}
-                </p>
-                <p className="text-[11px] text-text-secondary truncate mt-0.5">
-                    {track.artist}
-                </p>
-            </div>
+            <p className="text-[13px] text-text-primary font-medium leading-snug line-clamp-2 group-hover:text-[#8E6F5E] transition-colors duration-150">
+                {track.track_title}
+            </p>
+            <p className="text-[11px] text-text-secondary truncate mt-0.5">
+                {track.artist}
+            </p>
         </Link>
     );
 }
@@ -112,9 +102,9 @@ export default function PourToiSection({ albums, tracks }: Props) {
 
             {tab === "albums" && (
                 albums.length > 0 ? (
-                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 lg:gap-4">
                         {albums.slice(0, 6).map((album) => (
-                            <AlbumRow key={album.album_id} album={album} />
+                            <AlbumCard key={album.album_id} album={album} />
                         ))}
                     </div>
                 ) : (
@@ -124,9 +114,9 @@ export default function PourToiSection({ albums, tracks }: Props) {
 
             {tab === "titres" && (
                 tracks.length > 0 ? (
-                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 lg:gap-4">
                         {tracks.slice(0, 6).map((track) => (
-                            <TrackRow key={track.track_id} track={track} />
+                            <TrackCard key={track.track_id} track={track} />
                         ))}
                     </div>
                 ) : (

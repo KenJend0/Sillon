@@ -29,6 +29,8 @@ import ProfileActionsMenu from "@/components/social/ProfileActionsMenu";
 import BackButton from "@/components/BackButton";
 import { UserAvatar } from "@/components/avatars/DefaultAvatar";
 import PublicProfileTabs from "@/components/profile/PublicProfileTabs";
+import Top3Albums from "@/components/profile/Top3Albums";
+import RatingDistribution from "@/components/profile/RatingDistribution";
 import { getUserDiary, getUserReviewsUnified } from "@/app/actions/diary";
 import { getPublicUserLists } from "@/app/actions/lists";
 import { getUserTrackDiary } from "@/app/actions/track-diary";
@@ -65,7 +67,6 @@ export default async function PublicProfilePage({
     redirect("/me");
   }
 
-  // ── Counts, diary, saved ────────────────────────────────
   const adminClient = createSupabaseAdmin();
   const [
     { count: followersCount },
@@ -104,7 +105,6 @@ export default async function PublicProfilePage({
   let myListenedAlbums: Record<string, number | null> = {};
 
   if (authUser) {
-    // Run follow/block checks and current user lookups in parallel (single roundtrip)
     const [
       { data: followStatus },
       { data: followBackStatus },
@@ -126,25 +126,20 @@ export default async function PublicProfilePage({
     });
   }
 
-  const displayName = username;
   const bio = (profile as any).bio || "";
   const reviewsCount = profileUnifiedReviews.length;
+  const publicDiary = profileDiary.filter((e) => (e as any).is_public !== false);
 
-  // ── Profil bloqué ───────────────────────────────────────────────────────
   if (isBlocking) {
     return (
       <main className="max-w-page mx-auto px-4 sm:px-6 py-6">
         <BackButton />
         <div className="mt-8 flex items-start gap-5">
           <div className="flex-shrink-0 rounded-full border border-border overflow-hidden">
-            <div style={{ width: "80px", height: "80px" }}>
-              <UserAvatar userId={profile.id} src={(profile as any).avatar_url} size={80} />
-            </div>
+            <UserAvatar userId={profile.id} src={(profile as any).avatar_url} size={80} />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-[24px] font-medium text-text-primary tracking-[-0.02em] leading-[1.2]">
-              @{username}
-            </h1>
+            <h1 className="text-[24px] font-medium text-text-primary tracking-[-0.02em]">@{username}</h1>
             <div className="mt-3">
               <ProfileActionsMenu userId={profile.id} initialIsBlocking={true} />
             </div>
@@ -157,83 +152,86 @@ export default async function PublicProfilePage({
     );
   }
 
-  // Public diary entries only
-  const publicDiary = profileDiary.filter((e) => (e as any).is_public !== false);
-
   return (
     <>
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="bg-background-secondary border-b border-border-divider">
-        <div className="max-w-page mx-auto px-4 sm:px-6 py-8">
-          <BackButton />
-
-          {/* Avatar + Name + Follow */}
-          <div className="mt-8 flex items-start gap-5">
-            <div className="flex-shrink-0 rounded-full border border-border overflow-hidden">
-              <div style={{ width: "80px", height: "80px" }}>
-                <UserAvatar userId={profile.id} src={(profile as any).avatar_url} size={80} />
-              </div>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <h1 className="text-[24px] font-medium text-text-primary tracking-[-0.02em] leading-[1.2]">
-                @{username}
-              </h1>
-
-              {authUser && authUser.id !== profile.id && (
-                <div className="flex items-center gap-3 mt-3 flex-wrap">
-                  <FollowButton userId={profile.id} initialIsFollowing={isFollowing} />
-                  {isFollowingYou && (
-                    <span className="text-[12px] text-text-tertiary">Vous suit</span>
-                  )}
-
-                  <ProfileActionsMenu userId={profile.id} initialIsBlocking={false} />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Bio */}
-          {bio && (
-            <p className="text-[14px] text-text-secondary leading-relaxed max-w-lg mt-5">{bio}</p>
-          )}
-
-          {/* Stats */}
-          <div className="flex gap-6 text-[12px] text-text-tertiary mt-6">
-            <span>
-              <span className="font-medium text-text-primary">{reviewsCount}</span>{" "}
-              revue{reviewsCount !== 1 ? "s" : ""}
-            </span>
-            <Link
-              href={`/u/${username}/followers`}
-              className="hover:text-text-primary transition-colors duration-150"
-            >
-              <span className="font-medium text-text-primary">{followersCount || 0}</span>{" "}
-              abonné{followersCount !== 1 ? "s" : ""}
-            </Link>
-            <Link
-              href={`/u/${username}/following`}
-              className="hover:text-text-primary transition-colors duration-150"
-            >
-              <span className="font-medium text-text-primary">{followingCount || 0}</span>{" "}
-              abonnements
-            </Link>
-          </div>
-        </div>
+      {/* BackButton mobile uniquement */}
+      <div className="lg:hidden px-4 sm:px-6 pt-4">
+        <BackButton />
       </div>
 
-      {/* ── Top 3 + Tabs ───────────────────────────────────────────────── */}
-      <PublicProfileTabs
-        profileUserId={profile.id}
-        username={username}
-        diaryEntries={publicDiary}
-        publicLists={profilePublicLists}
-        myListenedAlbums={myListenedAlbums}
-        isLoggedIn={!!authUser}
-        favoriteAlbums={favoriteAlbums}
-        trackEntries={profileTrackDiary}
-        unifiedReviews={profileUnifiedReviews}
-      />
+      <div className="lg:flex lg:items-start lg:gap-12 lg:px-8 pb-28 lg:pb-12">
+        {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+        <aside className="lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-[72px]">
+          {/* Profil */}
+          <div className="bg-background-secondary border-b border-border-divider lg:bg-transparent lg:border-0">
+            <div className="px-4 sm:px-6 py-8 lg:px-0 lg:py-6">
+              <div className="flex gap-5 items-center">
+                <div className="flex-shrink-0 rounded-full border border-border overflow-hidden">
+                  <div className="w-[80px] h-[80px] lg:w-[96px] lg:h-[96px]">
+                    <UserAvatar userId={profile.id} src={(profile as any).avatar_url} size={96} />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-[22px] font-medium text-text-primary tracking-[-0.02em] leading-[1.2]">
+                    @{username}
+                  </h1>
+                  {authUser && authUser.id !== profile.id && (
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <FollowButton userId={profile.id} initialIsFollowing={isFollowing} />
+                      {isFollowingYou && (
+                        <span className="text-[12px] text-text-tertiary">Vous suit</span>
+                      )}
+                      <ProfileActionsMenu userId={profile.id} initialIsBlocking={false} />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {bio && (
+                <p className="text-[14px] text-text-secondary leading-relaxed mt-5">{bio}</p>
+              )}
+
+              {/* Stats empilées */}
+              <div className="flex gap-8 mt-6">
+                <div className="flex flex-col">
+                  <span className="text-[18px] font-semibold text-text-primary leading-none">{reviewsCount}</span>
+                  <span className="text-[11px] text-text-tertiary mt-1">revue{reviewsCount !== 1 ? "s" : ""}</span>
+                </div>
+                <Link href={`/u/${username}/followers`} className="flex flex-col hover:opacity-75 transition-opacity duration-150">
+                  <span className="text-[18px] font-semibold text-text-primary leading-none">{followersCount || 0}</span>
+                  <span className="text-[11px] text-text-tertiary mt-1">abonné{(followersCount || 0) !== 1 ? "s" : ""}</span>
+                </Link>
+                <Link href={`/u/${username}/following`} className="flex flex-col hover:opacity-75 transition-opacity duration-150">
+                  <span className="text-[18px] font-semibold text-text-primary leading-none">{followingCount || 0}</span>
+                  <span className="text-[11px] text-text-tertiary mt-1">abonnements</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Albums favoris + distribution */}
+          <div className="px-4 sm:px-6 lg:px-0 lg:mt-4">
+            <Top3Albums userId={profile.id} initialAlbums={favoriteAlbums} />
+            <div className="hidden lg:block mt-6">
+              <RatingDistribution ratings={publicDiary.map((e) => e.rating)} />
+            </div>
+          </div>
+        </aside>
+
+        {/* ── Contenu principal ────────────────────────────────────────────── */}
+        <div className="lg:flex-1 lg:min-w-0 lg:pt-8">
+          <PublicProfileTabs
+            profileUserId={profile.id}
+            username={username}
+            diaryEntries={publicDiary}
+            publicLists={profilePublicLists}
+            myListenedAlbums={myListenedAlbums}
+            isLoggedIn={!!authUser}
+            trackEntries={profileTrackDiary}
+            unifiedReviews={profileUnifiedReviews}
+          />
+        </div>
+      </div>
     </>
   );
 }

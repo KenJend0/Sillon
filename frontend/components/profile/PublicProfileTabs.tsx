@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import Top3Albums, { type FavoriteAlbum } from "./Top3Albums";
+import { type FavoriteAlbum } from "./Top3Albums";
 import ReviewsList from "./ReviewsList";
 import type { DiaryEntryUI, UnifiedReview } from "@/app/actions/diary";
 import { getUserDiary } from "@/app/actions/diary";
@@ -27,7 +27,6 @@ type Props = {
   publicLists: UserList[];
   myListenedAlbums: Record<string, number | null>;
   isLoggedIn: boolean;
-  favoriteAlbums?: FavoriteAlbum[];
   trackEntries?: TrackDiaryEntryUI[];
   unifiedReviews?: UnifiedReview[];
 };
@@ -86,7 +85,6 @@ export default function PublicProfileTabs({
   publicLists,
   myListenedAlbums,
   isLoggedIn,
-  favoriteAlbums,
   trackEntries = [],
   unifiedReviews = [],
 }: Props) {
@@ -188,11 +186,7 @@ export default function PublicProfileTabs({
     : TRACK_SORT_OPTIONS.find((o) => o.id === trackSort)?.label;
 
   return (
-    <div className="max-w-page mx-auto px-4 sm:px-6">
-      {/* Albums favoris */}
-      <Top3Albums userId={profileUserId} initialAlbums={favoriteAlbums} />
-      <div className="py-6" />
-
+    <div className="px-4 sm:px-6 lg:px-0">
       <div className="pb-28">
         {/* Tab bar */}
         <div className="flex gap-5 mb-8 border-b border-border-divider">
@@ -307,7 +301,7 @@ export default function PublicProfileTabs({
                 </p>
               ) : (
                 <>
-                  <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                  <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-6">
                     {filteredDiary.map((entry) => (
                       <div key={entry.id}>
                         <Link
@@ -357,7 +351,7 @@ export default function PublicProfileTabs({
                 <p className="text-center text-text-tertiary py-12 text-[14px]">Aucun titre noté pour le moment</p>
               ) : (
                 <>
-                  <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                  <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-6">
                     {sortedTracks.map((entry) => (
                       <Link key={entry.id} href={`/tracks/${entry.track_id}`} className="group">
                         <div className="aspect-square rounded-[10px] overflow-hidden bg-background-secondary relative">
