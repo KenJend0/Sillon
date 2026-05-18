@@ -93,7 +93,7 @@ export default function ReviewsList({ reviews }: Props) {
         {sorted.map((review) => (
           <article
             key={`${review.type}-${review.id}`}
-            className="p-4 border border-border hover:border-[#8E6F5E] transition-colors duration-150 flex gap-4 bg-background-secondary rounded-[12px]"
+            className="min-w-0 p-4 border border-border hover:border-[#8E6F5E] transition-colors duration-150 flex gap-4 bg-background-secondary rounded-[12px]"
           >
             {/* Cover */}
             {review.cover_url && (
