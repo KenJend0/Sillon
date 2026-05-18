@@ -212,14 +212,14 @@ export default async function PublicProfilePage({
           {/* Albums favoris + distribution */}
           <div className="px-4 sm:px-6 lg:px-0 lg:mt-4">
             <Top3Albums userId={profile.id} initialAlbums={favoriteAlbums} />
-            <div className="hidden lg:block mt-6">
+            <div className="hidden lg:block mt-8">
               <RatingDistribution ratings={publicDiary.map((e) => e.rating)} />
             </div>
           </div>
         </aside>
 
         {/* ── Contenu principal ────────────────────────────────────────────── */}
-        <div className="lg:flex-1 lg:min-w-0 lg:pt-8">
+        <div className="lg:flex-1 lg:min-w-0 mt-8 lg:pt-8 lg:mt-0">
           <PublicProfileTabs
             profileUserId={profile.id}
             username={username}

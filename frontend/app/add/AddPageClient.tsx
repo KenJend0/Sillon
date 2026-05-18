@@ -92,9 +92,9 @@ function CoverTile({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
     return (
-        <h2 className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-3">
+        <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-3">
             {children}
-        </h2>
+        </p>
     );
 }
 

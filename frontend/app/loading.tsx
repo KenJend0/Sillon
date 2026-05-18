@@ -1,22 +1,29 @@
 export default function Loading() {
     return (
-        <main className="p-6 pb-20 max-w-page mx-auto animate-pulse">
-            {/* Page title */}
-            <div className="h-7 w-48 bg-background-secondary rounded-[8px] mb-8" />
-
-            {/* Content rows */}
-            <div className="space-y-5">
-                {[0, 1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-start gap-3 pb-5 border-b border-border-divider">
-                        <div className="w-12 h-12 rounded-[8px] bg-background-secondary flex-shrink-0" />
-                        <div className="flex-1 space-y-2">
-                            <div className="h-4 bg-background-secondary rounded-[6px] w-2/3" />
-                            <div className="h-3 bg-background-secondary rounded-[6px] w-1/3" />
-                            <div className="h-3 bg-background-secondary rounded-[6px] w-1/2" />
-                        </div>
-                    </div>
-                ))}
+        <div className="fixed inset-0 flex items-center justify-center bg-[#F5F3EF]">
+            <div className="flex flex-col items-center gap-5">
+                <div className="flex items-end gap-[5px] h-8">
+                    {[0, 1, 2, 3, 4].map((i) => (
+                        <span
+                            key={i}
+                            className="w-[4px] rounded-full bg-[#8E6F5E]"
+                            style={{
+                                animation: `waveBar 1.1s ease-in-out infinite`,
+                                animationDelay: `${i * 0.13}s`,
+                            }}
+                        />
+                    ))}
+                </div>
+                <span className="text-[13px] text-[#9A9A9A] tracking-wide">
+                    Waveform
+                </span>
             </div>
-        </main>
+            <style>{`
+                @keyframes waveBar {
+                    0%, 100% { height: 8px; opacity: 0.4; }
+                    50%       { height: 28px; opacity: 1; }
+                }
+            `}</style>
+        </div>
     );
 }

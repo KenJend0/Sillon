@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 
+import { getAuthUser } from "@/lib/supabase/server";
 import { getTrendingThisWeek, getForYouSuggestions, getDiscoveryAlbums, getSimilarUsers, getForYouTracks } from "@/app/actions/explore";
 import { getPublicLists, type UserList } from "@/app/actions/lists";
 import { getTrendingTracks } from "@/app/actions/track-diary";
@@ -13,6 +14,9 @@ import { type TrendingAlbum, type ForYouAlbum, type DiscoveryAlbum, type Similar
 import { type TrackWithStats } from "@/app/actions/track-diary";
 
 export default async function ExplorePage() {
+    const authUser = await getAuthUser();
+    const isLoggedIn = !!authUser;
+
     let trending: TrendingAlbum[] = [];
     let forYou: ForYouAlbum[] = [];
     let forYouTracks: ForYouTrack[] = [];
@@ -24,10 +28,10 @@ export default async function ExplorePage() {
     try {
         [trending, forYou, forYouTracks, discovery, similarUsers, trendingTracks, communityLists] = await Promise.all([
             getTrendingThisWeek(10),
-            getForYouSuggestions(6),
-            getForYouTracks(6),
-            getDiscoveryAlbums(10),
-            getSimilarUsers(4),
+            isLoggedIn ? getForYouSuggestions(6) : Promise.resolve([]),
+            isLoggedIn ? getForYouTracks(6) : Promise.resolve([]),
+            isLoggedIn ? getDiscoveryAlbums(10) : Promise.resolve([]),
+            isLoggedIn ? getSimilarUsers(4) : Promise.resolve([]),
             getTrendingTracks(10),
             getPublicLists(6),
         ]);
@@ -35,26 +39,23 @@ export default async function ExplorePage() {
         console.error("Explore data fetch failed:", err);
     }
 
-    const isEmpty = trending.length === 0 && forYou.length === 0 && discovery.length === 0;
+    const isEmpty = trending.length === 0 && trendingTracks.length === 0;
 
     return (
         <>
-            <section className="px-6 lg:px-8 pt-safe pb-6">
+            <section className="px-6 lg:px-8 pt-6 lg:pt-8 pb-5">
                 <h1 className="text-h1 text-text-primary mb-2">
                     Explorer
                 </h1>
                 <p className="text-text-secondary text-[14px]">
                     Découvre de la musique, des listes et des profils qui correspondent à tes goûts.
                 </p>
-            </section>
-
-            <div className="bg-background border-b border-border-divider">
-                <div className="px-6 lg:px-8 pb-3">
+                <div className="mt-4">
                     <SearchOverlay />
                 </div>
-            </div>
+            </section>
 
-            <main className="p-6 lg:px-8 pb-28 lg:pb-10">
+            <main className="px-6 lg:px-8 pb-28 lg:pb-10">
                 {isEmpty ? (
                     <div className="text-center py-16 space-y-6">
                         <div className="space-y-3">
@@ -71,14 +72,14 @@ export default async function ExplorePage() {
                     </div>
                 ) : (
                     <div className="space-y-12">
-                        {/* Pour toi — recommandations personnalisées */}
-                        <PourToiSection albums={forYou} tracks={forYouTracks} />
+                        {/* Pour toi — recommandations personnalisées (connecté seulement) */}
+                        {isLoggedIn && <PourToiSection albums={forYou} tracks={forYouTracks} />}
 
                         {/* Tendances — albums + titres populaires cette semaine */}
                         <TrendingSection albums={trending} tracks={trendingTracks} />
 
-                        {/* Hors de ta bulle — artistes inconnus bien notés */}
-                        <DiscoverySection albums={discovery} />
+                        {/* Hors de ta bulle — artistes inconnus bien notés (connecté seulement) */}
+                        {isLoggedIn && <DiscoverySection albums={discovery} />}
 
                         {/* Listes de la communauté */}
                         {communityLists.length > 0 && (
@@ -101,8 +102,8 @@ export default async function ExplorePage() {
                             </section>
                         )}
 
-                        {/* Goûts similaires */}
-                        <SimilarUsersSection users={similarUsers} />
+                        {/* Goûts similaires (connecté seulement) */}
+                        {isLoggedIn && <SimilarUsersSection users={similarUsers} />}
                     </div>
                 )}
             </main>

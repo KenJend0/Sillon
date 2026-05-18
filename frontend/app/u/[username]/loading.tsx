@@ -47,7 +47,7 @@ export default function Loading() {
             </aside>
 
             {/* Contenu principal */}
-            <div className="lg:flex-1 lg:min-w-0 lg:pt-8 px-4 sm:px-6 lg:px-0">
+            <div className="lg:flex-1 lg:min-w-0 mt-8 lg:pt-8 lg:mt-0 px-4 sm:px-6 lg:px-0">
                 {/* Tabs */}
                 <div className="flex gap-5 mb-8 border-b border-border-divider">
                     {[52, 48, 44].map((w, i) => (
