@@ -217,27 +217,10 @@ Modèle **fan-out en écriture** : chaque action (review, like, follow…) insè
 
 ### Storage avatars
 
-Upload signé vers Supabase Storage (bucket `avatars`). Chemin : `{user_id}/avatar_{timestamp}.jpg`. Les avatars par défaut sont 12 SVG générés via `/api/avatars/[userId]`.
+Upload signé vers Supabase Storage (bucket `avatars`). Chemin : `{user_id}/avatar_{timestamp}.jpg`.
 
 ---
 
-## Scripts utiles
-
-### Rafraîchir les items Discover
-
-```bash
-# Unix
-bash scripts/refresh_discover.sh
-
-# Windows
-.\scripts\refresh_discover.ps1
-```
-
-Remplit `discover_items` avec 7 catégories : trending semaine/mois, all-time top, momentum, hidden gems, nouvelles sorties, community pick.
-
-En production (Vercel) : planifier l'appel via cron externe ou GitHub Actions (la clé `SUPABASE_SERVICE_KEY` est requise).
-
----
 
 ## Déploiement (Vercel)
 
