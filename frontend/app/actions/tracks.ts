@@ -29,7 +29,7 @@ export type TrackDetail = {
 export async function getTrack(id: string): Promise<TrackDetail | null> {
   const supabase = await createSupabaseServer();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('tracks')
     .select(`
       id,

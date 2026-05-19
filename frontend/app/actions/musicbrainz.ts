@@ -895,7 +895,7 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
 
     // Create album
     const newAlbumId = crypto.randomUUID();
-    const { error: albumError } = await supabase
+    const { error: albumError } = await (supabase as any)
       .from('albums')
       .insert({
         id: newAlbumId,

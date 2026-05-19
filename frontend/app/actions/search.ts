@@ -50,7 +50,7 @@ export async function searchInternal(
   const albumsQuery = async () => {
     if (kind !== "all" && kind !== "albums") return { data: null };
     if (useTextSearch) {
-      const r = await supabase
+      const r = await (supabase as any)
         .from("albums")
         .select("id, title, cover_url, release_date, artists(name)")
         .neq("type", "Single")
@@ -59,7 +59,7 @@ export async function searchInternal(
       if (!r.error) return r;
       // search_vector column doesn't exist yet — fall back to ILIKE
     }
-    return supabase
+    return (supabase as any)
       .from("albums")
       .select("id, title, cover_url, release_date, artists(name)")
       .neq("type", "Single")

@@ -64,7 +64,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
     const supabase = await createSupabaseServer();
 
     // [1] Fetch album — bloque tout, obligatoire en premier
-    const { data: album } = await supabase
+    const { data: album } = await (supabase as any)
         .from("albums")
         .select("id, title, cover_url, release_date, artist_id, mbid, type")
         .eq("id", id)
