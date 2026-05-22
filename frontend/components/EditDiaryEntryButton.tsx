@@ -16,6 +16,11 @@ type EditDiaryEntryButtonProps = {
   onUpdated?: () => void;
   showDelete?: boolean;
   variant?: "compact" | "full";
+  headless?: boolean;
+  externalEditOpen?: boolean;
+  onExternalEditClose?: () => void;
+  externalDeleteOpen?: boolean;
+  onExternalDeleteClose?: () => void;
 };
 
 export default function EditDiaryEntryButton({
@@ -27,12 +32,22 @@ export default function EditDiaryEntryButton({
   onUpdated,
   showDelete = true,
   variant = "compact",
+  headless = false,
+  externalEditOpen,
+  onExternalEditClose,
+  externalDeleteOpen,
+  onExternalDeleteClose,
 }: EditDiaryEntryButtonProps) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteConfirm, setIsDeleteConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const today = new Date().toISOString().split("T")[0];
+
+  const resolvedEditOpen = externalEditOpen ?? isEditOpen;
+  const resolvedDeleteOpen = externalDeleteOpen ?? isDeleteConfirm;
+  const closeEdit = onExternalEditClose ?? (() => setIsEditOpen(false));
+  const closeDelete = onExternalDeleteClose ?? (() => setIsDeleteConfirm(false));
 
   // Form state
   const [rating, setRating] = useState<number | null>(currentRating ?? null);
@@ -61,7 +76,7 @@ export default function EditDiaryEntryButton({
 
       if (result.success) {
         showToast("Mis à jour !", "success");
-        setIsEditOpen(false);
+        closeEdit();
         router.refresh();
         onUpdated?.();
       } else {
@@ -82,7 +97,7 @@ export default function EditDiaryEntryButton({
 
       if (result.success) {
         showToast("Écoute supprimée", "success");
-        setIsDeleteConfirm(false);
+        closeDelete();
         if (window.history.length > 1) {
           router.back();
         } else {
@@ -102,51 +117,53 @@ export default function EditDiaryEntryButton({
   if (variant === "compact") {
     return (
       <>
-        <div className="flex gap-1">
-          <button
-            onClick={() => setIsEditOpen(true)}
-            className="p-1 text-text-tertiary hover:text-text-secondary transition-colors duration-150"
-            title="Modifier"
-          >
-            <Edit2 size={14} />
-          </button>
-          {showDelete && (
+        {!headless && (
+          <div className="flex gap-1">
             <button
-              onClick={() => setIsDeleteConfirm(true)}
-              className="p-1 text-text-tertiary hover:text-[#C86C6C] transition-colors duration-150"
-              title="Supprimer"
+              onClick={() => setIsEditOpen(true)}
+              className="p-1 text-text-tertiary hover:text-text-secondary transition-colors duration-150"
+              title="Modifier"
             >
-              <Trash2 size={14} />
+              <Edit2 size={14} />
             </button>
-          )}
-        </div>
+            {showDelete && (
+              <button
+                onClick={() => setIsDeleteConfirm(true)}
+                className="p-1 text-text-tertiary hover:text-[#C86C6C] transition-colors duration-150"
+                title="Supprimer"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Edit Modal */}
-        {isEditOpen && (
+        {resolvedEditOpen && (
           <div className="fixed inset-0 bg-[#1C1C1C]/20 flex items-center justify-center z-50 p-4">
             <div className="bg-background rounded-[12px] p-6 max-w-md w-full border border-border">
-              <h2 className="text-[14px] font-medium text-text-primary mb-section-sm">Mettre à jour</h2>
+              <h2 className="text-meta font-medium font-sans text-text-primary mb-section-sm">Mettre à jour</h2>
 
               <form onSubmit={handleUpdate} className="mt-3 space-y-3">
                 {/* Stars Rating */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[14px] text-text-secondary">Note</span>
-                    <span className="text-text-primary font-medium text-[13px]">{rating ?? 0} / 10</span>
+                    <span className="text-meta text-text-secondary">Note</span>
+                    <span className="text-text-primary font-medium text-sm">{rating ?? 0} / 10</span>
                   </div>
                   <StarRating value={rating} onChange={setRating} />
                 </div>
 
                 {/* Date */}
                 <div>
-                  <label className="block text-[12px] text-text-secondary mb-2">Date d'écoute</label>
+                  <label className="block text-label text-text-secondary mb-2">Date d'écoute</label>
                   <div className="relative">
                     <input
                       type="date"
                       value={listenedAt}
                       max={today}
                       onChange={(e) => setListenedAt(e.target.value)}
-                      className="w-full px-3 py-2 pr-9 bg-background-secondary border border-border rounded-[10px] text-text-primary focus:outline-none focus:border-[#8E6F5E] text-[14px] appearance-none"
+                      className="w-full px-3 py-2 pr-9 bg-background-secondary border border-border rounded-[10px] text-text-primary focus:outline-none focus:border-[#8E6F5E] text-meta appearance-none"
                     />
                     <svg
                       aria-hidden="true"
@@ -166,21 +183,21 @@ export default function EditDiaryEntryButton({
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   placeholder="Vos pensées..."
-                  className="w-full border border-border rounded-[10px] p-3 text-[14px] bg-background-secondary text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] transition-colors duration-150"
+                  className="w-full border border-border rounded-[10px] p-3 text-meta bg-background-secondary text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] transition-colors duration-150"
                 />
 
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
-                    onClick={() => setIsEditOpen(false)}
-                    className="flex-1 px-3 py-2.5 bg-background-secondary hover:bg-background-tertiary text-text-primary rounded-[8px] text-[14px] transition-colors duration-150"
+                    onClick={closeEdit}
+                    className="flex-1 px-3 py-2.5 bg-background-secondary hover:bg-background-tertiary text-text-primary rounded-[8px] text-meta transition-colors duration-150"
                   >
                     Annuler
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 px-3 py-2.5 bg-[#1C1C1C] hover:opacity-85 text-[#F5F3EF] rounded-[8px] text-[14px] disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-150"
+                    className="flex-1 px-3 py-2.5 bg-[#1C1C1C] hover:opacity-85 text-[#F5F3EF] rounded-[8px] text-meta disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-150"
                   >
                     Mettre à jour
                   </button>
@@ -191,23 +208,23 @@ export default function EditDiaryEntryButton({
         )}
 
         {/* Delete Confirmation */}
-        {isDeleteConfirm && (
+        {resolvedDeleteOpen && (
           <div className="fixed inset-0 bg-[#1C1C1C]/20 flex items-center justify-center z-50 p-4">
             <div className="bg-background rounded-[12px] p-6 max-w-md w-full border border-border">
-              <h2 className="text-[14px] font-medium text-text-primary mb-2">Supprimer ?</h2>
-              <p className="text-[12px] text-text-secondary mb-section-sm">Cette action ne peut pas être annulée.</p>
+              <h2 className="text-meta font-medium font-sans text-text-primary mb-2">Supprimer ?</h2>
+              <p className="text-label text-text-secondary mb-section-sm">Cette action ne peut pas être annulée.</p>
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => setIsDeleteConfirm(false)}
-                  className="flex-1 px-3 py-2.5 bg-background-secondary hover:bg-background-tertiary text-text-primary rounded-[8px] text-[14px] transition-colors duration-150"
+                  onClick={closeDelete}
+                  className="flex-1 px-3 py-2.5 bg-background-secondary hover:bg-background-tertiary text-text-primary rounded-[8px] text-meta transition-colors duration-150"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={loading}
-                  className="flex-1 px-3 py-2.5 bg-[#C86C6C] hover:opacity-85 text-[#F5F3EF] rounded-[8px] text-[14px] disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-150"
+                  className="flex-1 px-3 py-2.5 bg-[#C86C6C] hover:opacity-85 text-[#F5F3EF] rounded-[8px] text-meta disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-150"
                 >
                   Supprimer
                 </button>

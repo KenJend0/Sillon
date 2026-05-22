@@ -3,6 +3,7 @@ import { getDiaryEntry } from '@/app/actions/diary';
 import { getAuthUser, createSupabaseServer } from '@/lib/supabase/server';
 import DiaryEntryClient from './DiaryEntryClient';
 
+
 interface DiaryEntryPageProps {
   params: Promise<{ entry_id: string }>;
 }
@@ -64,7 +65,6 @@ export default async function DiaryEntryPage({ params }: DiaryEntryPageProps) {
     notFound();
   }
 
-  // Hide entry if current user has blocked the author
   if (currentUser && currentUser.id !== result.data.author.id) {
     const supabase = await createSupabaseServer();
     const { data: block } = await (supabase as any)
@@ -73,7 +73,6 @@ export default async function DiaryEntryPage({ params }: DiaryEntryPageProps) {
       .eq('blocker_id', currentUser.id)
       .eq('blocked_id', result.data.author.id)
       .maybeSingle();
-
     if (block) notFound();
   }
 

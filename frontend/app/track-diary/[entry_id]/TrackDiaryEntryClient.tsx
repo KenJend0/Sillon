@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Heart, MessageCircle, Trash2 } from 'lucide-react';
-import ShareButton from '@/components/ShareButton';
+import { useRouter } from 'next/navigation';
+import { Heart, Trash2, CornerDownLeft, Flag, Share2, Link2, MoreHorizontal, Edit2 } from 'lucide-react';
 import { showToast } from '@/components/Toast';
 import { UserAvatar } from '@/components/avatars/DefaultAvatar';
 import BackButton from '@/components/BackButton';
 import EditTrackDiaryEntryButton from '@/components/EditTrackDiaryEntryButton';
+import { useAuth } from '@/lib/AuthContext';
 import {
   toggleTrackDiaryLike,
   addTrackComment,
@@ -19,14 +19,97 @@ import {
   type TrackDiaryComment,
 } from '@/app/actions/track-diary';
 
+function relativeTime(dateStr: string): string {
+  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if (days === 0) return "aujourd'hui";
+  if (days === 1) return 'hier';
+  if (days < 7) return `il y a ${days} jours`;
+  if (days < 30) return `il y a ${Math.floor(days / 7)} sem.`;
+  if (days < 365) return `il y a ${Math.floor(days / 30)} mois`;
+  return `il y a ${Math.floor(days / 365)} an${Math.floor(days / 365) > 1 ? 's' : ''}`;
+}
+
+function shortDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+}
+
+function MoreMenu({ onShare, onCopyLink, onReport, onEdit, onDelete, isAuthor }: {
+  onShare: () => void;
+  onCopyLink: () => void;
+  onReport?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  isAuthor: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div className="relative flex-shrink-0" ref={ref}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="p-1.5 rounded-[6px] text-text-tertiary hover:text-accent hover:bg-background-secondary transition-colors"
+      >
+        <MoreHorizontal size={16} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 w-48 bg-[#FAF8F4] border border-[#D8D3CB] rounded-[10px] shadow-[0_4px_12px_-4px_rgba(60,40,20,0.14)] z-50 py-1.5 overflow-hidden">
+          <p className="text-[9px] uppercase tracking-[0.22em] text-text-disabled px-3 pt-1.5 pb-1">Options</p>
+          <button onClick={() => { onShare(); setOpen(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-text-primary hover:bg-[#ECE8E1] transition-colors text-left">
+            <Share2 size={13} className="text-text-secondary flex-shrink-0" />
+            Partager
+          </button>
+          <button onClick={() => { onCopyLink(); setOpen(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-text-primary hover:bg-[#ECE8E1] transition-colors text-left">
+            <Link2 size={13} className="text-text-secondary flex-shrink-0" />
+            Copier le lien
+          </button>
+          {isAuthor && onEdit && (
+            <>
+              <div className="h-px bg-[#C9C2B5] mx-2 my-1" />
+              <button onClick={() => { onEdit(); setOpen(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-text-primary hover:bg-[#ECE8E1] transition-colors text-left">
+                <Edit2 size={13} className="text-text-secondary flex-shrink-0" />
+                Modifier
+              </button>
+              <button onClick={() => { onDelete?.(); setOpen(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-[#C86C6C] hover:bg-[#ECE8E1] transition-colors text-left">
+                <Trash2 size={13} className="flex-shrink-0" />
+                Supprimer
+              </button>
+            </>
+          )}
+          {!isAuthor && onReport && (
+            <>
+              <div className="h-px bg-[#C9C2B5] mx-2 my-1" />
+              <button onClick={() => { onReport(); setOpen(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-[#C86C6C] hover:bg-[#ECE8E1] transition-colors text-left">
+                <Flag size={13} className="flex-shrink-0" />
+                Signaler
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface Props {
   entry: TrackDiaryEntryDetail;
   currentUser: { id: string; email?: string } | null;
 }
 
 export default function TrackDiaryEntryClient({ entry, currentUser }: Props) {
-  const router = useRouter();
+  const { profile } = useAuth();
   const isAuthor = currentUser?.id === entry.author.id;
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const [hasLiked, setHasLiked] = useState(entry.has_liked);
   const [likesCount, setLikesCount] = useState(entry.stats.likes_count);
@@ -38,8 +121,7 @@ export default function TrackDiaryEntryClient({ entry, currentUser }: Props) {
   const [replyText, setReplyText] = useState('');
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const totalComments = comments.reduce((acc, c) => acc + 1 + c.replies.length, 0);
 
   const handleLike = async () => {
     if (!currentUser) { showToast('Connecte-toi pour aimer cette entrée', 'error'); return; }
@@ -67,10 +149,9 @@ export default function TrackDiaryEntryClient({ entry, currentUser }: Props) {
     try {
       await addTrackComment(entry.id, newComment.trim());
       setNewComment('');
-      const fresh = await getTrackEntryComments(entry.id);
-      setComments(fresh);
+      setComments(await getTrackEntryComments(entry.id));
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Impossible d\'ajouter le commentaire', 'error');
+      showToast(err instanceof Error ? err.message : "Impossible d'ajouter le commentaire", 'error');
     } finally {
       setPosting(false);
     }
@@ -78,16 +159,16 @@ export default function TrackDiaryEntryClient({ entry, currentUser }: Props) {
 
   const handleAddReply = async () => {
     if (!currentUser || !replyingTo || posting || !replyText.trim()) return;
+    const { parentCommentId } = replyingTo;
     setPosting(true);
     try {
-      await addTrackComment(entry.id, replyText.trim(), replyingTo.parentCommentId);
+      await addTrackComment(entry.id, replyText.trim(), parentCommentId);
       setReplyText('');
       setReplyingTo(null);
-      setExpandedReplies((prev) => new Set([...prev, replyingTo.parentCommentId]));
-      const fresh = await getTrackEntryComments(entry.id);
-      setComments(fresh);
+      setExpandedReplies((prev) => new Set([...prev, parentCommentId]));
+      setComments(await getTrackEntryComments(entry.id));
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Impossible d\'ajouter la réponse', 'error');
+      showToast(err instanceof Error ? err.message : "Impossible d'ajouter la réponse", 'error');
     } finally {
       setPosting(false);
     }
@@ -104,51 +185,93 @@ export default function TrackDiaryEntryClient({ entry, currentUser }: Props) {
     }
   };
 
-  return (
-    <div className="max-w-page mx-auto px-4 py-6">
-      <BackButton />
+  const handleShare = async () => {
+    const url = `${window.location.origin}/track-diary/${entry.id}`;
+    if (typeof navigator.share === 'function') {
+      try { await navigator.share({ url, title: entry.track.title }); } catch {}
+    } else {
+      await handleCopyLink();
+    }
+  };
 
-      {/* Header : cover 100px + titre/artiste */}
-      <div className="flex gap-6 mb-6 mt-4">
-        {entry.album.cover_url ? (
-          <Link href={`/albums/${entry.album.id}`} className="flex-shrink-0">
-            <Image src={entry.album.cover_url} alt={entry.album.title} width={100} height={100} className="rounded-[10px]" />
-          </Link>
-        ) : (
-          <div className="w-[100px] h-[100px] bg-background-secondary rounded-[10px] flex-shrink-0" />
-        )}
-        <div className="flex-1 min-w-0 flex flex-col justify-center mt-2">
-          <Link href={`/tracks/${entry.track.id}`} className="text-h2 hover:text-text-secondary transition-colors block mb-2 text-text-primary">
-            {entry.track.title}
-          </Link>
-          <div className="text-body text-text-secondary">
-            <Link href={`/artists/${entry.artist.id}`} className="hover:text-text-primary transition-colors">{entry.artist.name}</Link>
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/track-diary/${entry.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('Lien copié', 'success');
+    } catch {
+      showToast('Impossible de copier le lien', 'error');
+    }
+  };
+
+  return (
+    <div className="max-w-page mx-auto px-4 pt-4 pb-6">
+      <BackButton label="Journal" fallbackHref="/diary" />
+
+      {/* ── Track hero ─────────────────────────────────────────── */}
+      <div className="mt-4 pb-5 border-b border-[#D8D3CB]">
+        <div className="flex gap-4 items-end">
+          <div className="flex-shrink-0">
+            <Link href={`/albums/${entry.album.id}`}>
+              {entry.album.cover_url ? (
+                <Image src={entry.album.cover_url} alt={entry.album.title} width={84} height={84} className="rounded-[8px] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(60,40,20,0.12)]" />
+              ) : (
+                <div className="w-[84px] h-[84px] bg-background-secondary rounded-[8px]" />
+              )}
+            </Link>
           </div>
-          <div className="text-label text-text-tertiary mt-1">
-            <Link href={`/albums/${entry.album.id}`} className="hover:text-text-secondary transition-colors">{entry.album.title}</Link>
-            {entry.album.release_date && <span>{` · ${new Date(entry.album.release_date).getFullYear()}`}</span>}
+          <div className="flex-1 min-w-0 pb-1">
+            <p className="text-[9.5px] uppercase tracking-[0.22em] text-text-tertiary mb-1">Titre</p>
+            <Link href={`/tracks/${entry.track.id}`}>
+              <h1 className="font-display font-normal text-[28px] leading-[1.05] text-text-warm tracking-tight hover:text-accent transition-colors">
+                {entry.track.title}
+              </h1>
+            </Link>
+            <div className="flex items-baseline gap-2 mt-1.5 flex-wrap">
+              <Link href={`/artists/${entry.artist.id}`} className="font-medium text-[13.5px] text-text-secondary hover:text-text-primary transition-colors">
+                {entry.artist.name}
+              </Link>
+              <span className="w-[3px] h-[3px] rounded-full bg-[#B5B0A6]" />
+              <Link href={`/albums/${entry.album.id}`} className="text-[12px] text-text-tertiary hover:text-text-secondary transition-colors">
+                {entry.album.title}
+              </Link>
+              {entry.album.release_date && (
+                <>
+                  <span className="w-[3px] h-[3px] rounded-full bg-[#B5B0A6]" />
+                  <span className="text-[12px] text-text-tertiary">{new Date(entry.album.release_date).getFullYear()}</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="border-b border-border my-6" />
+      {/* ── Critique block — à plat ─────────────────────────────── */}
+      <div className="relative pl-4 mt-5">
+        <div className="absolute left-0 top-2 bottom-4 w-0.5 bg-accent rounded-full opacity-55" />
 
-      {/* Auteur + date */}
-      <div className="flex items-start gap-3 mb-6">
-        <Link href={`/u/${entry.author.username}`}>
-          <UserAvatar userId={entry.author.id} src={entry.author.avatar_url} size={48} />
-        </Link>
-        <div className="flex-1">
-          <p className="text-meta text-text-secondary">
-            Une écoute de{' '}
-            <Link href={`/u/${entry.author.username}`} className="font-medium hover:text-text-primary transition-colors">
-              {entry.author.username}
-            </Link>
-          </p>
-          <p className="text-label text-text-tertiary mt-1">{formatDate(entry.listened_at)}</p>
-        </div>
-        {isAuthor && (
-          <div className="flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <Link href={`/u/${entry.author.username}`} className="flex-shrink-0">
+            <UserAvatar userId={entry.author.id} src={entry.author.avatar_url} size={34} />
+          </Link>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] text-text-secondary leading-tight">
+              Une écoute de{' '}
+              <Link href={`/u/${entry.author.username}`} className="font-medium text-text-warm hover:text-text-primary transition-colors">
+                {entry.author.username}
+              </Link>
+            </p>
+            <p className="text-[11px] text-text-disabled mt-1 tracking-wide">{relativeTime(entry.listened_at)}</p>
+          </div>
+          <MoreMenu
+            onShare={handleShare}
+            onCopyLink={handleCopyLink}
+            onReport={!isAuthor && currentUser ? async () => {} : undefined}
+            onEdit={isAuthor ? () => setIsEditModalOpen(true) : undefined}
+            onDelete={isAuthor ? () => setIsDeleteModalOpen(true) : undefined}
+            isAuthor={isAuthor}
+          />
+          {isAuthor && (
             <EditTrackDiaryEntryButton
               entryId={entry.id}
               trackId={entry.track.id}
@@ -157,94 +280,100 @@ export default function TrackDiaryEntryClient({ entry, currentUser }: Props) {
               currentRating={entry.rating}
               currentReview={entry.review_body}
               currentListenedAt={entry.listened_at}
+              headless={true}
+              externalEditOpen={isEditModalOpen}
+              onExternalEditClose={() => setIsEditModalOpen(false)}
+              externalDeleteOpen={isDeleteModalOpen}
+              onExternalDeleteClose={() => setIsDeleteModalOpen(false)}
             />
+          )}
+        </div>
+
+        {entry.rating !== null && (
+          <div className="flex items-baseline gap-1 mt-5">
+            <span className="font-display italic text-[48px] leading-[0.9]" style={{ color: '#5C4538' }}>
+              {entry.rating}
+            </span>
+            <span className="font-sans text-[10px] uppercase tracking-[0.16em] text-accent opacity-75 mb-1.5 ml-0.5">/10</span>
           </div>
         )}
-      </div>
 
-      {/* Note */}
-      {entry.rating !== null && (
-        <div className="mt-6">
-          <div className="text-label uppercase text-text-secondary mb-2">Note</div>
-          <p className="text-body text-text-primary">{entry.rating} / 10</p>
-        </div>
-      )}
+        {entry.review_body && (
+          <p className="italic text-meta leading-relaxed text-text-secondary mt-4">
+            &laquo;&thinsp;{entry.review_body.trim()}&thinsp;&raquo;
+          </p>
+        )}
 
-      {/* Review */}
-      {(entry.review_title || entry.review_body) && (
-        <div className="mt-6">
-          {entry.review_title && <h2 className="text-[14px] font-medium text-text-primary mb-3">{entry.review_title}</h2>}
-          {entry.review_body && (
-            <p className="text-[14px] text-text-primary whitespace-pre-wrap leading-[1.7] italic">
-              {`« ${entry.review_body.trim()}`}<span className="whitespace-nowrap">{' »'}</span>
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Like + commentaires */}
-      <div className="flex items-center gap-6 mt-8">
-        <div className="flex items-center gap-2">
+        <div className="h-px bg-[#C9C2B5] mt-5 opacity-70" />
+        <div className="flex items-center gap-4 mt-3 text-[12px] text-text-tertiary">
           {currentUser ? (
-            <button onClick={handleLike} disabled={liking} className="text-text-tertiary hover:text-[#C86C6C] transition-colors disabled:opacity-50">
-              <Heart size={18} fill={hasLiked ? 'currentColor' : 'none'} className={hasLiked ? 'text-[#C86C6C]' : ''} />
+            <button onClick={handleLike} disabled={liking} className={`flex items-center gap-1.5 transition-colors duration-150 disabled:opacity-50 ${hasLiked ? 'text-[#C86C6C]' : 'hover:text-[#C86C6C]'}`}>
+              <Heart size={13} fill={hasLiked ? 'currentColor' : 'none'} />
+              <span>{likesCount} J&apos;aime</span>
             </button>
           ) : (
-            <Heart size={18} className="text-text-tertiary" />
+            <span className="flex items-center gap-1.5"><Heart size={13} />{likesCount} J&apos;aime</span>
           )}
-          <span className="text-label text-text-tertiary">{likesCount}</span>
-          <span className="text-label text-text-disabled">j'aime{likesCount > 1 ? 's' : ''}</span>
-        </div>
-        <div className="flex items-center gap-2 text-text-tertiary">
-          <MessageCircle size={18} />
-          <span className="text-label">{comments.reduce((acc, c) => acc + 1 + c.replies.length, 0)}</span>
-        </div>
-        <div className="ml-auto">
-          <ShareButton entryId={entry.id} basePath="track-diary" />
         </div>
       </div>
 
-      <div className="mt-6">
-        <Link href={`/tracks/${entry.track.id}`} className="text-meta text-text-secondary hover:text-text-primary transition-colors inline-flex items-center gap-1">
-          Voir toutes les critiques de ce titre →
-        </Link>
-      </div>
+      {/* ── CTA ────────────────────────────────────────────────── */}
+      <Link href={`/tracks/${entry.track.id}#reviews`} className="mt-5 flex items-center justify-between gap-3 px-4 py-3.5 bg-[#ECE8E1] border border-[#D8D3CB] rounded-[10px] hover:border-accent hover:bg-[#FAF8F4] transition-all duration-150 group">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[9.5px] uppercase tracking-[0.22em] text-text-tertiary">Continuer la lecture</span>
+          <span className="font-display text-[16px] text-text-warm leading-tight">
+            Les <em className="italic" style={{ color: '#5C4538' }}>critiques</em> de ce titre
+          </span>
+        </div>
+        <span className="font-display italic text-[18px] text-accent group-hover:translate-x-1 transition-transform duration-150">→</span>
+      </Link>
 
-      {/* Réponses */}
-      <section className="border-t border-border pt-8 mt-8 mb-20">
-        <h3 className="text-label font-medium text-text-primary uppercase mb-6">Réponses</h3>
+      {/* ── Réponses ───────────────────────────────────────────── */}
+      <section className="mt-7 mb-20">
+        <div className="flex items-baseline gap-2 mb-4">
+          <h2 className="font-display font-normal text-[24px] text-text-warm leading-none">Réponses</h2>
+          <span className="font-display italic text-[16px] leading-none" style={{ color: '#8E6F5E' }}>· {totalComments}</span>
+          <div className="flex-1 h-px bg-[#C9C2B5] self-center ml-1.5" />
+        </div>
 
-        {currentUser ? (
-          <div className="flex gap-3 mb-6">
-            <input
-              type="text"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Ajouter quelques mots…"
-              className="flex-1 bg-background-secondary border border-border rounded-[10px] px-3 py-2 text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E]"
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
-            />
-            <button
-              onClick={handleAddComment}
-              disabled={posting || !newComment.trim()}
-              className="px-4 py-2 border border-border text-text-primary hover:bg-[#1C1C1C] hover:text-[#F5F3EF] disabled:bg-background-secondary disabled:text-text-disabled disabled:border-border rounded-[8px] text-meta font-medium transition-colors"
-            >
-              Envoyer
-            </button>
-          </div>
-        ) : (
-          <div className="mb-6 p-4 bg-background-secondary rounded-[10px] border border-border">
-            <p className="text-meta text-text-secondary">
-              <Link href="/auth/signin" className="text-text-primary hover:text-[#8E6F5E] font-medium transition-colors">Connectez-vous</Link>
+        {!currentUser ? (
+          <div className="mb-4 px-4 py-3.5 bg-[#FAF8F4] border border-[#D8D3CB] rounded-[12px]">
+            <p className="text-[13px] text-text-secondary">
+              <Link href="/auth/signin" className="font-medium text-text-warm hover:text-accent transition-colors">Connecte-toi</Link>
               {' '}pour liker et commenter cette écoute.
             </p>
           </div>
-        )}
+        ) : !isAuthor ? (
+          <div className="bg-[#FAF8F4] border border-[#D8D3CB] rounded-[12px] p-3 mb-4 transition-all duration-150 focus-within:border-accent focus-within:shadow-[0_0_0_3px_rgba(142,111,94,0.08)]">
+            <div className="flex gap-2.5 items-start">
+              <UserAvatar userId={currentUser.id} src={profile?.avatar_url ?? null} size={28} className="mt-0.5 flex-shrink-0" />
+              <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Ajouter quelques mots…"
+                rows={1}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
+                className="flex-1 bg-transparent border-0 outline-none resize-none text-[13.5px] text-text-primary leading-[1.6] pt-0.5 placeholder:font-display placeholder:italic placeholder:text-text-tertiary placeholder:text-[14px]"
+              />
+            </div>
+            <div className="flex justify-end mt-2.5">
+              <button
+                onClick={handleAddComment}
+                disabled={posting || !newComment.trim()}
+                className={`text-[13px] font-medium px-4 py-1.5 rounded-full border transition-colors duration-150 ${
+                  !newComment.trim() ? 'border-border text-text-tertiary cursor-default' : 'border-accent text-accent hover:bg-accent hover:text-[#FAF8F4]'
+                }`}
+              >
+                Envoyer
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {comments.length === 0 ? (
-          <p className="text-text-tertiary text-meta">Personne n'a encore répondu.</p>
+          <p className="font-display italic text-[15px] text-text-tertiary">Personne n&apos;a encore répondu.</p>
         ) : (
-          <div className="space-y-5">
+          <div className="flex flex-col gap-2">
             {comments.map((comment) => {
               const replies = comment.replies ?? [];
               const isExpanded = expandedReplies.has(comment.id);
@@ -252,28 +381,30 @@ export default function TrackDiaryEntryClient({ entry, currentUser }: Props) {
 
               return (
                 <div key={comment.id}>
-                  <div className="flex gap-3 group">
-                    <Link href={`/u/${comment.author.username}`}>
-                      <UserAvatar userId={comment.author.id} src={comment.author.avatar_url} size={32} />
+                  <div className={`flex gap-2.5 p-3 rounded-[12px] border border-[#D8D3CB] ${comment.is_mine ? 'bg-[#ECE8E1]' : 'bg-[#FAF8F4]'}`}>
+                    <Link href={`/u/${comment.author.username}`} className="flex-shrink-0">
+                      <UserAvatar userId={comment.author.id} src={comment.author.avatar_url} size={30} />
                     </Link>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2 text-meta">
-                        <Link href={`/u/${comment.author.username}`} className="font-medium text-text-primary hover:text-text-secondary transition-colors">
+                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                        <Link href={`/u/${comment.author.username}`} className="font-medium text-[13px] text-text-warm hover:text-text-primary transition-colors">
                           {comment.author.username}
                         </Link>
-                        <span className="text-label text-text-tertiary flex-1">{formatDate(comment.created_at)}</span>
+                        <span className="w-[3px] h-[3px] rounded-full bg-[#B5B0A6] self-center" />
+                        <span className="font-display italic text-[13px]" style={{ color: '#8E6F5E' }}>{shortDate(comment.created_at)}</span>
                         {comment.is_mine && (
-                          <button onClick={() => handleDeleteComment(comment.id)} className="text-text-tertiary hover:text-text-primary transition-colors" title="Supprimer">
-                            <Trash2 size={14} />
+                          <button onClick={() => handleDeleteComment(comment.id)} className="ml-auto p-1 rounded-[5px] text-text-disabled hover:text-[#C86C6C] hover:bg-background transition-colors" title="Supprimer">
+                            <Trash2 size={12} />
                           </button>
                         )}
                       </div>
-                      <p className="text-[14px] text-text-primary leading-[1.7] mt-2">{comment.body}</p>
+                      <p className="text-[13.5px] text-text-primary leading-[1.65] mt-1.5">{comment.body}</p>
                       {currentUser && (
                         <button
                           onClick={() => isReplyingHere ? setReplyingTo(null) : setReplyingTo({ parentCommentId: comment.id, mentionUsername: comment.author.username })}
-                          className="mt-2 text-label text-text-tertiary hover:text-text-primary transition-colors"
+                          className="flex items-center gap-1.5 mt-2 text-[11.5px] text-accent hover:text-accent-deep transition-colors"
                         >
+                          <CornerDownLeft size={10} />
                           {isReplyingHere ? 'Annuler' : 'Répondre'}
                         </button>
                       )}
@@ -283,29 +414,35 @@ export default function TrackDiaryEntryClient({ entry, currentUser }: Props) {
                   {replies.length > 0 && (
                     <button
                       onClick={() => setExpandedReplies((prev) => { const next = new Set(prev); next.has(comment.id) ? next.delete(comment.id) : next.add(comment.id); return next; })}
-                      className="mt-2 ml-11 text-label text-text-tertiary hover:text-text-primary transition-colors flex items-center gap-1"
+                      className="flex items-center gap-2 mt-1.5 ml-9 text-[11.5px] text-text-tertiary hover:text-text-primary transition-colors"
                     >
-                      <span style={{ display: 'inline-block', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
-                      {isExpanded ? 'Masquer les réponses' : `${replies.length} réponse${replies.length > 1 ? 's' : ''}`}
+                      <span className="w-3.5 h-px bg-[#C9C2B5]" />
+                      {isExpanded ? 'Masquer les réponses' : <em className="font-display italic text-[12.5px]" style={{ color: '#8E6F5E' }}>Lire {replies.length} réponse{replies.length > 1 ? 's' : ''}</em>}
                     </button>
                   )}
 
                   {isExpanded && replies.length > 0 && (
-                    <div className="mt-2 ml-11 space-y-4 border-l border-border pl-4">
+                    <div className="relative mt-1.5 ml-9 pl-3.5 flex flex-col gap-2">
+                      <div className="absolute left-0 top-0 bottom-3 w-px bg-[#C9C2B5]" />
                       {replies.map((reply) => (
-                        <div key={reply.id} className="flex gap-3">
-                          <Link href={`/u/${reply.author.username}`}>
+                        <div key={reply.id} className={`flex gap-2 p-2.5 rounded-[10px] border border-[#D8D3CB] ${reply.is_mine ? 'bg-[#ECE8E1]' : 'bg-[#FAF8F4]'}`}>
+                          <Link href={`/u/${reply.author.username}`} className="flex-shrink-0">
                             <UserAvatar userId={reply.author.id} src={reply.author.avatar_url} size={26} />
                           </Link>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-baseline gap-2 text-meta">
-                              <Link href={`/u/${reply.author.username}`} className="font-medium text-text-primary hover:text-text-secondary transition-colors">{reply.author.username}</Link>
-                              <span className="text-label text-text-tertiary flex-1">{formatDate(reply.created_at)}</span>
+                            <div className="flex items-baseline gap-1.5 flex-wrap">
+                              <Link href={`/u/${reply.author.username}`} className="font-medium text-[12.5px] text-text-warm hover:text-text-primary transition-colors">
+                                {reply.author.username}
+                              </Link>
+                              <span className="w-[3px] h-[3px] rounded-full bg-[#B5B0A6] self-center" />
+                              <span className="font-display italic text-[12.5px]" style={{ color: '#8E6F5E' }}>{shortDate(reply.created_at)}</span>
                               {reply.is_mine && (
-                                <button onClick={() => handleDeleteComment(reply.id)} className="text-text-tertiary hover:text-text-primary" title="Supprimer"><Trash2 size={13} /></button>
+                                <button onClick={() => handleDeleteComment(reply.id)} className="ml-auto p-1 rounded-[5px] text-text-disabled hover:text-[#C86C6C] hover:bg-background transition-colors" title="Supprimer">
+                                  <Trash2 size={11} />
+                                </button>
                               )}
                             </div>
-                            <p className="text-[13px] text-text-primary leading-[1.7] mt-1">{reply.body}</p>
+                            <p className="text-[13px] text-text-primary leading-[1.65] mt-1">{reply.body}</p>
                           </div>
                         </div>
                       ))}
@@ -313,20 +450,25 @@ export default function TrackDiaryEntryClient({ entry, currentUser }: Props) {
                   )}
 
                   {isReplyingHere && (
-                    <div className="flex gap-2 mt-3 ml-11">
+                    <div className="flex gap-2 mt-2 ml-9">
                       <input
                         type="text"
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
                         placeholder={`Répondre à @${replyingTo.mentionUsername}…`}
                         autoFocus
-                        className="flex-1 bg-background-secondary border border-border rounded-[10px] px-3 py-2 text-[13px] text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E]"
-                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddReply(); } if (e.key === 'Escape') { setReplyingTo(null); setReplyText(''); } }}
+                        className="flex-1 bg-[#FAF8F4] border border-[#D8D3CB] rounded-[10px] px-3 py-2 text-[13px] text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent transition-all"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddReply(); }
+                          if (e.key === 'Escape') { setReplyingTo(null); setReplyText(''); }
+                        }}
                       />
                       <button
                         onClick={handleAddReply}
                         disabled={posting || !replyText.trim()}
-                        className="px-3 py-2 border border-border text-text-primary hover:bg-[#1C1C1C] hover:text-[#F5F3EF] disabled:bg-background-secondary disabled:text-text-disabled disabled:border-border rounded-[8px] text-label font-medium transition-colors"
+                        className={`flex-shrink-0 px-4 py-1.5 rounded-full border text-[12.5px] font-medium transition-colors duration-150 ${
+                          !replyText.trim() ? 'border-border text-text-tertiary cursor-default' : 'border-accent text-accent hover:bg-accent hover:text-[#FAF8F4]'
+                        }`}
                       >
                         Envoyer
                       </button>
