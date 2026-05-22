@@ -32,10 +32,11 @@ export default function BottomNav() {
     ];
 
     return (
-        <nav className="fixed left-5 right-5 bottom-3 md:hidden z-50 flex items-center justify-around
+        <nav className="fixed left-5 right-5 md:hidden z-50 flex items-center justify-around
                         bg-[#FAF8F4]/92 backdrop-blur-md border border-border rounded-[20px]
-                        px-2 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]
-                        shadow-[0_8px_20px_-8px_rgba(60,40,20,0.18),0_1px_2px_rgba(0,0,0,0.04)]">
+                        px-2 py-2
+                        shadow-[0_8px_20px_-8px_rgba(60,40,20,0.18),0_1px_2px_rgba(0,0,0,0.04)]"
+             style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
             {navItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
