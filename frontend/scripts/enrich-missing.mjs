@@ -54,6 +54,24 @@ const supabase = createClient(
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Supabase PostgREST caps responses at 1000 rows by default regardless of .limit().
+ * This helper paginates through all rows using .range() to bypass that cap.
+ */
+async function fetchAllPages(buildQuery) {
+  const PAGE = 1000;
+  const rows = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await buildQuery(from, from + PAGE - 1);
+    if (error) throw error;
+    if (data?.length) rows.push(...data);
+    if (!data || data.length < PAGE) break;
+    from += PAGE;
+  }
+  return rows;
+}
+
 function toSlug(name) {
   return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
@@ -328,48 +346,60 @@ async function searchSpotify(artist, title) {
 async function searchSpotifyTrack(artist, title) {
   const token = await getSpotifyToken();
   if (!token) return null;
-  try {
-    const q = encodeURIComponent(`track:"${title}" artist:"${artist}"`);
-    const res = await fetch(
-      `https://api.spotify.com/v1/search?q=${q}&type=track&limit=5`,
-      { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(6000) },
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const items = data.tracks?.items ?? []; // data.tracks, not data.albums
-    const titleLow = title.toLowerCase();
-    const artistLow = artist.toLowerCase();
-    const match =
-      items.find(
+  const titleLow = title.toLowerCase();
+  const artistLow = artist.toLowerCase();
+  // Try strict quoted search first, then loose keyword fallback
+  const queries = [
+    encodeURIComponent(`track:"${title}" artist:"${artist}"`),
+    encodeURIComponent(`${title} ${artist}`),
+  ];
+  for (const q of queries) {
+    try {
+      const res = await fetch(
+        `https://api.spotify.com/v1/search?q=${q}&type=track&limit=10`,
+        { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(6000) },
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      const items = data.tracks?.items ?? [];
+      const match = items.find(
         (r) =>
           r.name.toLowerCase().includes(titleLow.slice(0, 6)) &&
           r.artists.some((a) => a.name.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase())),
-      ) ?? items[0];
-    return match?.external_urls?.spotify ?? null;
-  } catch { return null; }
+      );
+      if (match) return match.external_urls?.spotify ?? null;
+    } catch { continue; }
+  }
+  return null;
 }
 
 async function searchAppleMusicTrack(artist, title) {
-  try {
-    const q = encodeURIComponent(`${artist} ${title}`);
-    const res = await fetch(
-      `https://itunes.apple.com/search?term=${q}&entity=song&limit=10`, // entity=song, not album
-      { signal: AbortSignal.timeout(6000) },
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const results = data.results ?? [];
-    const titleLow = title.toLowerCase();
-    const artistLow = artist.toLowerCase();
-    const match =
-      results.find(
+  const titleLow = title.toLowerCase();
+  const artistLow = artist.toLowerCase();
+  // Try "artist title" then "title" alone as fallback
+  const terms = [
+    encodeURIComponent(`${artist} ${title}`),
+    encodeURIComponent(title),
+  ];
+  for (const term of terms) {
+    try {
+      const res = await fetch(
+        `https://itunes.apple.com/search?term=${term}&entity=song&limit=10`,
+        { signal: AbortSignal.timeout(6000) },
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      const results = data.results ?? [];
+      const match = results.find(
         (r) =>
           r.wrapperType === 'track' &&
-          r.trackName?.toLowerCase().includes(titleLow.slice(0, 6)) && // trackName, not collectionName
+          r.trackName?.toLowerCase().includes(titleLow.slice(0, 6)) &&
           r.artistName?.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase()),
-      ) ?? results.find((r) => r.wrapperType === 'track');
-    return match?.trackViewUrl ?? null; // trackViewUrl, not collectionViewUrl
-  } catch { return null; }
+      );
+      if (match) return match.trackViewUrl ?? null;
+    } catch { continue; }
+  }
+  return null;
 }
 
 async function searchDeezerTrack(artist, title) {
@@ -667,16 +697,20 @@ async function runPhase3() {
 async function runPhase4() {
   console.log('── Phase 4 : liens de streaming par titre ──────────────────────');
 
-  const { data: allTracks, error } = await supabase
-    .from('tracks')
-    .select('id, title, album_id, albums(id, title, artists(name))')
-    .limit(50_000);
-
-  if (error) { console.error('  ❌ Query error:', error.message); return; }
-
-  const { data: existingMeta } = await supabase
-    .from('track_metadata')
-    .select('track_id');
+  let allTracks, existingMeta;
+  try {
+    [allTracks, existingMeta] = await Promise.all([
+      fetchAllPages((from, to) =>
+        supabase.from('tracks').select('id, title, album_id, albums(id, title, artists(name))').range(from, to)
+      ),
+      fetchAllPages((from, to) =>
+        supabase.from('track_metadata').select('track_id').range(from, to)
+      ),
+    ]);
+  } catch (error) {
+    console.error('  ❌ Query error:', error.message);
+    return;
+  }
 
   const enrichedIds = new Set((existingMeta ?? []).map((m) => m.track_id));
   const toEnrich = (allTracks ?? [])
@@ -772,6 +806,7 @@ async function main() {
     await runPhase1();
     await runPhase2();
     await runPhase3();
+    await runPhase4();
   }
 
   console.log('✅  Enrichissement terminé.');
