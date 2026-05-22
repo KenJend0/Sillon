@@ -1,0 +1,50 @@
+name: Daily DB Enrichment
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # 3h00 UTC chaque nuit
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry-run (aucune écriture en BDD)'
+        type: boolean
+        default: false
+      limit:
+        description: 'Nombre max d'albums par phase (vide = tout traiter)'
+        type: string
+        required: false
+
+jobs:
+  enrich:
+    name: Enrich missing data
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Run enrichment script
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ -n "${{ inputs.limit }}" ]; then ARGS="$ARGS --limit ${{ inputs.limit }}"; fi
+          node scripts/enrich-missing.mjs $ARGS
