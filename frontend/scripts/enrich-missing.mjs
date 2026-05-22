@@ -363,8 +363,7 @@ async function runPhase1() {
     .from('albums')
     .select('id, mbid, title, artists(name)')
     .not('mbid', 'is', null)
-    .is('album_metadata.fetched_at', null)   // left-join trick via PostgREST isn't reliable here
-    .limit(10_000);  // fetch all, we'll filter manually below
+    .limit(10_000);
 
   if (error) { console.error('  ❌ Query error:', error.message); return; }
 
