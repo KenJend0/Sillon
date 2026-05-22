@@ -11,6 +11,7 @@ import PublicFeedCard from '@/components/feed/PublicFeedCard';
 import { getTrendingThisWeek } from '@/app/actions/explore';
 import type { TrendingAlbum } from '@/app/actions/explore';
 import { CoverImage } from '@/components/CoverImage';
+import UnauthCTA from '@/components/UnauthCTA';
 
 /**
  * Feed state machine — calculé une seule fois, drive fetches ET rendu.
@@ -38,33 +39,17 @@ export default async function FeedPage() {
       <div className="px-4 md:px-6 lg:px-8 pb-28 lg:pb-12">
         <div className="pt-8 pb-6">
           <h1 className="text-h1 text-text-primary mb-2">Feed</h1>
-          <p className="text-[14px] text-text-tertiary">Ce qui se passe autour de toi.</p>
+          <p className="text-meta text-text-tertiary">Ce qui se passe autour de toi.</p>
         </div>
 
-        {/* CTA bannière */}
-        <div className="flex flex-col items-start gap-3 px-4 py-4 mb-8 bg-background-secondary border border-border rounded-[12px]">
-          <p className="text-[14px] text-text-secondary leading-snug">
-            Crée un compte pour voir ce qu&apos;écoutent tes amis.
-          </p>
-          <div className="flex items-center gap-3 flex-wrap">
-            <Link
-              href="/auth?mode=signup"
-              className="text-[13px] font-medium px-3 py-1.5 bg-[#1C1C1C] text-[#F5F3EF] rounded-[8px] hover:opacity-85 transition-opacity"
-            >
-              Créer un compte
-            </Link>
-            <Link
-              href="/auth?mode=login"
-              className="text-[13px] text-text-secondary hover:text-text-primary transition-colors underline"
-            >
-              Se connecter
-            </Link>
-          </div>
-        </div>
+        <UnauthCTA
+          className="mb-8"
+          title={<>Ton carnet musical t&apos;attend — <em className="italic text-accent-deep">commence par noter un album.</em></>}
+        />
 
         {/* Feed public */}
         {publicEntries.length === 0 ? (
-          <p className="text-[14px] text-text-tertiary py-8 text-center">Aucune activité récente.</p>
+          <p className="text-meta text-text-tertiary py-8 text-center">Aucune activité récente.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {publicEntries.map((entry) => (
@@ -127,7 +112,7 @@ export default async function FeedPage() {
           </Link>
           <div className="flex-1 min-w-0">
             <Link href={`/u/${p.username}`} className="block hover:opacity-70 transition-opacity duration-150">
-              <p className="text-[14px] font-medium text-text-primary truncate">
+              <p className="text-meta font-medium text-text-primary truncate">
                 @{p.username}
               </p>
             </Link>
@@ -141,26 +126,27 @@ export default async function FeedPage() {
   const AddAlbumCTA = () => (
     <Link
       href="/add"
-      className="flex items-center justify-between px-4 py-4 bg-background-secondary border border-border rounded-[12px] hover:bg-background-tertiary transition-colors duration-150"
+      className="flex items-center justify-between px-4 py-3.5 bg-text-warm text-paper-hi rounded-input hover:opacity-90 transition-opacity duration-150 group"
     >
-      <p className="text-[14px] text-text-primary font-medium">Noter un album</p>
-      <span className="text-[18px] leading-none ml-4 text-text-tertiary">→</span>
+      <p className="text-sm font-medium">Noter un album</p>
+      <span className="text-[16px] leading-none ml-4 transition-transform duration-150 group-hover:translate-x-0.5">→</span>
     </Link>
   );
 
   const TrendingMini = () => (
-    <div>
-      <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-3">
-        Tendances
+    <div className="mb-4">
+      <p className="text-label font-medium text-text-tertiary uppercase tracking-[0.22em] mb-2">
+        Tendances cette semaine
       </p>
-      <div className="space-y-3">
-        {trendingAlbums.map((album: TrendingAlbum) => (
+      <div className="space-y-0 divide-y divide-dashed divide-rule">
+        {trendingAlbums.map((album: TrendingAlbum, i: number) => (
           <Link
             key={album.id}
             href={`/albums/${album.album_id}`}
-            className="flex items-center gap-3 hover:opacity-75 transition-opacity duration-150"
+            className="flex items-center gap-2.5 py-2 hover:opacity-75 transition-opacity duration-150"
           >
-            <div className="relative w-10 h-10 rounded-[6px] overflow-hidden flex-shrink-0 bg-background-secondary">
+            <span className="font-display italic text-[15px] text-accent leading-none w-3 text-right flex-shrink-0">{i + 1}</span>
+            <div className="relative w-8 h-8 rounded-badge-sm overflow-hidden flex-shrink-0 bg-background-secondary">
               {album.cover_url && (
                 <CoverImage
                   src={album.cover_url}
@@ -172,8 +158,8 @@ export default async function FeedPage() {
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-medium text-text-primary truncate">{album.album_title}</p>
-              <p className="text-[11px] text-text-secondary truncate">{album.artist_name}</p>
+              <p className="text-label font-medium text-text-primary truncate">{album.album_title}</p>
+              <p className="text-label text-text-tertiary truncate">{album.artist_name}</p>
             </div>
           </Link>
         ))}
@@ -182,12 +168,13 @@ export default async function FeedPage() {
   );
 
   const Sidebar = () => (
-    <div className="space-y-8">
+    <div className="relative bg-paper-hi border border-border rounded-card-lg p-4 overflow-hidden">
+      <div className="absolute left-0 top-5 bottom-5 w-0.5 bg-accent opacity-40 rounded-r-full" />
       {trendingAlbums.length > 0 && <TrendingMini />}
       {suggestedUsers.length > 0 && (
-        <div>
-          <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-3">
-            Personnes à suivre
+        <div className="mb-4">
+          <p className="text-label font-medium text-text-tertiary uppercase tracking-[0.22em] mb-2">
+            À suivre
           </p>
           <SuggestedUsersSection />
         </div>
@@ -202,14 +189,14 @@ export default async function FeedPage() {
       <div className="lg:flex-1 lg:min-w-0">
         <div className="pt-8 pb-6">
           <h1 className="text-h1 text-text-primary mb-2">Feed</h1>
-          <p className="text-[14px] text-text-tertiary">Ce qui se passe autour de toi.</p>
+          <p className="text-meta text-text-tertiary">Ce qui se passe autour de toi.</p>
         </div>
 
         {/* ── empty ──────────────────────────────────────────────────────────── */}
         {state === 'empty' && (
           <div className="py-4">
-            <p className="text-[16px] text-text-secondary mb-2">Le fil est calme pour l&apos;instant.</p>
-            <p className="text-[14px] text-text-tertiary mb-8 leading-relaxed">
+            <p className="text-body text-text-secondary mb-2">Le fil est calme pour l&apos;instant.</p>
+            <p className="text-meta text-text-tertiary mb-8 leading-relaxed">
               Suis des gens pour voir leurs écoutes ici, ou commence par noter un album.
             </p>
             <div className="flex flex-col gap-3 mb-12">
@@ -218,13 +205,13 @@ export default async function FeedPage() {
                 href="/explore"
                 className="flex items-center justify-between px-4 py-4 bg-background-secondary border border-border rounded-[12px] hover:bg-background-tertiary transition-colors duration-150"
               >
-                <p className="text-[14px] text-text-primary font-medium">Explorer des albums</p>
+                <p className="text-meta text-text-primary font-medium">Explorer des albums</p>
                 <span className="text-[18px] leading-none ml-4 text-text-tertiary">→</span>
               </Link>
             </div>
             {publicEntries.length > 0 && (
               <div>
-                <p className="text-[12px] text-text-secondary font-medium uppercase tracking-[0.08em] mb-4">
+                <p className="text-label text-text-secondary font-medium uppercase tracking-[0.08em] mb-4">
                   Ce qui se passe sur Waveform
                 </p>
                 <div className="flex flex-col gap-3">
@@ -247,7 +234,7 @@ export default async function FeedPage() {
             />
             {publicEntries.length > 0 && (
               <div className="mt-8">
-                <p className="text-[12px] text-text-secondary font-medium uppercase tracking-[0.08em] mb-4">
+                <p className="text-label text-text-secondary font-medium uppercase tracking-[0.08em] mb-4">
                   Découvrir sur Waveform
                 </p>
                 <div className="flex flex-col gap-3">
@@ -271,8 +258,8 @@ export default async function FeedPage() {
       </div>
 
       {/* Sidebar unique — sticky depuis le haut */}
-      <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-[72px]">
-        <div className="pt-8">
+      <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-72px)] lg:overflow-y-auto">
+        <div className="pt-8 pb-4">
           <Sidebar />
         </div>
       </aside>

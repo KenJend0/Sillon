@@ -1,7 +1,11 @@
 ﻿'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
+import { Heart } from 'lucide-react';
 import { FeedEvent, getMyFeed } from '@/app/actions/feed';
+import { UserAvatar } from '@/components/avatars/DefaultAvatar';
+import { getTimeAgo } from '@/lib/utils/formatDate';
 import FeedCardReviewCreated from './cards/FeedCardReviewCreated';
 import FeedCardAlbumSaved from './cards/FeedCardAlbumSaved';
 import FeedCardUserFollowed from './cards/FeedCardUserFollowed';
@@ -71,6 +75,113 @@ function getDateLabel(dateStr: string): string {
     day: 'numeric',
     month: 'long',
   });
+}
+
+// ── Groupage des likes consécutifs ──────────────────────────────────────────
+
+type LikeGroup = {
+  type: 'LIKE_GROUP';
+  id: string;
+  actor: FeedEvent['actor'];
+  created_at: string;
+  items: Array<{ title: string; href: string; isMyEntry: boolean }>;
+};
+
+type RenderItem = FeedEvent | LikeGroup;
+
+function groupEvents(events: FeedEvent[], currentUserId?: string): RenderItem[] {
+  const result: RenderItem[] = [];
+  let i = 0;
+
+  while (i < events.length) {
+    const event = events[i];
+    const isLike = event.type === 'REVIEW_LIKED' || event.type === 'TRACK_REVIEW_LIKED';
+
+    if (!isLike) {
+      result.push(event);
+      i++;
+      continue;
+    }
+
+    const startIdx = i;
+    const items: Array<{ title: string; href: string; isMyEntry: boolean }> = [];
+
+    while (
+      i < events.length &&
+      (events[i].type === 'REVIEW_LIKED' || events[i].type === 'TRACK_REVIEW_LIKED') &&
+      events[i].actor.id === event.actor.id &&
+      getDateLabel(events[i].created_at) === getDateLabel(event.created_at)
+    ) {
+      const e = events[i];
+      const title = e.type === 'TRACK_REVIEW_LIKED'
+        ? (e.track?.title ?? e.album?.title ?? '–')
+        : (e.album?.title ?? '–');
+      const href = e.type === 'REVIEW_LIKED'
+        ? (e.liked_entry_id ? `/diary/${e.liked_entry_id}` : `/albums/${e.album?.id ?? ''}`)
+        : (e.liked_entry_id ? `/track-diary/${e.liked_entry_id}` : '#');
+      const isMyEntry = e.entry_owner_id === currentUserId;
+      items.push({ title, href, isMyEntry });
+      i++;
+    }
+
+    if (items.length < 2) {
+      result.push(events[startIdx]);
+    } else {
+      result.push({ type: 'LIKE_GROUP', id: event.id, actor: event.actor, created_at: event.created_at, items });
+    }
+  }
+
+  return result;
+}
+
+function LikeGroupCard({ group, currentUserId }: { group: LikeGroup; currentUserId?: string }) {
+  const timeAgo = getTimeAgo(group.created_at);
+  const isMe = currentUserId === group.actor.id;
+  const total = group.items.length;
+  const myCount = group.items.filter(i => i.isMyEntry).length;
+
+  const action = isMe
+    ? `Tu as aimé ${total} écoutes`
+    : myCount === total
+      ? `a aimé ${total} de tes écoutes`
+      : myCount === 0
+        ? `a aimé ${total} écoutes`
+        : `a aimé ${total} écoutes dont ${myCount} des tiennes`;
+
+  return (
+    <div className="relative flex items-start gap-2 px-6 py-3">
+      <time className="absolute top-3 right-6 text-label text-text-disabled">{timeAgo}</time>
+      <div className="flex-shrink-0 mt-0.5">
+        <UserAvatar userId={group.actor.id} src={group.actor.avatar_url} size={18} />
+      </div>
+      <div className="flex-1 min-w-0 pr-14">
+        <p className="text-label text-text-tertiary mb-2">
+          {isMe ? (
+            <>{action}</>
+          ) : (
+            <>
+              <Link href={`/u/${group.actor.username}`} className="text-text-secondary hover:text-text-primary transition-colors duration-150">
+                {group.actor.username}
+              </Link>
+              {' '}{action}
+            </>
+          )}
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {group.items.map((item, idx) => (
+            <Link
+              key={idx}
+              href={item.href}
+              className="inline-flex items-center gap-1.5 font-display italic text-sm text-text-warm bg-paper-hi border border-border rounded-full px-2.5 py-1 leading-none hover:border-accent transition-colors duration-150"
+            >
+              <Heart size={9} className="text-like fill-like flex-shrink-0" />
+              {item.title}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function renderEvent(event: FeedEvent, currentUserId?: string) {
@@ -320,25 +431,32 @@ export default function FeedInfiniteList({ initialEvents, initialCursor, current
     };
   }, [loadMore, hasMore, loading]);
 
+  const renderItems = groupEvents(events, currentUserId);
+
   return (
     <div className="pb-20" onClick={handleContainerClick}>
       <div>
-        {events.map((event, index) => {
-          const dateLabel = getDateLabel(event.created_at);
-          const prevDateLabel = index > 0 ? getDateLabel(events[index - 1].created_at) : null;
+        {renderItems.map((item, index) => {
+          const dateLabel = getDateLabel(item.created_at);
+          const prevDateLabel = index > 0 ? getDateLabel(renderItems[index - 1].created_at) : null;
           const showDateSeparator = dateLabel !== prevDateLabel;
 
           return (
-            <div key={event.id}>
+            <div key={item.id}>
               {showDateSeparator && (
-                <div className={index > 0 ? 'mt-10 mb-6' : 'mb-6'}>
-                  <span className="text-[12px] font-medium text-text-tertiary uppercase tracking-[0.08em]">
-                    {dateLabel}
-                  </span>
+                <div className={`flex items-center gap-3.5 ${index > 0 ? 'mt-10 mb-5' : 'mb-5'}`}>
+                  <div className="flex-1 h-px bg-rule" />
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-paper-hi border border-rule rounded-full">
+                    <span className="font-display italic text-[15px] text-accent leading-none">{dateLabel}</span>
+                  </div>
+                  <div className="flex-1 h-px bg-rule" />
                 </div>
               )}
               <div className={index > 0 && !showDateSeparator ? 'mt-8' : ''}>
-                {renderEvent(event, currentUserId)}
+                {item.type === 'LIKE_GROUP'
+                  ? <LikeGroupCard group={item} currentUserId={currentUserId} />
+                  : renderEvent(item, currentUserId)
+                }
               </div>
             </div>
           );
@@ -348,7 +466,7 @@ export default function FeedInfiniteList({ initialEvents, initialCursor, current
       {hasMore && (
         <div ref={observerTarget} className="py-8 text-center">
           {loading && (
-            <p className="text-[14px] text-text-disabled">...</p>
+            <p className="text-meta text-text-disabled">...</p>
           )}
         </div>
       )}
@@ -356,7 +474,7 @@ export default function FeedInfiniteList({ initialEvents, initialCursor, current
       {!hasMore && events.length > 0 && (
         <div className="py-12 text-center">
           <div className="w-8 h-px bg-border mx-auto mb-4" />
-          <p className="text-[14px] text-text-disabled">Fin du fil</p>
+          <p className="text-meta text-text-disabled">Fin du fil</p>
         </div>
       )}
     </div>

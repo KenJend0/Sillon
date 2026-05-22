@@ -84,7 +84,7 @@ export default function FeedCardReviewCreated({
 
   return (
     <div
-      className="w-full relative rounded-[12px] px-6 py-6 bg-background-tertiary cursor-pointer"
+      className="w-full relative rounded-card px-6 py-6 bg-background-tertiary cursor-pointer overflow-hidden"
       onClick={(e) => handleCardNavigation(e.target)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -95,12 +95,14 @@ export default function FeedCardReviewCreated({
       role="link"
       tabIndex={0}
     >
-      <time className="absolute top-5 right-6 text-[12px] text-text-disabled">
+      {/* Barre d'identité gauche */}
+      <div className="absolute left-0 top-6 bottom-6 w-0.5 bg-accent opacity-40 rounded-r-full" />
+      <time className="absolute top-5 right-6 text-label text-text-disabled">
         {timeAgo}
       </time>
 
       {/* Contexte — avatar + nom */}
-      <div className="mb-4 flex items-center gap-2 pr-16 text-[12px] text-text-tertiary">
+      <div className="mb-4 flex items-center gap-2 pr-16 text-label text-text-tertiary">
         <UserAvatar userId={event.actor.id} src={event.actor.avatar_url} size={18} />
         {currentUserId === event.actor.id ? (
           <span>{hasWords ? 'Tu as écrit quelques mots' : 'Tu as écouté'}</span>
@@ -122,7 +124,7 @@ export default function FeedCardReviewCreated({
       <div className="flex gap-4 items-center mb-4">
         {event.album?.cover_url && (
           <Link href={entryHref} className="shrink-0">
-            <div className="w-20 h-20 rounded-[10px] overflow-hidden bg-background-secondary flex-shrink-0">
+            <div className="w-20 h-20 rounded-cover overflow-hidden bg-background-secondary flex-shrink-0">
               <CoverImage
                 src={event.album.cover_url}
                 alt=""
@@ -138,29 +140,30 @@ export default function FeedCardReviewCreated({
         <div className="flex-1 min-w-0">
           {event.album && (
             <Link href={entryHref}>
-              <h3 className="text-[16px] font-medium text-text-primary line-clamp-2 leading-snug">
+              <p className="font-display font-normal text-body text-text-warm line-clamp-2 leading-snug">
                 {event.album.title}
-              </h3>
+              </p>
             </Link>
           )}
           {event.album?.artist_name && (
             artistHref ? (
               <Link
                 href={artistHref}
-                className="mt-0.5 block truncate text-[12px] text-text-tertiary transition-colors duration-150 hover:text-text-primary"
+                className="mt-0.5 block truncate text-sm text-text-tertiary transition-colors duration-150 hover:text-text-primary"
               >
                 {event.album.artist_name}
               </Link>
             ) : (
-              <p className="text-[12px] text-text-tertiary mt-0.5 truncate">
+              <p className="text-sm text-text-tertiary mt-0.5 truncate">
                 {event.album.artist_name}
               </p>
             )
           )}
           {event.rating && (
-            <div className="text-[#8E6F5E] font-medium text-[12px] mt-1">
-              {Math.round(event.rating)}/10
-            </div>
+            <span className="inline-flex items-baseline gap-0.5 mt-2 bg-paper-hi border border-accent rounded-badge px-1.5 py-0.5 text-accent font-display italic text-[15px] leading-none">
+              {Math.round(event.rating)}
+              <span className="font-sans not-italic text-[9px] tracking-[0.16em] uppercase opacity-70">/10</span>
+            </span>
           )}
         </div>
       </div>
@@ -168,13 +171,13 @@ export default function FeedCardReviewCreated({
       {/* Extrait de review — pleine largeur */}
       {hasWords && (
         <div className="mb-4">
-          <p className={`text-[14px] leading-[1.8] text-text-secondary italic ${!expanded && isLong ? 'line-clamp-3' : ''}`}>
+          <p className={`italic text-meta leading-relaxed text-text-secondary max-w-[540px] ${!expanded && isLong ? 'line-clamp-3' : ''}`}>
             &laquo;&thinsp;{event.review_excerpt}&thinsp;&raquo;
           </p>
           {isLong && (
             <button
               onClick={() => setExpanded((v) => !v)}
-              className="mt-1 text-[12px] text-text-tertiary hover:text-text-primary transition-colors duration-150"
+              className="mt-1 text-label text-text-tertiary hover:text-text-primary transition-colors duration-150 pl-3.5"
             >
               {expanded ? 'Voir moins' : 'Voir plus'}
             </button>
@@ -182,18 +185,19 @@ export default function FeedCardReviewCreated({
         </div>
       )}
 
-      {/* Actions */}
+      {/* Hairline + Actions */}
+      <div className="h-px bg-rule opacity-70 mb-3" />
       <div className="flex items-center gap-6">
         <button
           onClick={handleLike}
           disabled={liking}
-          className="flex items-center gap-2 text-text-tertiary hover:text-[#C86C6C] transition-colors duration-150 disabled:opacity-50"
+          className="flex items-center gap-2 text-text-tertiary hover:text-like transition-colors duration-150 disabled:opacity-50"
         >
           <Heart
             size={16}
-            className={isLiked ? 'fill-[#C86C6C] text-[#C86C6C]' : ''}
+            className={isLiked ? 'fill-like text-like' : ''}
           />
-          <span className="text-[12px]">{likesCount}</span>
+          <span className="text-label">{likesCount > 0 ? likesCount : ''} J'aime</span>
         </button>
         {event.entry_id && (
           <Link
@@ -201,7 +205,7 @@ export default function FeedCardReviewCreated({
             className="flex items-center gap-2 text-text-tertiary hover:text-text-primary transition-colors duration-150"
           >
             <MessageCircle size={16} />
-            <span className="text-[12px]">{event.comments_count ?? 0}</span>
+            <span className="text-label">Répondre</span>
           </Link>
         )}
       </div>
