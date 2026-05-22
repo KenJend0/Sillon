@@ -1,354 +1,346 @@
-🎧 WAVEFORM — CHARTE GRAPHIQUE OFFICIELLE
-1️⃣ Positionnement visuel
+WAVEFORM — CHARTE GRAPHIQUE v2
+═══════════════════════════════════════════════════════════════════════════════
+
+
+1. POSITIONNEMENT VISUEL
+───────────────────────
 
 Waveform est :
 
-Intime
+  Intime — un journal personnel, pas un réseau social
+  Éditorial — le contenu prime sur l'interface
+  Analogique — la chaleur du papier, pas le froid du numérique
+  Silencieux — l'UI s'efface derrière la musique et les mots
+
+Ce n'est pas :
+
+  Un réseau social demonstratif
+  Une app de streaming colorée
+  Une interface gaming ou techno
+  Une app d'avis / notation froide
+
+Tout doit respirer. Si l'UI attire l'attention, c'est trop.
+
+Test final : une capture en noir et blanc reste lisible.
+             une page imprimée fonctionne.
+             l'interface disparaît mentalement après 3 secondes.
+
+
+2. COULEURS
+───────────
+
+  FONDS (du plus clair au plus profond)
+  ──────────────────────────────────────
+  paper-hi        #FAF8F4   Fond très clair — hover, modales, sidebar, badges
+  background      #F5F3EF   Fond principal de l'app
+  bg-secondary    #ECE8E1   Surface cards, inputs, hero profil mobile
+  bg-tertiary     #E4DFD6   Surface feed cards, covers placeholder, hover
 
-Silencieux
+  Aucun blanc pur (#FFFFFF). Aucun gris froid bleuté.
+
+  TEXTE & ENCRE
+  ──────────────
+  text-warm       #2A2520   Encre tiède — titres Instrument Serif uniquement
+  text-primary    #1C1C1C   Corps de texte principal
+  text-secondary  #6B6B6B   Métadonnées, descriptions
+  text-tertiary   #9A9A9A   Timestamps, labels secondaires, axes
+  text-disabled   #BDBDBD   Désactivé
 
-Éditorial
+  Jamais de noir pur. Jamais de texte warm sur du texte courant.
 
-Non démonstratif
+  ACCENTS
+  ────────
+  accent          #8E6F5E   Brun chaud — liens hover, badges de note, ornements,
+                            barre d'identité gauche, bordures de badges
+  accent-deep     #5C4538   Brun profond — CTA primaires (fond sombre),
+                            mots en italique dans les titres display,
+                            hover sur accent
+  accent-muted    rgba(142,111,94,0.08)   Fond très léger
 
-Non social-first
+  sage            #7A8471   Sauge — boutons "Suivre", états neutres secondaires
+  like            #C86C6C   Rouge désaturé — likes, cœurs actifs
 
-Ce n’est pas :
+  L'accent (brun) peut être utilisé en fond pour les CTA secondaires et badges.
+  L'accent-deep peut être utilisé en fond pour les CTA primaires (boutons encrier).
+  Jamais de fond accent massif sur des zones larges.
 
-Un réseau social
+  BORDURES & FILETS
+  ──────────────────
+  border          #D8D3CB   Bordure standard
+  border-divider  #DDD7CF   Séparateur léger (entre items)
+  rule            #C9C2B5   Filet ornemental — séparateurs de date, sidebar,
+                            filets de stats, axes
 
-Une app dynamique
+  Focus / actif : border accent (#8E6F5E)
 
-Une interface “gaming”
 
-Une app colorée ou contrastée
+3. TYPOGRAPHIE
+──────────────
 
-Tout doit respirer.
+  Waveform est éditorial. Deux polices, deux rôles distincts.
 
-2️⃣ Système Couleurs
-🎨 Palette Principale (Light Mode)
-Fond principal
-Background app:        #F5F3EF   (stone-100 custom)
-Surface secondaire:    #ECE8E1   (stone-200 soft)
-Surface tertiaire:     #E4DFD6
+  POLICES
+  ────────
+  Instrument Serif 400   → Titres, display, identité
+  Inter 400/500          → Corps, labels, fonctionnel
 
+  Instrument Serif italique réservé à :
+    • Mots d'emphase dans les titres (ex: "Pour toi", "cette semaine")
+    • Chiffres des badges de note (9/10)
+    • Chiffres des stats du profil (55 critiques)
+    • Citations entre guillemets « »
+    • Comptes dans les listes (17 items)
+    • Labels de dates dans les séparateurs (Hier, 15 mai)
 
-Aucun blanc pur (#FFFFFF) sur fond principal.
+  HIÉRARCHIE
+  ───────────
+  h1 — Instrument Serif 400 / 32px / line-height 1.1 / letter-spacing -0.01em
+       → Titre de page (Explorer, Feed, Mon profil)
 
-Texte
-Texte principal:       #1C1C1C   (presque noir)
-Texte secondaire:      #6B6B6B
-Texte tertiaire:       #9A9A9A
-Texte désactivé:       #BDBDBD
+  h2 — Instrument Serif 400 / 22px / line-height 1.2 / letter-spacing -0.005em
+       → Titre de section (Pour toi, Tendances, Critiques)
+       ! Les h2 fonctionnels (modales, sheets) restent en Inter via font-sans
 
+  h3 — Inter 500 / 24px → Sous-sections fonctionnelles
 
-Jamais de noir pur.
-Jamais de gris froid bleuté.
+  body — Inter 400 / 16px / line-height 1.75
+  meta — Inter 400 / 14px / line-height 1.5
+  sm   — Inter 400 / 13px / line-height 1.5    (titres de cards en grille)
+  label — Inter 500 / 12px / letter-spacing 0.06em
 
-Accent unique (très limité)
+  EYEBROW (pattern récurrent)
+  ────────────────────────────
+  Inter 11px / uppercase / tracking-[0.22em] / text-tertiary
+  Usage : étiquettes de section compactes, axes d'histogramme, colonnes de stats
 
-Accent principal Waveform :
+  NOMS D'ALBUMS & TRACKS (dans les cards)
+  ────────────────────────────────────────
+  font-display (Instrument Serif) / font-normal / text-sm (13px)
+  Couleur : text-warm (#2A2520)
+  Toujours line-clamp-2, jamais truncate sur une seule ligne
 
-Accent subtil:         #8E6F5E  (brun chaud)
-Accent hover:          #A17F6D
-Accent très léger:     rgba(142,111,94,0.08)
+  CITATIONS (extraits de critiques)
+  ───────────────────────────────────
+  Inter italic / text-meta (14px) / leading-relaxed
+  Avec guillemets français : « {texte} »
+  Couleur : text-secondary
 
+  Jamais Bold 700. Jamais de mix de polices non documenté.
 
-Cet accent ne doit apparaître que :
 
-sur hover texte
+4. ESPACEMENT
+─────────────
 
-en underline fine
+  Base unit = 4px
 
-en état actif discret
+  section-lg   48px   Entre grandes sections de page
+  section-md   32px   Entre sections moyennes
+  section-sm   16px   Entre éléments d'une section
+  micro        8px    Gap minimal
+
+  Max-width contenu : 672px (max-w-page)
+  Padding horizontal : px-4 mobile / px-6 md / px-8 lg
+
+  Règle : si un bloc semble vide → augmenter le padding, pas la décoration.
+
 
-Jamais en fond massif.
-Jamais en bouton plein dominant.
+5. CARTES & SURFACES
+────────────────────
 
-États fonctionnels
-Like actif:            #C86C6C (désaturé, pas rouge vif)
-Note mise en avant:    #8E6F5E
-Focus border:          #8E6F5E
-Border neutre:         #D8D3CB
-Divider léger:         #DDD7CF
+  CARD STANDARD
+  ──────────────
+  Background : bg-secondary (#ECE8E1)
+  Border     : 1px solid border (#D8D3CB)
+  Radius     : 12px
+  Shadow     : aucune ou subtle (0 1px 2px rgba(0,0,0,0.04))
 
+  CARD PAPIER (sidebar, banners, zones d'emphase)
+  ─────────────────────────────────────────────────
+  Background : paper-hi (#FAF8F4)
+  Border     : 1px solid border
+  Radius     : 14px
+  Barre accent gauche optionnelle : w-0.5 bg-accent opacity-40 (filet d'identité)
 
-3️⃣ Typographie
+  FEED CARDS (activité)
+  ──────────────────────
+  Background : bg-tertiary (#E4DFD6)
+  Radius     : 12px
+  Barre accent gauche : absolute left-0 top-6 bottom-6, w-0.5, accent, opacity-40
+  overflow-hidden obligatoire pour la barre
 
-Waveform est éditorial.
+  Pas de gradient. Pas de glow. Pas de fond accent massif.
 
-Police recommandée
 
-Primary:
+6. BADGE TAMPON DE NOTE
+───────────────────────
 
-Inter
-ou
-IBM Plex Sans
-ou
-Satoshi
+  Le pattern le plus répété de l'app. Toujours le même traitement.
 
+  SUR FOND CRÈME (inline, dans les cards)
+  ─────────────────────────────────────────
+  Background : paper-hi / border : 1px solid accent / radius : 6px
+  Padding    : 3px 6px
+  Chiffre    : Instrument Serif italic / 15px / text-accent
+  "/10"      : Inter / 9px / uppercase / tracking-[0.16em] / opacity-70
 
-Pas de police techno.
-Pas de serif décorative.
+  SUR COVER D'IMAGE (overlay en haut-droite)
+  ────────────────────────────────────────────
+  Position   : absolute top-1.5 right-1.5
+  Background : paper-hi/90 + backdrop-blur-sm
+  Radius     : 5px / Padding : 2px 6px
+  Chiffre    : Instrument Serif italic / 13px / text-accent
+  "/10"      : Inter / 8px / uppercase / tracking-[0.14em] / opacity-70
 
-Hiérarchie Typographique
-H1 (titre page)
-Size: 32px
-Weight: 500
-Letter spacing: -0.02em
-Line height: 1.2
 
+7. SÉPARATEUR DE DATE (feed)
+────────────────────────────
 
-Jamais bold 700.
+  Layout : flex items-center gap-3.5
+  Filets : flex-1 h-px bg-rule de chaque côté
+  Pilule : paper-hi / border rule / rounded-full / px-3.5 py-1.5
+  Texte  : Instrument Serif italic / 15px / text-accent
 
-H2 (sections)
-Size: 22px
-Weight: 500
-Letter spacing: -0.01em
 
-Titre album
-Size: 24px
-Weight: 500
+8. BOUTONS
+──────────
 
-Body principal (review)
-Size: 16px
-Line-height: 1.75
-Weight: 400
-Color: texte principal
+  PRIMAIRE SOMBRE (CTA principal)
+  ─────────────────────────────────
+  Background : text-warm (#2A2520) / Text : paper-hi (#FAF8F4)
+  Padding : 10px 18px / Radius : 8px / Hover : opacity-90
+  Usage : "Créer un compte", "Noter un album", CTA encrier
 
+  PRIMAIRE STANDARD
+  ──────────────────
+  Background : #1C1C1C / Text : #F5F3EF
+  Padding : 10px 16px / Radius : 8px / Hover : opacity-85
+  Usage : "Se connecter", actions principales modales
 
-Important :
-La review doit ressembler à un paragraphe d’article.
+  SECONDAIRE
+  ───────────
+  Background : transparent / Border : 1px solid border
+  Text : secondary / Hover : border accent, text accent
+  Radius : 8px
 
-Meta (date, auteur)
-Size: 14px
-Color: secondaire
-Weight: 400
+  GHOST
+  ──────
+  Texte seul / Hover : text-accent
 
-Labels uppercase (Réponses, etc.)
-Size: 12px
-Letter spacing: 0.08em
-Weight: 500
-Color: tertiaire
+  SUIVRE / SAGE
+  ──────────────
+  Border : 1px solid sage (#7A8471) / Text : sage / Radius : 99px
+  Hover : bg-sage text-paper-hi
 
+  OUTLINE ACCENT (PILULE) — action sociale légère
+  ─────────────────────────────────────────────────
+  Background : transparent / Border : 1px solid accent (#8E6F5E)
+  Text : accent / Radius : 99px (rounded-full)
+  Padding : 6px 12px / Font : Inter 500 / 11.5–13px
+  Hover : bg-accent text-paper-hi
+  Désactivé : border-border text-tertiary cursor-default
+  Usage : "Suivre" (goûts similaires), actions d'engagement secondaire,
+          tout CTA pill qui n'est pas une action destructive ou primaire
 
-Jamais trop contrasté.
+  Jamais de bouton énorme. Jamais d'accent en fond sur plus de 50% de la largeur.
 
-4️⃣ Système d’Espacement
 
-Waveform respire.
+9. NAVIGATION MOBILE (bottom nav)
+──────────────────────────────────
 
-Base unit = 4px
+  Layout    : pilule flottante, left-4 right-4 bottom-4
+  Background: paper-hi/90 + backdrop-blur-md
+  Border    : 1px solid border / Radius : 22px
+  Shadow    : 0 8px 20px -8px rgba(60,40,20,0.18)
 
-Espacements standards
-Section spacing large:     48px
-Section spacing medium:    32px
-Section spacing small:     16px
-Micro gap:                 8px
+  Onglet actif : filet accent 2px en haut de l'icône + label text-accent-deep
+  Onglet inactif : text-tertiary
 
-Règle d’or
+  Bouton AJOUTER (signature de l'app) :
+    Carré sombre (bg-text-warm) / rounded-[10px] / rotate(-4deg)
+    Icône en paper-hi / shadow warm
 
-Si un bloc semble vide →
-On augmente le padding vertical, pas la décoration.
+  Avatar (onglet Moi) actif : ring-2 accent autour de l'avatar
 
-5️⃣ Cartes & Surfaces
 
-Règle :
+10. IMAGES & COVERS
+──────────────────
 
-Moins il y a de cartes, mieux c’est.
+  Grilles (explore, journal) : ratio 1:1 / radius 10px
+  Cards compactes (feed, search) : 80×80px / radius 10px
+  Cards très compactes (sidebar) : 36×36px / radius 5px
+  Covers dans les listes (collage 2×2) : radius 8px au global
 
-Quand utiliser une carte ?
+  Pas d'ombre dramatique. Filet intérieur subtil : inset 0 0 0 1px rgba(0,0,0,0.04)
 
-Uniquement pour :
 
-input
+11. ICÔNES
+──────────
 
-zone commentaire
+  Taille standard : 16–20px (Lucide React)
+  Stroke : 1.5–1.6
+  Couleur par défaut : text-tertiary
+  Hover : text-secondary ou text-accent selon contexte
+  Actif (like, save) : fill-like ou fill-accent
 
-éléments interactifs
 
-Jamais pour :
+12. INPUTS
+──────────
 
-review principale
+  Background : bg-secondary / Border : border neutre
+  Radius : 10px / Padding : 12px / Text : principal
+  Placeholder : tertiary
+  Focus : border accent, outline none
+  Font-size : 16px minimum (évite le zoom iOS)
 
-contenu éditorial
 
-Style carte
-Background: surface secondaire
-Border: 1px solid border neutre
-Radius: 12px
-Shadow: none ou shadow très légère
+13. INTERACTIONS
+───────────────
 
+  Durées : 150ms (hover colors) / 200ms (opacity, transform) / 300ms (modales)
+  Easing : ease-out standard
+  Transitions autorisées : colors, opacity, transform (translateY max 4px)
 
-Pas de gradient.
-Pas de glow.
-Pas de fond coloré accent.
+  Jamais : bounce / scale violent / animation > 300ms / flash coloré
 
-6️⃣ Boutons
 
-Waveform évite les boutons agressifs.
+14. STATS CHIFFRÉES (profil)
+────────────────────────────
 
-Bouton primaire
-Background: #1C1C1C
-Text: #F5F3EF
-Padding: 10px 16px
-Radius: 8px
+  Chiffre : Instrument Serif italic / 28px / text-warm
+  Label   : Inter / text-label / uppercase / tracking-[0.14em] / text-tertiary
+  Layout  : flex, chaque stat flex-1, séparés par filets verticaux (border-r rule)
+  Filet horizontal supérieur : border-t rule avant le bloc de stats
 
 
-Hover :
+15. TOASTS
+──────────
 
-Opacity 0.85
+  Composant : components/Toast.tsx
+  Fonction  : showToast(message, type)
 
-Bouton secondaire
-Background: transparent
-Border: 1px solid border neutre
-Text: secondaire
+  success → fond #1C1C1C / texte #F5F3EF / pas d'icône
+  info    → fond #1C1C1C / texte #F5F3EF / pas d'icône
+  error   → fond #1C1C1C / texte #C86C6C / AlertCircle
 
+  Durée : 4 secondes / Position : bottom-20 mobile, bottom-4 right-4 desktop
+  showToast est client-only — appeler depuis un handler client après await.
+  <Toast /> monté une seule fois dans le layout global.
 
-Hover :
 
-Border: accent
-Text: accent
+16. CE QUI EST INTERDIT
+────────────────────────
 
-Bouton ghost
-
-Juste texte + hover accent.
-
-7️⃣ Icônes
-
-Taille standard : 18–20px
-
-Stroke 1.5
-
-Couleur secondaire par défaut
-
-Hover accent
-
-Jamais d’icône dominante en couleur.
-
-8️⃣ Images (covers)
-Taille standard
-
-Page album :
-
-100px × 100px
-Radius: 10px
-
-
-Explore grid :
-
-Ratio 1:1
-Radius: 8px
-
-
-Pas d’ombre dramatique.
-
-9️⃣ Inputs
-Background: surface secondaire
-Border: border neutre
-Text: principal
-Placeholder: tertiaire
-Radius: 10px
-Padding: 12px
-
-
-Focus :
-
-Border: accent
-Outline: none
-
-🔟 Interactions
-
-Les animations doivent être :
-
-Courtes (150–200ms)
-
-Ease-out
-
-Jamais bounce
-
-Jamais scale violent
-
-1️⃣1️⃣ Ton visuel global
-
-À chaque page :
-
-Demander :
-
-Est-ce que l’interface attire l’attention ?
-
-Ou est-ce qu’elle laisse la place au contenu ?
-
-Si l’UI attire → c’est trop.
-
-1️⃣2️⃣ Uniformisation globale
-
-Toutes les pages doivent respecter :
-
-Même largeur max (max-w-2xl)
-
-Même padding horizontal (px-6 desktop, px-4 mobile)
-
-Même rythme vertical
-
-Même gris
-
-Même accent
-
-Même hiérarchie typo
-
-1️⃣3️⃣ Ce qui est interdit
-
-❌ Vert flashy
-❌ Bleu vibrant
-❌ Fond sombre bleu
-❌ Gradient décoratif
-❌ Bouton énorme
-❌ Shadow lourde
-❌ Border radius incohérent
-❌ Police mixée
-
-1️⃣4️⃣ Notifications (Toast)
-
-Composant : components/Toast.tsx
-Fonction globale : showToast(message, type)
-
-Usage
-import { showToast } from "@/components/Toast";
-showToast("Album importé", "success");
-showToast("Déjà dans la bibliothèque", "info");
-showToast("Erreur lors de l'import", "error");
-
-Types
-success  →  fond #1C1C1C  /  texte #F5F3EF  /  pas d'icône  →  action réussie
-info     →  fond #1C1C1C  /  texte #F5F3EF  /  pas d'icône  →  information neutre
-error    →  fond #1C1C1C  /  texte #C86C6C  /  AlertCircle  →  erreur
-
-Comportement
-Durée : disparaît automatiquement après 4 secondes
-Position : bas de l'écran (bottom-20 mobile, bottom-4 right-4 desktop)
-Plusieurs toasts peuvent se stacker
-Fermeture manuelle via croix
-
-Règles
-showToast est client-only — toujours appeler depuis un handler client,
-après un await d'une server action. Jamais dans un server component.
-Le composant <Toast /> est monté une seule fois dans le layout global.
-Ne jamais l'ajouter dans des pages individuelles.
-
-Style
-Fond sombre (#1C1C1C) sur fond clair de l'app = contraste intentionnel.
-Radius 8px. Padding 12px 16px.
-Cohérent avec le bouton primaire (même fond).
-
-1️⃣5️⃣ Test final produit
-
-Waveform est cohérent si :
-
-Une capture d’écran en noir et blanc reste lisible
-
-Une page imprimée fonctionne
-
-Une review tient seule sans UI
-
-L’interface disparaît mentalement après 3 secondes
+  ❌ Blanc pur (#FFFFFF) en fond
+  ❌ Noir pur en texte
+  ❌ Gris froid ou bleuté
+  ❌ Vert flashy, bleu vibrant, couleur saturée
+  ❌ Gradient décoratif
+  ❌ Shadow lourde ou glow
+  ❌ Border radius incohérent (toujours depuis les tokens)
+  ❌ Mix de polices non documenté (Inter + Instrument Serif uniquement)
+  ❌ Instrument Serif sur du texte courant (corps, labels)
+  ❌ Bold 700
+  ❌ Animation > 300ms ou bounce
+  ❌ Accent en fond massif sur de grandes zones
+  ❌ Bouton énorme ou trop coloré
+  ❌ Interface qui attire plus l'attention que le contenu
