@@ -38,9 +38,10 @@ const CAA_URL = 'https://coverartarchive.org/release-group';
 const DELAY_MS = 1250; // safely above MB's 1 req/s limit
 const STREAMING_RETRY_DAYS = 7;
 
-const DRY_RUN = process.argv.includes('--dry-run');
-const limitArg = process.argv.indexOf('--limit');
-const LIMIT = limitArg !== -1 ? parseInt(process.argv[limitArg + 1], 10) : Infinity;
+const DRY_RUN      = process.argv.includes('--dry-run');
+const PHASE4_ONLY  = process.argv.includes('--phase4-only');
+const limitArg     = process.argv.indexOf('--limit');
+const LIMIT        = limitArg !== -1 ? parseInt(process.argv[limitArg + 1], 10) : Infinity;
 
 // ── Supabase client (service-role, bypasses RLS) ───────────────────────────────
 
@@ -321,6 +322,78 @@ async function searchSpotify(artist, title) {
   } catch { return null; }
 }
 
+// ── Track-level streaming search ──────────────────────────────────────────────
+// Distinct from the album variants: different endpoints, query syntax, and response fields.
+
+async function searchSpotifyTrack(artist, title) {
+  const token = await getSpotifyToken();
+  if (!token) return null;
+  try {
+    const q = encodeURIComponent(`track:"${title}" artist:"${artist}"`);
+    const res = await fetch(
+      `https://api.spotify.com/v1/search?q=${q}&type=track&limit=5`,
+      { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(6000) },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const items = data.tracks?.items ?? []; // data.tracks, not data.albums
+    const titleLow = title.toLowerCase();
+    const artistLow = artist.toLowerCase();
+    const match =
+      items.find(
+        (r) =>
+          r.name.toLowerCase().includes(titleLow.slice(0, 6)) &&
+          r.artists.some((a) => a.name.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase())),
+      ) ?? items[0];
+    return match?.external_urls?.spotify ?? null;
+  } catch { return null; }
+}
+
+async function searchAppleMusicTrack(artist, title) {
+  try {
+    const q = encodeURIComponent(`${artist} ${title}`);
+    const res = await fetch(
+      `https://itunes.apple.com/search?term=${q}&entity=song&limit=10`, // entity=song, not album
+      { signal: AbortSignal.timeout(6000) },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const results = data.results ?? [];
+    const titleLow = title.toLowerCase();
+    const artistLow = artist.toLowerCase();
+    const match =
+      results.find(
+        (r) =>
+          r.wrapperType === 'track' &&
+          r.trackName?.toLowerCase().includes(titleLow.slice(0, 6)) && // trackName, not collectionName
+          r.artistName?.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase()),
+      ) ?? results.find((r) => r.wrapperType === 'track');
+    return match?.trackViewUrl ?? null; // trackViewUrl, not collectionViewUrl
+  } catch { return null; }
+}
+
+async function searchDeezerTrack(artist, title) {
+  try {
+    const q = encodeURIComponent(`artist:"${artist}" track:"${title}"`); // track:, not album:
+    const res = await fetch(
+      `https://api.deezer.com/search/track?q=${q}&limit=5`, // /search/track, not /search/album
+      { signal: AbortSignal.timeout(6000) },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const results = data.data ?? [];
+    const titleLow = title.toLowerCase();
+    const artistLow = artist.toLowerCase();
+    const match =
+      results.find(
+        (r) =>
+          r.title.toLowerCase().includes(titleLow.slice(0, 6)) &&
+          r.artist.name.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase()),
+      ) ?? results[0];
+    return match?.link ?? null;
+  } catch { return null; }
+}
+
 // ── DB helpers ─────────────────────────────────────────────────────────────────
 
 async function upsertGenresAndAlbumGenres(albumId, tagMap) {
@@ -589,6 +662,87 @@ async function runPhase3() {
   console.log(`\n  Phase 3 terminée — ${done} cover(s) ajoutée(s), ${missing} introuvable(s).\n`);
 }
 
+// ── Phase 4: Track streaming links ────────────────────────────────────────────
+
+async function runPhase4() {
+  console.log('── Phase 4 : liens de streaming par titre ──────────────────────');
+
+  const { data: allTracks, error } = await supabase
+    .from('tracks')
+    .select('id, title, album_id, albums(id, title, artists(name))')
+    .limit(50_000);
+
+  if (error) { console.error('  ❌ Query error:', error.message); return; }
+
+  const { data: existingMeta } = await supabase
+    .from('track_metadata')
+    .select('track_id');
+
+  const enrichedIds = new Set((existingMeta ?? []).map((m) => m.track_id));
+  const toEnrich = (allTracks ?? [])
+    .filter((t) => !enrichedIds.has(t.id))
+    .slice(0, LIMIT === Infinity ? 50_000 : LIMIT);
+
+  if (!toEnrich.length) {
+    console.log('  ✅ Aucun titre à enrichir.\n');
+    return;
+  }
+  console.log(`  ${toEnrich.length} titre(s) à enrichir.\n`);
+
+  // Group by album to share the artist name and batch rate-limit pauses
+  const byAlbum = new Map();
+  for (const track of toEnrich) {
+    if (!byAlbum.has(track.album_id)) byAlbum.set(track.album_id, { album: track.albums, tracks: [] });
+    byAlbum.get(track.album_id).tracks.push(track);
+  }
+
+  let done = 0, skipped = 0, albumIdx = 0;
+
+  for (const { album, tracks } of byAlbum.values()) {
+    const artistName = album?.artists?.name ?? '';
+    console.log(`  Album [${++albumIdx}/${byAlbum.size}]: ${album?.title} — ${artistName} (${tracks.length} titre(s))`);
+
+    for (const track of tracks) {
+      console.log(`    → ${track.title}`);
+      try {
+        // Spotify + Apple Music in parallel; Deezer after 110ms gap (50 req/5s rate limit)
+        const [spot, apl] = await Promise.all([
+          searchSpotifyTrack(artistName, track.title),
+          searchAppleMusicTrack(artistName, track.title),
+        ]);
+        await delay(110);
+        const dz = await searchDeezerTrack(artistName, track.title);
+
+        if (!DRY_RUN) {
+          await supabase.from('track_metadata').upsert({
+            track_id:        track.id,
+            spotify_url:     spot ?? null,
+            apple_music_url: apl  ?? null,
+            deezer_url:      dz   ?? null,
+            fetched_at:      new Date().toISOString(),
+          }, { onConflict: 'track_id' });
+        }
+
+        const linkSummary = [
+          spot ? '🎵 Spotify'     : null,
+          apl  ? '🍎 Apple Music' : null,
+          dz   ? '🎶 Deezer'      : null,
+        ].filter(Boolean).join(', ') || '— aucun lien';
+        console.log(`      ✅ ${linkSummary}${DRY_RUN ? ' [dry-run]' : ''}`);
+        done++;
+      } catch (err) {
+        console.error(`      ❌ Erreur: ${err.message}`);
+        skipped++;
+      }
+      await delay(110); // inter-track gap for Deezer rate limit
+    }
+
+    if (albumIdx < byAlbum.size) await delay(1000); // inter-album pause
+  }
+
+  console.log(`\n  Phase 4 terminée — ${done} enrichi(s), ${skipped} ignoré(s).\n`);
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -597,9 +751,10 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('🎵 Waveform — Enrichissement quotidien');
-  if (DRY_RUN) console.log('   Mode dry-run activé — aucune écriture en BDD.\n');
-  if (LIMIT !== Infinity) console.log(`   Limite : ${LIMIT} album(s) par phase.\n`);
+  console.log('🎵 Waveform — Enrichissement');
+  if (DRY_RUN)     console.log('   Mode dry-run activé — aucune écriture en BDD.');
+  if (PHASE4_ONLY) console.log('   Mode phase4-only — backfill liens streaming par titre.');
+  if (LIMIT !== Infinity) console.log(`   Limite : ${LIMIT} élément(s) par phase.`);
   console.log('');
 
   const warnings = [];
@@ -611,9 +766,13 @@ async function main() {
     console.log('');
   }
 
-  await runPhase1();
-  await runPhase2();
-  await runPhase3();
+  if (PHASE4_ONLY) {
+    await runPhase4();
+  } else {
+    await runPhase1();
+    await runPhase2();
+    await runPhase3();
+  }
 
   console.log('✅  Enrichissement terminé.');
 }
