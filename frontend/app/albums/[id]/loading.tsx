@@ -1,31 +1,37 @@
 export default function Loading() {
     return (
-        <main className="max-w-page mx-auto px-4 py-8 pb-24 animate-pulse">
+        <main className="max-w-page mx-auto px-4 pt-4 pb-24 animate-pulse">
             {/* Back button */}
             <div className="h-5 w-14 bg-background-secondary rounded-[6px]" />
 
             {/* ── 1. Album hero ── */}
-            <div className="mt-8 mb-6">
+            <div className="mt-4 mb-6">
                 <div className="flex flex-col md:flex-row md:gap-8 md:items-start">
                     {/* Cover */}
                     <div className="w-full md:w-48 aspect-square bg-background-secondary rounded-[10px] shrink-0 max-w-48 mx-auto md:mx-0 mb-6 md:mb-0" />
 
-                    <div className="flex-1 space-y-3">
+                    <div className="flex-1 min-w-0">
                         {/* Title */}
-                        <div className="h-8 bg-background-secondary rounded-[8px]" />
+                        <div className="h-8 bg-background-secondary rounded-[8px] mb-2" />
                         {/* Artist + year */}
-                        <div className="h-5 bg-background-secondary rounded-[8px] w-48" />
-
-                        {/* Stats: revues · note · écoutes */}
-                        <div className="flex gap-5 pt-1">
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="space-y-1">
-                                    <div className="h-5 bg-background-secondary rounded-[8px] w-10" />
-                                    <div className="h-3 bg-background-secondary rounded-[8px] w-14" />
+                        <div className="h-5 bg-background-secondary rounded-[8px] w-48 mb-3" />
+                        {/* Genre pills */}
+                        <div className="flex gap-2 mb-4">
+                            <div className="h-6 w-16 bg-background-secondary rounded-full" />
+                            <div className="h-6 w-20 bg-background-secondary rounded-full" />
+                        </div>
+                        {/* Stats — bande horizontale */}
+                        <div className="flex border-t border-b border-border py-3 mb-4">
+                            {[0, 1, 2].map((i) => (
+                                <div
+                                    key={i}
+                                    className={`flex flex-col flex-1 ${i < 2 ? 'border-r border-border pr-4' : ''} ${i > 0 ? 'pl-4' : ''}`}
+                                >
+                                    <div className="h-6 bg-background-secondary rounded w-12 mb-1" />
+                                    <div className="h-3 bg-background-secondary rounded w-16" />
                                 </div>
                             ))}
                         </div>
-
                         {/* Action button */}
                         <div className="h-10 bg-background-secondary rounded-[10px] w-36" />
                     </div>

@@ -34,7 +34,7 @@ export default function UserCard({
                     </div>
                 )}
                 <div className="min-w-0">
-                    <p className="text-[14px] font-medium text-text-primary truncate">
+                    <p className="text-meta font-medium text-text-primary truncate">
                         @{user.username}
                     </p>
                 </div>
@@ -46,10 +46,10 @@ export default function UserCard({
                         if (!isLoading) onFollowToggle(user.id, !user.is_following);
                     }}
                     disabled={isLoading}
-                    className={`flex-shrink-0 px-4 py-1.5 text-[12px] font-medium rounded-[8px] transition-colors duration-150 inline-flex items-center gap-1.5 disabled:cursor-not-allowed ${
+                    className={`flex-shrink-0 px-4 py-1.5 text-label font-medium rounded-pill transition-colors duration-150 inline-flex items-center gap-1.5 disabled:cursor-not-allowed ${
                         user.is_following
-                            ? "bg-background-tertiary text-text-primary hover:bg-[#D8D3CB]"
-                            : "bg-[#1C1C1C] text-[#F5F3EF] hover:opacity-85"
+                            ? "bg-background-tertiary text-text-secondary hover:border hover:border-accent hover:text-accent"
+                            : "border border-sage text-sage hover:bg-sage hover:text-paper-hi"
                     }`}
                 >
                     {isLoading && (

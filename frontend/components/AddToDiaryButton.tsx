@@ -158,7 +158,7 @@ export default function AddToDiaryButton({
     return (
       <button
         disabled
-        className="text-[12px] text-text-disabled px-3 py-1.5 rounded-[8px] opacity-50 cursor-not-allowed"
+        className="text-label text-text-disabled px-3 py-1.5 rounded-[8px] opacity-50 cursor-not-allowed"
       >
         {buttonLabel}
       </button>
@@ -169,7 +169,7 @@ export default function AddToDiaryButton({
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="text-[12px] text-text-secondary hover:text-text-primary px-3 py-1.5 rounded-[8px] transition-colors duration-150 border border-border hover:border-[#8E6F5E]"
+        className="text-sm font-medium bg-accent-deep text-[#FAF8F4] px-4 py-2 rounded-[8px] hover:opacity-90 transition-opacity duration-150"
       >
         {buttonLabel}
       </button>
@@ -187,7 +187,7 @@ export default function AddToDiaryButton({
           <div className="px-6 py-4">
             {!selectedFamily ? (
               <>
-                <p className="text-[14px] text-text-secondary mb-6">
+                <p className="text-meta text-text-secondary mb-6">
                   Cet album n&apos;a pas encore de genre. Tu peux en suggérer un pour aider la communauté.
                 </p>
                 <div className="flex flex-wrap gap-2 mb-8">
@@ -196,7 +196,7 @@ export default function AddToDiaryButton({
                       key={f.slug}
                       onClick={() => handleFamilyClick(f)}
                       disabled={genreVoting}
-                      className="px-3 py-1.5 rounded-full border border-border text-[13px] text-text-primary hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150 disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-full border border-border text-sm text-text-primary hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150 disabled:opacity-50"
                     >
                       {f.label}
                     </button>
@@ -204,7 +204,7 @@ export default function AddToDiaryButton({
                 </div>
                 <button
                   onClick={navigateAfterNudge}
-                  className="w-full text-[13px] text-text-tertiary hover:text-text-secondary transition-colors duration-150"
+                  className="w-full text-sm text-text-tertiary hover:text-text-secondary transition-colors duration-150"
                 >
                   Passer
                 </button>
@@ -213,21 +213,21 @@ export default function AddToDiaryButton({
               <>
                 <button
                   onClick={() => setSelectedFamily(null)}
-                  className="flex items-center gap-1.5 text-[13px] text-text-tertiary hover:text-text-secondary transition-colors duration-150 mb-5"
+                  className="flex items-center gap-1.5 text-sm text-text-tertiary hover:text-text-secondary transition-colors duration-150 mb-5"
                 >
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                   </svg>
                   {selectedFamily.label}
                 </button>
-                <p className="text-[14px] text-text-secondary mb-4">Un sous-genre plus précis ?</p>
+                <p className="text-meta text-text-secondary mb-4">Un sous-genre plus précis ?</p>
                 <div className="flex flex-wrap gap-2 mb-8">
                   {selectedFamily.subgenres.map((sub) => (
                     <button
                       key={sub.slug}
                       onClick={() => handleGenreVote(sub.slug)}
                       disabled={genreVoting}
-                      className="px-3 py-1.5 rounded-full border border-border text-[13px] text-text-primary hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150 disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-full border border-border text-sm text-text-primary hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150 disabled:opacity-50"
                     >
                       {sub.label}
                     </button>
@@ -236,7 +236,7 @@ export default function AddToDiaryButton({
                 <button
                   onClick={() => handleGenreVote(selectedFamily.slug)}
                   disabled={genreVoting}
-                  className="w-full text-[13px] text-text-tertiary hover:text-text-secondary transition-colors duration-150"
+                  className="w-full text-sm text-text-tertiary hover:text-text-secondary transition-colors duration-150"
                 >
                   Voter pour {selectedFamily.label} sans préciser
                 </button>
@@ -249,22 +249,22 @@ export default function AddToDiaryButton({
           {/* Rating */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-[14px] text-text-secondary">Note</label>
-              <span className="text-text-primary font-medium text-[13px]">{rating ?? 0} / 10</span>
+              <label className="text-meta text-text-secondary">Note</label>
+              <span className="text-text-primary font-medium text-sm">{rating ?? 0} / 10</span>
             </div>
             <StarRating value={rating} onChange={setRating} />
           </div>
 
           {/* Date */}
           <div>
-            <label className="block text-[14px] text-text-secondary mb-2">Date d'écoute</label>
+            <label className="block text-meta text-text-secondary mb-2">Date d'écoute</label>
             <div className="relative">
               <input
                 type="date"
                 value={listenedAt}
                 max={today}
                 onChange={(e) => setListenedAt(e.target.value)}
-                className="w-full px-4 py-3 pr-10 bg-background-secondary border border-border rounded-[10px] text-text-primary focus:outline-none focus:border-[#8E6F5E] text-[14px] appearance-none"
+                className="w-full px-4 py-3 pr-10 bg-background-secondary border border-border rounded-[10px] text-text-primary focus:outline-none focus:border-[#8E6F5E] text-meta appearance-none"
               />
               <svg
                 aria-hidden="true"
@@ -281,17 +281,17 @@ export default function AddToDiaryButton({
 
           {/* Comment */}
           <div>
-            <label className="block text-[14px] text-text-secondary mb-2">Quelques mots</label>
+            <label className="block text-meta text-text-secondary mb-2">Quelques mots</label>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Ce que tu as ressenti, si tu en as envie."
-              className="w-full px-4 py-3 bg-background-secondary border border-border rounded-[10px] text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] resize-none h-24 text-[14px] transition-colors duration-150"
+              className="w-full px-4 py-3 bg-background-secondary border border-border rounded-[10px] text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] resize-none h-24 text-meta transition-colors duration-150"
             />
           </div>
 
           {initialSaved && (
-            <label className="flex items-center gap-2 text-[12px] text-text-secondary">
+            <label className="flex items-center gap-2 text-label text-text-secondary">
               <input
                 type="checkbox"
                 checked={removeFromSaved}
@@ -306,14 +306,14 @@ export default function AddToDiaryButton({
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="flex-1 px-3 py-2.5 bg-background-secondary hover:bg-background-tertiary text-text-primary rounded-[8px] text-[14px] transition-colors duration-150"
+              className="flex-1 px-3 py-2.5 bg-background-secondary hover:bg-background-tertiary text-text-primary rounded-[8px] text-meta transition-colors duration-150"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={loading || isSubmitting}
-              className="flex-1 px-6 py-2.5 bg-[#1C1C1C] hover:opacity-85 disabled:bg-[#BDBDBD] disabled:cursor-not-allowed text-[#F5F3EF] font-medium rounded-[8px] text-[14px] transition-opacity duration-150"
+              className="flex-1 px-6 py-2.5 bg-[#1C1C1C] hover:opacity-85 disabled:bg-[#BDBDBD] disabled:cursor-not-allowed text-[#F5F3EF] font-medium rounded-[8px] text-meta transition-opacity duration-150"
             >
               {loading || isSubmitting ? "Enregistrement..." : "Enregistrer"}
             </button>

@@ -137,11 +137,11 @@ export async function searchInternal(
 
   usersData.data?.forEach((u: any) => {
     if (u.username) {
+      const username = u.username.trim();
       results.push({
         id: u.id,
-        title: u.username,
-        subtitle: `@${u.username}`,
-        slug: u.username,
+        title: username,
+        slug: username,
         kind: "user",
         coverUrl: u.avatar_url,
         source: "internal",

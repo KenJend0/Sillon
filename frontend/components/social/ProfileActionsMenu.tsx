@@ -73,7 +73,7 @@ export default function ProfileActionsMenu({ userId, initialIsBlocking }: Profil
           setConfirming(false);
         }}
         disabled={loading}
-        className="flex items-center justify-center w-9 h-9 rounded-[8px] border border-border text-text-tertiary hover:text-text-primary hover:bg-background-secondary transition-colors duration-150 disabled:opacity-50"
+        className="flex items-center justify-center w-9 h-9 rounded-[8px] text-text-tertiary hover:text-text-secondary hover:bg-background-tertiary transition-colors duration-150 disabled:opacity-50"
         aria-label="Plus d'options"
       >
         {loading ? (
@@ -88,7 +88,7 @@ export default function ProfileActionsMenu({ userId, initialIsBlocking }: Profil
           {!confirming ? (
             <button
               onClick={handleBlockClick}
-              className={`w-full flex items-center gap-2.5 px-4 py-3 text-[13px] transition-colors duration-150 text-left hover:bg-background-secondary ${
+              className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-colors duration-150 text-left hover:bg-background-secondary ${
                 isBlocking ? "text-text-secondary" : "text-[#C86C6C]"
               }`}
             >
@@ -97,19 +97,19 @@ export default function ProfileActionsMenu({ userId, initialIsBlocking }: Profil
             </button>
           ) : (
             <div className="px-4 py-3 space-y-3">
-              <p className="text-[13px] text-text-primary leading-[1.5]">
+              <p className="text-sm text-text-primary leading-[1.5]">
                 Son contenu disparaîtra de ton feed et il ne pourra plus te suivre.
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={handleCancel}
-                  className="flex-1 px-3 py-1.5 text-[12px] font-medium rounded-[8px] border border-border text-text-secondary hover:bg-background-secondary transition-colors duration-150"
+                  className="flex-1 px-3 py-1.5 text-label font-medium rounded-[8px] border border-border text-text-secondary hover:bg-background-secondary transition-colors duration-150"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={handleConfirm}
-                  className="flex-1 px-3 py-1.5 text-[12px] font-medium rounded-[8px] bg-[#C86C6C] text-white hover:opacity-90 transition-opacity duration-150"
+                  className="flex-1 px-3 py-1.5 text-label font-medium rounded-[8px] bg-[#C86C6C] text-white hover:opacity-90 transition-opacity duration-150"
                 >
                   Bloquer
                 </button>

@@ -71,7 +71,7 @@ function CoverTile({
             onClick={onClick}
             className="group block w-full text-left transition-opacity duration-150 hover:opacity-75"
         >
-            <div className="relative aspect-square rounded-[10px] overflow-hidden bg-background-secondary mb-2">
+            <div className="relative aspect-square rounded-cover overflow-hidden bg-background-secondary mb-2">
                 {coverUrl ? (
                     <CoverImage
                         src={coverUrl}
@@ -84,15 +84,15 @@ function CoverTile({
                     <div className="w-full h-full bg-background-tertiary" />
                 )}
             </div>
-            <p className="text-[12px] font-medium text-text-primary leading-snug line-clamp-2 group-hover:text-[#8E6F5E] transition-colors">{title}</p>
-            <p className="mt-0.5 truncate text-[11px] text-text-secondary">{artist}</p>
+            <p className="font-display font-normal text-sm text-text-warm line-clamp-2 leading-snug group-hover:text-accent transition-colors duration-150">{title}</p>
+            <p className="mt-0.5 truncate text-label text-text-tertiary">{artist}</p>
         </button>
     );
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
     return (
-        <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-3">
+        <p className="font-display italic text-[15px] text-text-warm mb-3">
             {children}
         </p>
     );
@@ -211,17 +211,16 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
         <>
             <div className="p-6 lg:px-8 pb-0">
                 <div>
-                    <h1 className="text-h1 text-text-primary mb-2">Ajouter</h1>
-                    <p className="text-[14px] text-text-secondary mb-6">
-                        Cherche un album ou un titre que tu as écouté pour l&apos;ajouter à ton journal.
-                    </p>
+                    <h1 className="text-h1 text-text-primary mb-2">
+                        Ajouter une <em className="italic text-accent-deep">écoute</em>
+                    </h1>
 
                     <div className="flex gap-4 mt-4">
                         <button
                             onClick={() => handleEntityTypeChange("album")}
-                            className={`text-[13px] font-medium pb-1 border-b-2 transition-colors duration-150 ${
+                            className={`text-sm font-medium pb-1 border-b-2 transition-colors duration-150 ${
                                 entityType === "album"
-                                    ? "text-text-primary border-[#8E6F5E]"
+                                    ? "text-text-primary border-accent"
                                     : "text-text-tertiary border-transparent hover:text-text-secondary"
                             }`}
                         >
@@ -229,9 +228,9 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                         </button>
                         <button
                             onClick={() => handleEntityTypeChange("track")}
-                            className={`text-[13px] font-medium pb-1 border-b-2 transition-colors duration-150 ${
+                            className={`text-sm font-medium pb-1 border-b-2 transition-colors duration-150 ${
                                 entityType === "track"
-                                    ? "text-text-primary border-[#8E6F5E]"
+                                    ? "text-text-primary border-accent"
                                     : "text-text-tertiary border-transparent hover:text-text-secondary"
                             }`}
                         >
@@ -258,7 +257,7 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                                     <div className="space-y-section-md mt-8 lg:mt-6">
                                         <div className="pb-6 border-b border-border">
                                             <div className="flex items-start gap-4 mb-4">
-                                                <div className="relative w-20 h-20 rounded-[8px] overflow-hidden flex-shrink-0 bg-background-secondary">
+                                                <div className="relative w-20 h-20 rounded-cover-sm overflow-hidden flex-shrink-0 bg-background-secondary">
                                                     {selectedAlbum.coverUrl ? (
                                                         <CoverImage
                                                             key={selectedAlbum.coverUrl}
@@ -274,12 +273,12 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                                                 </div>
                                                 <div className="min-w-0 pt-1">
                                                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                        <h2 className="text-h2 font-medium text-text-primary leading-tight">
+                                                        <h2 className="font-display font-normal text-h2 text-text-warm leading-tight">
                                                             {selectedAlbum.title}
                                                         </h2>
                                                         {previousEntry !== null && (
-                                                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-background-secondary text-text-secondary whitespace-nowrap">
-                                                                Ré-écoute{previousEntry.rating !== null ? ` · ${previousEntry.rating}/10` : ""}
+                                                            <span className="font-display italic text-[13px] text-text-secondary whitespace-nowrap">
+                                                                · Ré-écoute{previousEntry.rating !== null ? <> · <span className="text-accent">{previousEntry.rating}/10</span></> : ""}
                                                             </span>
                                                         )}
                                                     </div>
@@ -291,16 +290,16 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                                             </div>
                                             <button
                                                 onClick={() => { setStep("select"); setSelectedAlbum(null); setPreviousEntry(null); }}
-                                                className="text-label text-text-tertiary underline hover:text-text-primary transition-colors duration-150"
+                                                className="font-display italic text-sm text-accent border-b border-accent pb-px hover:text-accent-deep hover:border-accent-deep transition-colors duration-150"
                                             >
-                                                Changer
+                                                changer
                                             </button>
                                         </div>
 
                                         <div>
                                             <div className="flex items-center justify-between mb-4">
                                                 <label className="text-meta text-text-secondary">Note</label>
-                                                <span className="text-text-primary font-medium text-[13px]">{rating ?? 0} / 10</span>
+                                                <span className="font-display italic text-[15px] leading-none text-accent">{rating ?? 0} / 10</span>
                                             </div>
                                             <StarRating value={rating} onChange={setRating} />
                                         </div>
@@ -313,7 +312,7 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                                                     value={listenedAt}
                                                     max={today}
                                                     onChange={(e) => setListenedAt(e.target.value)}
-                                                    className="w-full px-4 py-3 pr-10 bg-background-secondary border border-border rounded-[10px] text-text-primary focus:outline-none focus:border-[#8E6F5E] focus:ring-0 appearance-none"
+                                                    className="w-full px-4 py-3 pr-10 bg-paper-hi border border-border rounded-input text-text-primary focus:outline-none focus:border-accent focus:ring-0 appearance-none"
                                                 />
                                                 <svg aria-hidden="true" viewBox="0 0 24 24" className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary pointer-events-none">
                                                     <path fill="currentColor" d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1Zm12 8H5v9h14v-9ZM5 6v2h14V6H5Z" />
@@ -327,14 +326,14 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                                                 value={comment}
                                                 onChange={(e) => setComment(e.target.value)}
                                                 placeholder="Ce que tu as ressenti, si tu en as envie."
-                                                className="w-full px-4 py-3 bg-background-secondary border border-border rounded-[10px] text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] focus:ring-0 resize-none h-32"
+                                                className="w-full px-4 py-3 bg-paper-hi border border-border rounded-input text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent focus:ring-0 resize-none h-32"
                                             />
                                         </div>
 
                                         <button
                                             onClick={handleSubmitDiary}
                                             disabled={isLoading}
-                                            className="w-full px-6 py-3 bg-[#1C1C1C] hover:opacity-85 disabled:bg-[#D8D3CB] disabled:text-text-disabled text-[#F5F3EF] font-medium rounded-[8px] transition-opacity disabled:cursor-not-allowed"
+                                            className="w-full px-6 py-3 bg-text-warm hover:opacity-85 disabled:bg-border disabled:text-text-disabled text-paper-hi font-medium rounded-button transition-opacity disabled:cursor-not-allowed"
                                         >
                                             {isLoading ? "Enregistrement..." : "Enregistrer"}
                                         </button>
@@ -345,7 +344,7 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                                     <div className="space-y-section-md mt-8 lg:mt-6">
                                         <div className="pb-6 border-b border-border">
                                             <div className="flex items-start gap-4 mb-4">
-                                                <div className="relative w-20 h-20 rounded-[8px] overflow-hidden flex-shrink-0 bg-background-secondary">
+                                                <div className="relative w-20 h-20 rounded-cover-sm overflow-hidden flex-shrink-0 bg-background-secondary">
                                                     {selectedTrack.coverUrl ? (
                                                         <CoverImage
                                                             key={selectedTrack.coverUrl}
@@ -361,12 +360,12 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                                                 </div>
                                                 <div className="min-w-0 pt-1">
                                                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                        <h2 className="text-h2 font-medium text-text-primary leading-tight">
+                                                        <h2 className="font-display font-normal text-h2 text-text-warm leading-tight">
                                                             {selectedTrack.title}
                                                         </h2>
                                                         {previousEntry !== null && (
-                                                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-background-secondary text-text-secondary whitespace-nowrap">
-                                                                Ré-écoute{previousEntry.rating !== null ? ` · ${previousEntry.rating}/10` : ""}
+                                                            <span className="font-display italic text-[13px] text-text-secondary whitespace-nowrap">
+                                                                · Ré-écoute{previousEntry.rating !== null ? <> · <span className="text-accent">{previousEntry.rating}/10</span></> : ""}
                                                             </span>
                                                         )}
                                                     </div>
@@ -378,16 +377,16 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                                             </div>
                                             <button
                                                 onClick={() => { setStep("select"); setSelectedTrack(null); setPreviousEntry(null); }}
-                                                className="text-label text-text-tertiary underline hover:text-text-primary transition-colors duration-150"
+                                                className="font-display italic text-sm text-accent border-b border-accent pb-px hover:text-accent-deep hover:border-accent-deep transition-colors duration-150"
                                             >
-                                                Changer
+                                                changer
                                             </button>
                                         </div>
 
                                         <div>
                                             <div className="flex items-center justify-between mb-4">
                                                 <label className="text-meta text-text-secondary">Note</label>
-                                                <span className="text-text-primary font-medium text-[13px]">{rating !== null ? `${rating} / 10` : "–"}</span>
+                                                <span className="font-display italic text-[15px] leading-none text-accent">{rating !== null ? `${rating} / 10` : "–"}</span>
                                             </div>
                                             <StarRating value={rating} onChange={setRating} />
                                         </div>
@@ -400,7 +399,7 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                                                     value={listenedAt}
                                                     max={today}
                                                     onChange={(e) => setListenedAt(e.target.value)}
-                                                    className="w-full px-4 py-3 pr-10 bg-background-secondary border border-border rounded-[10px] text-text-primary focus:outline-none focus:border-[#8E6F5E] focus:ring-0 appearance-none"
+                                                    className="w-full px-4 py-3 pr-10 bg-paper-hi border border-border rounded-input text-text-primary focus:outline-none focus:border-accent focus:ring-0 appearance-none"
                                                 />
                                                 <svg aria-hidden="true" viewBox="0 0 24 24" className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary pointer-events-none">
                                                     <path fill="currentColor" d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1Zm12 8H5v9h14v-9ZM5 6v2h14V6H5Z" />
@@ -414,14 +413,14 @@ export default function AddPageClient({ defaultListItems, defaultListTracks, ini
                                                 value={comment}
                                                 onChange={(e) => setComment(e.target.value)}
                                                 placeholder="Ce que tu as ressenti, si tu en as envie."
-                                                className="w-full px-4 py-3 bg-background-secondary border border-border rounded-[10px] text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] focus:ring-0 resize-none h-32"
+                                                className="w-full px-4 py-3 bg-paper-hi border border-border rounded-input text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent focus:ring-0 resize-none h-32"
                                             />
                                         </div>
 
                                         <button
                                             onClick={handleSubmitTrackDiary}
                                             disabled={isLoading}
-                                            className="w-full px-6 py-3 bg-[#1C1C1C] hover:opacity-85 disabled:bg-[#D8D3CB] disabled:text-text-disabled text-[#F5F3EF] font-medium rounded-[8px] transition-opacity disabled:cursor-not-allowed"
+                                            className="w-full px-6 py-3 bg-text-warm hover:opacity-85 disabled:bg-border disabled:text-text-disabled text-paper-hi font-medium rounded-button transition-opacity disabled:cursor-not-allowed"
                                         >
                                             {isLoading ? "Enregistrement..." : "Enregistrer"}
                                         </button>

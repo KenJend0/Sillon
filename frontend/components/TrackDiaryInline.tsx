@@ -67,7 +67,7 @@ export default function TrackDiaryInline({ trackId, albumId, artistId, existingE
         <>
             <button
                 onClick={() => setOpen(true)}
-                className="text-[12px] text-text-secondary hover:text-text-primary px-3 py-1.5 rounded-[8px] transition-colors duration-150 border border-border hover:border-[#8E6F5E]"
+                className="text-label text-text-secondary hover:text-text-primary px-3 py-1.5 rounded-[8px] transition-colors duration-150 border border-border hover:border-[#8E6F5E]"
             >
                 {existingEntry ? "Ré-écouter" : "Ajouter au journal"}
             </button>
@@ -82,8 +82,8 @@ export default function TrackDiaryInline({ trackId, albumId, artistId, existingE
                     {/* Note */}
                     <div>
                         <div className="flex items-center justify-between mb-3">
-                            <span className="text-[14px] text-text-secondary">Note</span>
-                            <span className="text-[14px] font-medium text-text-primary">
+                            <span className="text-meta text-text-secondary">Note</span>
+                            <span className="text-meta font-medium text-text-primary">
                                 {rating !== null ? `${rating} / 10` : "–"}
                             </span>
                         </div>
@@ -92,7 +92,7 @@ export default function TrackDiaryInline({ trackId, albumId, artistId, existingE
 
                     {/* Date */}
                     <div>
-                        <label className="block text-[14px] text-text-secondary mb-2">Date d'écoute</label>
+                        <label className="block text-meta text-text-secondary mb-2">Date d'écoute</label>
                         <div className="relative">
                             <input
                                 type="date"
@@ -109,7 +109,7 @@ export default function TrackDiaryInline({ trackId, albumId, artistId, existingE
 
                     {/* Texte libre */}
                     <div>
-                        <label className="block text-[14px] text-text-secondary mb-2">Quelques mots</label>
+                        <label className="block text-meta text-text-secondary mb-2">Quelques mots</label>
                         <textarea
                             value={comment}
                             onChange={(e) => setComment(e.target.value)}
@@ -122,7 +122,7 @@ export default function TrackDiaryInline({ trackId, albumId, artistId, existingE
                     <button
                         onClick={handleSubmit}
                         disabled={submitting}
-                        className="w-full py-3 bg-[#1C1C1C] text-[#F5F3EF] text-[14px] font-medium rounded-[8px] hover:opacity-85 disabled:opacity-50 transition-opacity"
+                        className="w-full py-3 bg-[#1C1C1C] text-[#F5F3EF] text-meta font-medium rounded-[8px] hover:opacity-85 disabled:opacity-50 transition-opacity"
                     >
                         {submitting ? "Enregistrement…" : "Enregistrer"}
                     </button>

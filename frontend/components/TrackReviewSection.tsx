@@ -22,7 +22,7 @@ export default function TrackReviewSection({ trackId, initialReviews = [], revie
                 {reviewsCount > 0 && (
                     <button
                         onClick={() => setIsSheetOpen(true)}
-                        className="text-[12px] text-text-secondary hover:text-[#8E6F5E] transition-colors duration-150"
+                        className="font-display italic text-sm text-accent border-b border-accent pb-px hover:text-accent-deep hover:border-accent-deep transition-colors duration-150"
                     >
                         voir toutes
                     </button>
@@ -30,7 +30,7 @@ export default function TrackReviewSection({ trackId, initialReviews = [], revie
             </div>
 
             {initialReviews.length === 0 ? (
-                <p className="text-[14px] text-text-tertiary">Aucune critique pour le moment.</p>
+                <p className="text-meta text-text-tertiary">Aucune critique pour le moment.</p>
             ) : (
                 <div className="space-y-3">
                     {initialReviews.map((review) => (
@@ -54,7 +54,10 @@ function ReviewItem({ review }: { review: TrackReview }) {
     const displayName = review.username || "Utilisateur";
 
     return (
-        <div className="bg-background-secondary rounded-[10px] p-4">
+        <Link
+            href={`/track-diary/${review.id}`}
+            className="block bg-background-secondary rounded-[10px] p-4 hover:opacity-75 transition-opacity duration-150"
+        >
             <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 mt-0.5">
                     <UserAvatar userId={review.user_id} src={review.avatar_url} size={28} />
@@ -62,24 +65,25 @@ function ReviewItem({ review }: { review: TrackReview }) {
                 <div className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between mb-2">
                         <div className="flex items-baseline gap-1">
-                            <Link href={`/u/${review.username}`} className="text-[14px] font-medium text-text-primary hover:text-[#8E6F5E] transition-colors">
-                                {displayName}
-                            </Link>
-                            <span className="text-[12px] text-text-tertiary">
+                            <span className="text-meta font-medium text-text-primary">{displayName}</span>
+                            <span className="text-label text-text-tertiary">
                                 · {new Date(review.created_at).toLocaleDateString('fr-FR')}
                             </span>
                         </div>
                         {review.rating !== null && (
-                            <span className="text-[14px] text-[#8E6F5E] font-medium">{review.rating}/10</span>
+                            <span className="inline-flex items-baseline gap-0.5 bg-[#FAF8F4] border border-accent rounded-[6px] px-1.5 py-0.5 text-accent font-display italic text-[15px] leading-none">
+                                {review.rating}
+                                <span className="font-sans not-italic text-[9px] tracking-[0.16em] uppercase opacity-70">/10</span>
+                            </span>
                         )}
                     </div>
                     {review.review_body && (
-                        <p className="text-[13px] text-text-secondary leading-relaxed break-words line-clamp-3">
+                        <p className="text-sm text-text-secondary leading-relaxed break-words line-clamp-3">
                             {review.review_body}
                         </p>
                     )}
                 </div>
             </div>
-        </div>
+        </Link>
     );
 }

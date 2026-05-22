@@ -50,19 +50,24 @@ export default function GenrePills({ genres, albumId, userId, genreWeights, clas
             <div className={`flex flex-wrap gap-1.5 ${className ?? ""}`}>
                 {genres.map((g) => {
                     const votes = genreWeights?.[g];
+                    const isHeavy = votes != null && votes > 0;
                     return (
                         <span
                             key={g}
-                            className="text-[11px] text-text-tertiary bg-background-secondary rounded-full px-2.5 py-0.5 capitalize"
+                            className={`text-[11px] tracking-[0.02em] rounded-full px-2.5 py-1 capitalize border ${
+                                isHeavy
+                                    ? 'border-[#B8AFA0] text-text-warm'
+                                    : 'border-rule text-text-secondary'
+                            }`}
                         >
-                            {g}{votes != null && votes > 0 && <span className="ml-1 opacity-60">{votes}</span>}
+                            {g}
                         </span>
                     );
                 })}
                 {userId && (
                     <button
                         onClick={() => setOpen(true)}
-                        className="text-[11px] text-text-tertiary border border-border rounded-full px-2.5 py-0.5 hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150"
+                        className="text-label text-text-tertiary border border-border rounded-full px-2.5 py-0.5 hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150"
                     >
                         + Genre
                     </button>
@@ -83,7 +88,7 @@ export default function GenrePills({ genres, albumId, userId, genreWeights, clas
                                     key={f.slug}
                                     onClick={() => handleFamilyClick(f)}
                                     disabled={voting}
-                                    className="px-3 py-1.5 rounded-full border border-border text-[13px] text-text-primary hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150 disabled:opacity-50"
+                                    className="px-3 py-1.5 rounded-full border border-border text-sm text-text-primary hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150 disabled:opacity-50"
                                 >
                                     {f.label}
                                 </button>
@@ -93,21 +98,21 @@ export default function GenrePills({ genres, albumId, userId, genreWeights, clas
                         <>
                             <button
                                 onClick={() => setSelectedFamily(null)}
-                                className="flex items-center gap-1.5 text-[13px] text-text-tertiary hover:text-text-secondary transition-colors duration-150 mb-5"
+                                className="flex items-center gap-1.5 text-sm text-text-tertiary hover:text-text-secondary transition-colors duration-150 mb-5"
                             >
                                 <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                                 </svg>
                                 {selectedFamily.label}
                             </button>
-                            <p className="text-[14px] text-text-secondary mb-4">Un sous-genre plus précis ?</p>
+                            <p className="text-meta text-text-secondary mb-4">Un sous-genre plus précis ?</p>
                             <div className="flex flex-wrap gap-2 mb-6">
                                 {selectedFamily.subgenres.map((sub) => (
                                     <button
                                         key={sub.slug}
                                         onClick={() => handleVote(sub.slug)}
                                         disabled={voting}
-                                        className="px-3 py-1.5 rounded-full border border-border text-[13px] text-text-primary hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150 disabled:opacity-50"
+                                        className="px-3 py-1.5 rounded-full border border-border text-sm text-text-primary hover:border-[#8E6F5E] hover:text-[#8E6F5E] transition-colors duration-150 disabled:opacity-50"
                                     >
                                         {sub.label}
                                     </button>
@@ -116,7 +121,7 @@ export default function GenrePills({ genres, albumId, userId, genreWeights, clas
                             <button
                                 onClick={() => handleVote(selectedFamily.slug)}
                                 disabled={voting}
-                                className="w-full text-[13px] text-text-tertiary hover:text-text-secondary transition-colors duration-150"
+                                className="w-full text-sm text-text-tertiary hover:text-text-secondary transition-colors duration-150"
                             >
                                 Voter pour {selectedFamily.label} sans préciser
                             </button>

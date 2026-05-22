@@ -172,7 +172,7 @@ export default function AuthForm() {
     <div className="space-y-6 w-full">
       <div className="text-center mb-8">
         <h1 className="text-h1 text-text-primary mb-2">Waveform</h1>
-        <p className="text-[14px] text-text-secondary">
+        <p className="text-meta text-text-secondary">
           {mode === "login" ? "Connecte-toi à ton compte" : mode === "signup" ? "Crée ton compte Waveform" : "Réinitialise ton mot de passe"}
         </p>
       </div>
@@ -181,7 +181,7 @@ export default function AuthForm() {
 
         {mode === "signup" && (
           <div>
-            <label className="block text-[14px] font-medium text-text-secondary mb-1">
+            <label className="block text-meta font-medium text-text-secondary mb-1">
               Prénom
             </label>
             <input
@@ -196,7 +196,7 @@ export default function AuthForm() {
 
         {mode !== "reset" && (
           <div>
-            <label className="block text-[14px] font-medium text-text-secondary mb-1">
+            <label className="block text-meta font-medium text-text-secondary mb-1">
               Email
             </label>
             <input
@@ -212,7 +212,7 @@ export default function AuthForm() {
 
         {mode === "reset" && (
           <div>
-            <label className="block text-[14px] font-medium text-text-secondary mb-1">
+            <label className="block text-meta font-medium text-text-secondary mb-1">
               Email
             </label>
             <input
@@ -223,7 +223,7 @@ export default function AuthForm() {
               required
               className="w-full bg-background border border-border rounded-[10px] px-3 py-2 text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] transition-colors duration-150"
             />
-            <p className="text-[12px] text-text-tertiary mt-1">
+            <p className="text-label text-text-tertiary mt-1">
               Nous t'enverrons un lien pour réinitialiser ton mot de passe.
             </p>
           </div>
@@ -231,7 +231,7 @@ export default function AuthForm() {
 
         {mode !== "reset" && (
           <div>
-            <label className="block text-[14px] font-medium text-text-secondary mb-1">
+            <label className="block text-meta font-medium text-text-secondary mb-1">
               Mot de passe
             </label>
             <input
@@ -244,7 +244,7 @@ export default function AuthForm() {
               className="w-full bg-background border border-border rounded-[10px] px-3 py-2 text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] transition-colors duration-150"
             />
             {mode === "signup" && (
-              <p className="text-[12px] text-text-tertiary mt-1">Minimum 8 caractères</p>
+              <p className="text-label text-text-tertiary mt-1">Minimum 8 caractères</p>
             )}
           </div>
         )}
@@ -258,7 +258,7 @@ export default function AuthForm() {
         </button>
       </form>
 
-      <div className="text-center text-[14px] text-text-secondary space-y-2">
+      <div className="text-center text-meta text-text-secondary space-y-2">
         {mode === "login" ? (
           <>
             <div>

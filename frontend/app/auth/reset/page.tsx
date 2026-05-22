@@ -81,17 +81,17 @@ export default function ResetPasswordPage() {
         <h1 className="text-h1 text-text-primary mb-6">Nouveau mot de passe</h1>
 
         {loading && (
-          <p className="text-[14px] text-text-tertiary">Vérification du lien…</p>
+          <p className="text-meta text-text-tertiary">Vérification du lien…</p>
         )}
 
         {!loading && (
           <>
             {error && (
-              <div className="p-3 bg-background-secondary border border-border rounded-[8px] text-[#C86C6C] text-[14px] mb-4">
+              <div className="p-3 bg-background-secondary border border-border rounded-[8px] text-[#C86C6C] text-meta mb-4">
                 <p>{error}</p>
                 <button
                   onClick={() => router.push('/auth?mode=reset')}
-                  className="mt-2 text-[13px] text-text-primary underline"
+                  className="mt-2 text-sm text-text-primary underline"
                 >
                   Renvoyer un email
                 </button>
@@ -99,7 +99,7 @@ export default function ResetPasswordPage() {
             )}
 
             {success && (
-              <div className="p-3 bg-background-secondary border border-border rounded-[8px] text-text-secondary text-[14px] mb-4">
+              <div className="p-3 bg-background-secondary border border-border rounded-[8px] text-text-secondary text-meta mb-4">
                 {success}
               </div>
             )}
@@ -107,7 +107,7 @@ export default function ResetPasswordPage() {
             {ready && !success && (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-[14px] font-medium text-text-secondary mb-1">
+                  <label className="block text-meta font-medium text-text-secondary mb-1">
                     Nouveau mot de passe
                   </label>
                   <input
@@ -122,7 +122,7 @@ export default function ResetPasswordPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[14px] font-medium text-text-secondary mb-1">
+                  <label className="block text-meta font-medium text-text-secondary mb-1">
                     Confirmer
                   </label>
                   <input
@@ -148,7 +148,7 @@ export default function ResetPasswordPage() {
                   <button
                     type="button"
                     onClick={() => router.push('/auth?mode=login')}
-                    className="text-[13px] text-text-tertiary hover:text-text-primary transition-colors duration-150"
+                    className="text-sm text-text-tertiary hover:text-text-primary transition-colors duration-150"
                   >
                     Retour à la connexion
                   </button>

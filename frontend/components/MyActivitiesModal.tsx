@@ -70,9 +70,9 @@ export default function MyActivitiesModal({
         >
             <div className="px-6 py-4">
                 {loading ? (
-                    <p className="text-[14px] text-text-tertiary py-8 text-center">Chargement...</p>
+                    <p className="text-meta text-text-tertiary py-8 text-center">Chargement...</p>
                 ) : entries.length === 0 ? (
-                    <p className="text-[14px] text-text-tertiary py-8 text-center">Pas d'entrées pour l'instant</p>
+                    <p className="text-meta text-text-tertiary py-8 text-center">Pas d'entrées pour l'instant</p>
                 ) : (
                     <div className="space-y-3">
                         {entries.map((entry, idx) => (
@@ -87,7 +87,7 @@ export default function MyActivitiesModal({
                                 <div className="flex items-start justify-between mb-2">
                                     <div>
                                         {idx === 0 && (
-                                            <div className="text-[12px] text-[#8E6F5E] font-medium mb-2">
+                                            <div className="text-label text-[#8E6F5E] font-medium mb-2">
                                                 Dernier
                                             </div>
                                         )}
@@ -100,7 +100,7 @@ export default function MyActivitiesModal({
                                         )}
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <div className="text-[12px] text-text-secondary">
+                                        <div className="text-label text-text-secondary">
                                             {new Date(entry.created_at).toLocaleDateString('fr-FR')}
                                         </div>
                                         <EditDiaryEntryButton
@@ -116,7 +116,7 @@ export default function MyActivitiesModal({
                                 </div>
 
                                 {entry.review_body && (
-                                    <p className="text-[14px] text-text-secondary leading-relaxed">
+                                    <p className="text-meta text-text-secondary leading-relaxed">
                                         {entry.review_body}
                                     </p>
                                 )}

@@ -6,8 +6,8 @@ import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import { BottomSheetProvider } from '@/lib/BottomSheetContext';
 
-// Pages où la navbar est masquée même pour les utilisateurs connectés
 const NO_NAV_PATHS = ['/onboarding', '/auth/reset'];
+const MAIN_NAV_PAGES = ['/feed', '/explore', '/add', '/me'];
 
 type Props = {
   children: React.ReactNode;
@@ -34,12 +34,13 @@ export default function AuthenticatedLayout({ children }: Props) {
   }
 
   const hideNav = NO_NAV_PATHS.some(path => pathname.startsWith(path));
+  const showBottomNav = MAIN_NAV_PAGES.includes(pathname);
 
   return (
     <BottomSheetProvider>
       {user && !hideNav && <Header />}
       <main>{children}</main>
-      {!hideNav && <BottomNav />}
+      {showBottomNav && <BottomNav />}
     </BottomSheetProvider>
   );
 }

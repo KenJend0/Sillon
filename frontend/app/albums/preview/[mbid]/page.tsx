@@ -37,8 +37,8 @@ export default async function AlbumPreviewPage({
     const trackCount = preview.tracks.length;
 
     return (
-        <main className="max-w-page mx-auto px-4 md:px-6 py-8 pb-24">
-            <BackButton />
+        <main className="max-w-page mx-auto px-4 md:px-6 pt-4 pb-24">
+            <BackButton label="Recherche" fallbackHref="/search" />
 
             {/* ========== 1. ALBUM ========== */}
             <div className="mt-8 mb-24">

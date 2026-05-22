@@ -189,10 +189,10 @@ export function ArtistPageContent({
     const totalTracks = albums.reduce((sum, a) => sum + (a.track_count || 0), 0);
 
     return (
-        <div className="mt-8">
+        <div className="mt-4">
             {/* ========== HERO ========== */}
             <div className="mb-10">
-                <div className="flex items-start gap-5">
+                <div className="flex items-center gap-5">
                     {/* Artist image */}
                     {imageUrl ? (
                         <div className="flex-shrink-0 w-20 h-20 rounded-full overflow-hidden relative">
@@ -208,43 +208,11 @@ export function ArtistPageContent({
                         <h1 className="text-[32px] font-medium text-text-primary tracking-[-0.02em] leading-[1.2]">
                             {artistName}
                         </h1>
-                        <div className="text-[14px] text-text-secondary mt-1">
-                            {(() => {
-                                const mainCount = discography.filter(d => d.releaseType !== 'Single').length;
-                                const singlesCount = discography.filter(d => d.releaseType === 'Single').length;
-                                const parts: string[] = [];
-                                if (mainCount > 0) parts.push(`${mainCount} ${mainCount > 1 ? 'albums' : 'album'}`);
-                                if (singlesCount > 0) parts.push(`${singlesCount} ${singlesCount > 1 ? 'singles' : 'single'}`);
-                                return parts.join(' · ') || `${discography.length} release${discography.length > 1 ? 's' : ''}`;
-                            })()}
-                            {previewType && ` · ${previewType}`}
-                        </div>
-                        {previewCountry && (
-                            <p className="text-[14px] text-text-secondary mt-0.5">{previewCountry}</p>
+                        {previewType && (
+                            <p className="text-meta text-text-secondary mt-1">{previewType}</p>
                         )}
-
-                        {/* Aggregate stats */}
-                        {artistStats && (artistStats.totalListeners > 0 || artistStats.globalAvgRating !== null || artistStats.totalReviews > 0) && (
-                            <div className="flex items-baseline gap-5 mt-3">
-                                {artistStats.globalAvgRating !== null && (
-                                    <span>
-                                        <span className="text-[16px] text-text-primary font-medium">{artistStats.globalAvgRating.toFixed(1)}</span>
-                                        <span className="text-[12px] text-text-tertiary ml-0.5">/10 moy.</span>
-                                    </span>
-                                )}
-                                {artistStats.totalListeners > 0 && (
-                                    <span>
-                                        <span className="text-[16px] text-text-primary font-medium">{artistStats.totalListeners.toLocaleString()}</span>
-                                        <span className="text-[12px] text-text-tertiary ml-1">{artistStats.totalListeners === 1 ? 'auditeur' : 'auditeurs'}</span>
-                                    </span>
-                                )}
-                                {artistStats.totalReviews > 0 && (
-                                    <span>
-                                        <span className="text-[16px] text-text-primary font-medium">{artistStats.totalReviews.toLocaleString()}</span>
-                                        <span className="text-[12px] text-text-tertiary ml-1">{artistStats.totalReviews === 1 ? 'critique' : 'critiques'}</span>
-                                    </span>
-                                )}
-                            </div>
+                        {previewCountry && (
+                            <p className="text-meta text-text-secondary mt-0.5">{previewCountry}</p>
                         )}
                     </div>
                 </div>
@@ -274,16 +242,43 @@ export function ArtistPageContent({
                                     </div>
                                 ))}
                             </div>
-                            <span className="text-[12px] text-text-tertiary leading-snug">{label}</span>
+                            <span className="text-label text-text-tertiary leading-snug">{label}</span>
                         </button>
                     );
                 })()}
+
+                {/* Aggregate stats — pleine largeur */}
+                {artistStats && (artistStats.totalListeners > 0 || artistStats.globalAvgRating !== null || artistStats.totalReviews > 0) && (
+                    <div className="flex w-full mt-5 border-t border-b border-rule py-3">
+                        {artistStats.globalAvgRating !== null && (
+                            <div className="flex flex-col flex-1 border-r border-rule pr-4">
+                                <span className="font-display italic text-[26px] text-text-warm leading-none">
+                                    {artistStats.globalAvgRating.toFixed(1).replace('.', ',')}
+                                    <span className="font-sans not-italic text-[10px] tracking-[0.16em] uppercase text-text-tertiary ml-1 align-[1px]">/10</span>
+                                </span>
+                                <span className="text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary mt-1.5">Moyenne</span>
+                            </div>
+                        )}
+                        {artistStats.totalListeners > 0 && (
+                            <div className={`flex flex-col flex-1 ${artistStats.globalAvgRating !== null ? 'px-4' : 'pr-4'} ${artistStats.totalReviews > 0 ? 'border-r border-rule' : ''}`}>
+                                <span className="font-display italic text-[26px] text-text-warm leading-none">{artistStats.totalListeners.toLocaleString()}</span>
+                                <span className="text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary mt-1.5">Auditeurs</span>
+                            </div>
+                        )}
+                        {artistStats.totalReviews > 0 && (
+                            <div className={`flex flex-col flex-1 ${(artistStats.globalAvgRating !== null || artistStats.totalListeners > 0) ? 'pl-4' : ''}`}>
+                                <span className="font-display italic text-[26px] text-text-warm leading-none">{artistStats.totalReviews.toLocaleString()}</span>
+                                <span className="text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary mt-1.5">Critiques</span>
+                            </div>
+                        )}
+                    </div>
+                )}
 
             </div>
 
             {/* ========== TOP ALBUMS ========== */}
             {topAlbums.length > 0 && (
-                <section className="border-t border-border-divider pt-10 mb-12">
+                <section className="pt-6 mb-12">
                     <h2 className="text-h2 text-text-primary mb-6">Populaires</h2>
                     <div className="flex flex-col gap-2">
                         {topAlbums.map((album, idx) => (
@@ -292,22 +287,23 @@ export function ArtistPageContent({
                                 href={`/albums/${album.id}`}
                                 className="flex items-center gap-4 py-2 hover:opacity-75 transition-opacity duration-150"
                             >
-                                <span className="text-[13px] text-text-tertiary tabular-nums w-4 flex-shrink-0">{idx + 1}</span>
+                                <span className="font-display italic text-[16px] text-accent w-5 text-right flex-shrink-0 leading-none tabular-nums">{idx + 1}</span>
                                 <div className="w-10 h-10 rounded-[6px] overflow-hidden flex-shrink-0 bg-background-secondary relative">
                                     {album.cover_url && (
                                         <Image src={album.cover_url} alt={album.title} fill className="object-cover" />
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-[14px] text-text-primary font-medium truncate">{album.title}</p>
-                                    <p className="text-[12px] text-text-tertiary">
+                                    <p className="font-display font-normal text-sm text-text-warm truncate">{album.title}</p>
+                                    <p className="text-label text-text-tertiary">
                                         {year(album.release_date)}
-                                        {(album.listeners_count ?? 0) > 0 && ` · ${album.listeners_count!.toLocaleString()} ${album.listeners_count === 1 ? 'auditeur' : 'auditeurs'}`}
+                                        {(album.listeners_count ?? 0) > 0 && ` · ${album.listeners_count!.toLocaleString()} auditeurs`}
                                     </p>
                                 </div>
                                 {album.avg_rating != null && (
-                                    <span className="text-[13px] text-text-primary flex-shrink-0">
-                                        {album.avg_rating.toFixed(1)}<span className="text-text-tertiary text-[11px]">/10</span>
+                                    <span className="inline-flex items-baseline justify-center gap-0.5 bg-[#FAF8F4] border border-accent rounded-[6px] w-[58px] py-0.5 text-accent font-display italic text-[15px] leading-none flex-shrink-0">
+                                        {album.avg_rating.toFixed(1).replace('.', ',')}
+                                        <span className="font-sans not-italic text-[9px] tracking-[0.16em] uppercase opacity-70">/10</span>
                                     </span>
                                 )}
                             </Link>
@@ -330,31 +326,32 @@ export function ArtistPageContent({
 
                             const cardContent = (
                                 <>
-                                    <AlbumCover album={album} />
+                                    <div className="relative">
+                                        <AlbumCover album={album} />
+                                        {album.avgRating != null && !isImporting && (
+                                            <span className="absolute top-1.5 right-1.5 inline-flex items-baseline gap-0.5 bg-[#FAF8F4]/90 border border-accent rounded-[5px] px-1.5 py-0.5 text-accent font-display italic text-[13px] leading-none backdrop-blur-sm">
+                                                {album.avgRating.toFixed(1).replace('.', ',')}
+                                                <span className="font-sans not-italic text-[8px] tracking-[0.14em] uppercase opacity-70">/10</span>
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="px-3 py-2.5">
                                         {isImporting ? (
                                             <div className="flex items-center gap-2 py-1">
                                                 <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-[#8E6F5E] flex-shrink-0" />
-                                                <span className="text-[13px] text-text-secondary">Import en cours…</span>
+                                                <span className="text-sm text-text-secondary">Import en cours…</span>
                                             </div>
                                         ) : (
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="text-[14px] font-medium text-text-primary truncate">{album.title}</div>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        {album.date && (
-                                                            <span className="text-[12px] text-text-secondary">{year(album.date)}</span>
-                                                        )}
-                                                        {album.releaseType === 'EP' && (
-                                                            <span className="text-[10px] text-text-disabled font-medium uppercase tracking-wide">EP</span>
-                                                        )}
-                                                    </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-display font-normal text-sm text-text-warm line-clamp-2 leading-snug">{album.title}</div>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    {album.date && (
+                                                        <span className="text-label text-text-tertiary">{year(album.date)}</span>
+                                                    )}
+                                                    {album.releaseType === 'EP' && (
+                                                        <span className="text-[10px] text-text-disabled font-medium uppercase tracking-wide">EP</span>
+                                                    )}
                                                 </div>
-                                                {album.avgRating != null && (
-                                                    <span className="text-[12px] text-text-primary flex-shrink-0 whitespace-nowrap">
-                                                        {album.avgRating.toFixed(1)}/10
-                                                    </span>
-                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -383,31 +380,36 @@ export function ArtistPageContent({
                     </div>
                 );
 
+                const hasBoth = mainReleases.length > 0 && singles.length > 0;
+
                 return (
-                    <>
+                    <section>
+                        <h2 className="text-h2 text-text-primary mb-6">Discographie</h2>
+
+                        {discography.length === 0 && (
+                            <div className="text-center text-text-tertiary text-meta py-12">
+                                Aucun album trouvé pour cet artiste
+                            </div>
+                        )}
+
                         {mainReleases.length > 0 && (
-                            <section>
-                                <h2 className="text-h2 text-text-primary mb-6">Discographie</h2>
+                            <div className={hasBoth ? 'mb-10' : ''}>
+                                <p className="text-[11px] uppercase tracking-[0.22em] text-text-tertiary mb-4">
+                                    Albums · {mainReleases.length}
+                                </p>
                                 {renderGrid(mainReleases)}
-                            </section>
+                            </div>
                         )}
 
                         {singles.length > 0 && (
-                            <section className="border-t border-border-divider pt-10 mt-12">
-                                <h2 className="text-h2 text-text-primary mb-6">Singles</h2>
+                            <div className={hasBoth ? 'border-t border-border-divider pt-8' : ''}>
+                                <p className="text-[11px] uppercase tracking-[0.22em] text-text-tertiary mb-4">
+                                    Singles · {singles.length}
+                                </p>
                                 {renderGrid(singles)}
-                            </section>
+                            </div>
                         )}
-
-                        {discography.length === 0 && (
-                            <section>
-                                <h2 className="text-h2 text-text-primary mb-6">Discographie</h2>
-                                <div className="text-center text-text-tertiary text-[14px] py-12">
-                                    Aucun album trouvé pour cet artiste
-                                </div>
-                            </section>
-                        )}
-                    </>
+                    </section>
                 );
             })()}
 
@@ -431,7 +433,7 @@ export function ArtistPageContent({
                                         </div>
                                     )}
                                 </div>
-                                <span className="text-[12px] text-text-secondary text-center leading-tight line-clamp-2 w-full">{a.name}</span>
+                                <span className="font-display font-normal text-sm text-text-warm text-center leading-tight line-clamp-2 w-full">{a.name}</span>
                             </Link>
                         ))}
                     </div>
@@ -482,7 +484,7 @@ function AlbumCover({ album }: { album: DiscographyItem }) {
 
     return (
         <div className="aspect-square bg-background-tertiary flex items-center justify-center">
-            <span className="text-[12px] text-text-tertiary">Aucune pochette</span>
+            <span className="text-label text-text-tertiary">Aucune pochette</span>
         </div>
     );
 }

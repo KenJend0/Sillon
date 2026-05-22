@@ -15,8 +15,8 @@ export default async function FollowersList({
 
   if (!result.success) {
     return (
-      <main className="max-w-page mx-auto px-4 py-8 pb-24">
-        <BackButton />
+      <main className="max-w-page mx-auto px-4 pt-4 pb-24">
+        <BackButton label="Profil" />
         <p className="text-text-tertiary text-[14px] mt-6">
           Impossible de charger les abonnés.
         </p>
@@ -27,8 +27,8 @@ export default async function FollowersList({
   const users = result.items || [];
 
   return (
-    <main className="max-w-page mx-auto px-4 py-8 pb-24">
-      <BackButton />
+    <main className="max-w-page mx-auto px-4 pt-4 pb-24">
+      <BackButton label="Profil" />
 
       <div className="mt-6 mb-8">
         <h1 className="text-[22px] font-medium text-text-primary tracking-[-0.01em] leading-[1.3]">

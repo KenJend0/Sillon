@@ -91,7 +91,7 @@ export default function ReviewsBottomSheet({
             <div className="flex border-b border-border-divider px-6 flex-shrink-0 sticky top-0 bg-background">
                 <button
                     onClick={() => handleTabChange("all")}
-                    className={`px-4 py-3 text-[14px] font-medium transition-colors duration-150 ${
+                    className={`px-4 py-3 text-meta font-medium transition-colors duration-150 ${
                         currentTab === "all"
                             ? "border-b-2 border-[#1C1C1C] text-text-primary"
                             : "text-text-secondary hover:text-text-primary"
@@ -102,7 +102,7 @@ export default function ReviewsBottomSheet({
                 {userId && hasFollowing && (
                     <button
                         onClick={() => handleTabChange("friends")}
-                        className={`px-4 py-3 text-[14px] font-medium transition-colors duration-150 ${
+                        className={`px-4 py-3 text-meta font-medium transition-colors duration-150 ${
                             currentTab === "friends"
                                 ? "border-b-2 border-[#1C1C1C] text-text-primary"
                                 : "text-text-secondary hover:text-text-primary"
@@ -114,7 +114,7 @@ export default function ReviewsBottomSheet({
                 {userId && (
                     <button
                         onClick={() => handleTabChange("my")}
-                        className={`px-4 py-3 text-[14px] font-medium transition-colors duration-150 ${
+                        className={`px-4 py-3 text-meta font-medium transition-colors duration-150 ${
                             currentTab === "my"
                                 ? "border-b-2 border-[#1C1C1C] text-text-primary"
                                 : "text-text-secondary hover:text-text-primary"
@@ -127,10 +127,10 @@ export default function ReviewsBottomSheet({
 
             {/* Sort */}
             <div className="flex items-center gap-2 px-6 pt-3 pb-1 flex-shrink-0">
-                <span className="text-[12px] text-text-tertiary">Trier :</span>
+                <span className="text-label text-text-tertiary">Trier :</span>
                 <button
                     onClick={() => setOrderBy("recent")}
-                    className={`text-[12px] px-2.5 py-1 rounded-full transition-colors duration-150 ${
+                    className={`text-label px-2.5 py-1 rounded-full transition-colors duration-150 ${
                         orderBy === "recent"
                             ? "bg-background-secondary text-text-primary font-medium"
                             : "text-text-secondary hover:text-text-primary"
@@ -140,7 +140,7 @@ export default function ReviewsBottomSheet({
                 </button>
                 <button
                     onClick={() => setOrderBy("top")}
-                    className={`text-[12px] px-2.5 py-1 rounded-full transition-colors duration-150 ${
+                    className={`text-label px-2.5 py-1 rounded-full transition-colors duration-150 ${
                         orderBy === "top"
                             ? "bg-background-secondary text-text-primary font-medium"
                             : "text-text-secondary hover:text-text-primary"
@@ -153,9 +153,9 @@ export default function ReviewsBottomSheet({
             {/* Content */}
             <div className="px-6 py-4">
                 {loading && items.length === 0 ? (
-                    <p className="text-[14px] text-text-tertiary py-8 text-center">Chargement...</p>
+                    <p className="text-meta text-text-tertiary py-8 text-center">Chargement...</p>
                 ) : items.length === 0 ? (
-                    <p className="text-[14px] text-text-tertiary py-8 text-center">
+                    <p className="text-meta text-text-tertiary py-8 text-center">
                         {currentTab === "my"
                             ? "Vous n'avez pas encore critiqué cet album"
                             : currentTab === "friends"
@@ -171,7 +171,7 @@ export default function ReviewsBottomSheet({
                             <button
                                 onClick={loadMore}
                                 disabled={loading}
-                                className="w-full mt-4 px-4 py-2.5 bg-background-secondary hover:bg-background-tertiary disabled:opacity-50 text-text-primary rounded-[8px] text-[14px] font-medium transition-colors duration-150"
+                                className="w-full mt-4 px-4 py-2.5 bg-background-secondary hover:bg-background-tertiary disabled:opacity-50 text-text-primary rounded-[8px] text-meta font-medium transition-colors duration-150"
                             >
                                 {loading ? "Chargement..." : "Charger plus"}
                             </button>
@@ -193,17 +193,17 @@ function ReviewItem({ review }: { review: Review }) {
         >
             <div className="flex items-baseline justify-between mb-2">
                 <div className="flex items-baseline gap-1">
-                    <span className="text-[14px] font-medium text-text-primary">{displayName}</span>
-                    <span className="text-[12px] text-text-tertiary">
+                    <span className="text-meta font-medium text-text-primary">{displayName}</span>
+                    <span className="text-label text-text-tertiary">
                         · {new Date(review.created_at).toLocaleDateString('fr-FR')}
                     </span>
                 </div>
                 {review.rating !== null && (
-                    <span className="text-[14px] text-text-primary font-medium">{review.rating}/10</span>
+                    <span className="text-meta text-text-primary font-medium">{review.rating}/10</span>
                 )}
             </div>
             {review.review_body && (
-                <p className="text-[13px] text-text-secondary leading-relaxed break-words line-clamp-3">
+                <p className="text-sm text-text-secondary leading-relaxed break-words line-clamp-3">
                     {review.review_body}
                 </p>
             )}

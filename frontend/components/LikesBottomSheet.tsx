@@ -59,7 +59,7 @@ export default function LikesBottomSheet({
         </div>
       ) : likes.length === 0 ? (
         <div className="py-8 text-center">
-          <p className="text-[14px] text-text-tertiary">
+          <p className="text-meta text-text-tertiary">
             Aucun like pour le moment
           </p>
         </div>
@@ -76,10 +76,10 @@ export default function LikesBottomSheet({
                 <UserAvatar userId={user.id} src={user.avatar_url} size={36} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-medium text-text-primary truncate">
+                <p className="text-meta font-medium text-text-primary truncate">
                   {user.username}
                 </p>
-                <p className="text-[12px] text-text-tertiary truncate">
+                <p className="text-label text-text-tertiary truncate">
                   @{user.username}
                 </p>
               </div>

@@ -23,8 +23,8 @@ export default async function ArtistPreviewPage({
     }
 
     return (
-        <main className="max-w-page mx-auto px-4 py-8 pb-24">
-            <BackButton />
+        <main className="max-w-page mx-auto px-4 pt-4 pb-24">
+            <BackButton label="Recherche" fallbackHref="/search" />
             <ArtistPageContent
                 previewName={meta.name}
                 previewMbid={mbid}

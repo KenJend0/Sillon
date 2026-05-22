@@ -23,7 +23,7 @@ export default function AlbumReviewSection({ albumId, reviewsCount = 0, initialR
                 {reviewsCount > 0 && (
                     <button
                         onClick={() => setIsReviewsSheetOpen(true)}
-                        className="text-[12px] text-text-secondary hover:text-[#8E6F5E] transition-colors duration-150"
+                        className="font-display italic text-sm text-accent border-b border-accent pb-px hover:text-accent-deep hover:border-accent-deep transition-colors duration-150"
                     >
                         voir toutes
                     </button>

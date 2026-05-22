@@ -120,10 +120,10 @@ export default function EditFavoriteAlbumsPage() {
   }
 
   return (
-    <main className="max-w-page mx-auto px-4 py-8 pb-24">
+    <main className="max-w-page mx-auto px-4 pt-4 pb-24">
       {/* Header */}
       <div className="mb-12">
-        <BackButton />
+        <BackButton label="Paramètres" fallbackHref="/settings" />
 
         <div className="mt-12">
           <h1 className="text-[32px] font-medium text-text-primary tracking-[-0.02em] leading-[1.2] mb-2">

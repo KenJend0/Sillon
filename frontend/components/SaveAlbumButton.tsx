@@ -42,7 +42,7 @@ export default function SaveAlbumButton({
     <button
       onClick={handleSaveToggle}
       disabled={loading}
-      className={`text-[12px] px-3 py-1.5 rounded-[8px] transition-colors duration-150 border ${
+      className={`text-label px-3 py-1.5 rounded-[8px] transition-colors duration-150 border ${
         !userId
           ? "text-text-tertiary border-border opacity-50 cursor-default"
           : saved

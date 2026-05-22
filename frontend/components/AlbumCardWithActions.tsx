@@ -57,7 +57,7 @@ export default function AlbumCardWithActions({
         <div className="mt-3">
           <Link
             href={`/albums/${album.id}`}
-            className="text-meta font-medium text-text-primary group-hover:text-[#8E6F5E] transition-colors duration-150 truncate block"
+            className="font-display font-normal text-sm text-text-warm group-hover:text-accent transition-colors duration-150 truncate block"
           >
             {album.title}
           </Link>

@@ -20,6 +20,8 @@ import StreamingLinks from "@/components/StreamingLinks";
 import AdminSpotifyEdit from "@/components/AdminSpotifyEdit";
 import AdminRefreshCover from "@/components/AdminRefreshCover";
 import EnrichmentPoller from "@/components/EnrichmentPoller";
+import MyListenSection from "@/components/MyListenSection";
+import NetworkListenersSection from "@/components/NetworkListenersSection";
 
 type PageProps = {
     params: Promise<{ id: string }>;
@@ -311,43 +313,69 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
     const enrichmentPending = !albumMeta.data?.fetched_at;
 
     return (
-        <main className="max-w-page mx-auto px-4 py-8 pb-24 overflow-x-hidden">
+        <main className="max-w-page mx-auto px-4 pt-4 pb-24 overflow-x-hidden">
             {enrichmentPending && <EnrichmentPoller albumId={album.id} />}
             <BackButton />
 
             {/* ========== 1. THE ALBUM ========== */}
-            <div className="mt-8 mb-6">
+            <div className="mt-4 mb-6">
                 <AlbumHero
                     album={albumHeroData}
                     albumId={album.id}
                     userId={user?.id}
                     userLists={userLists}
                     listsContaining={listsContaining}
-                    stats={stats}
-                    myLatestEntry={myLatestEntry}
                     myEntriesCount={myEntries.length}
                     autoOpenDiary={autoOpenDiary}
                     albumHasGenres={hasGenres}
-                    genres={showOnlyPillsInHero ? genres : undefined}
+                    genres={hasPills ? genres : undefined}
                     genreWeights={genreWeights}
-                    streamingLinks={showOnlyLinksInHero ? streamingLinks : undefined}
-                    networkListeners={networkListeners}
+                    streamingLinks={hasSomeLinks ? streamingLinks : undefined}
                 />
             </div>
 
-            {/* Section unifiée — seulement si pills ET liens sont présents */}
-            {showBothInSection && (
-                <div className="border-t border-border-divider pt-8 mb-8">
-                    <StreamingLinks albumId={album.id} initial={streamingLinks} />
-                    <div className="mt-3">
-                        <GenrePills
-                            genres={genres}
-                            albumId={album.id}
-                            userId={genres.length < 3 ? user?.id : undefined}
-                            genreWeights={genreWeights}
-                        />
-                    </div>
-                </div>
+            {/* ========== Mon écoute ========== */}
+            {myLatestEntry && (
+                <MyListenSection
+                    albumId={album.id}
+                    userId={user?.id}
+                    entry={myLatestEntry}
+                    entriesCount={myEntries.length}
+                />
+            )}
+
+            {/* ========== Stats + réseau ========== */}
+            {(stats.avg_rating !== null || stats.listeners_count > 0 || stats.reviews_count > 0 || networkListeners.length > 0) && (
+                <section className="border-t border-border-divider pt-6 mb-10">
+                    {(stats.avg_rating !== null || stats.listeners_count > 0 || stats.reviews_count > 0) && (
+                        <div className={`flex ${networkListeners.length > 0 ? 'mb-4' : ''}`}>
+                            {stats.avg_rating !== null && (
+                                <div className={`flex flex-col flex-1 ${(stats.listeners_count > 0 || stats.reviews_count > 0) ? 'border-r border-rule pr-4' : ''}`}>
+                                    <span className="font-display italic text-[26px] text-text-warm leading-none">
+                                        {stats.avg_rating.toFixed(1).replace('.', ',')}
+                                        <span className="font-sans not-italic text-[10px] tracking-[0.16em] uppercase text-text-tertiary ml-1 align-[1px]">/10</span>
+                                    </span>
+                                    <span className="text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary mt-1.5">Moyenne</span>
+                                </div>
+                            )}
+                            {stats.listeners_count > 0 && (
+                                <div className={`flex flex-col flex-1 ${stats.reviews_count > 0 ? 'border-r border-rule' : ''} ${stats.avg_rating !== null ? 'px-4' : 'pr-4'}`}>
+                                    <span className="font-display italic text-[26px] text-text-warm leading-none">{stats.listeners_count.toLocaleString()}</span>
+                                    <span className="text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary mt-1.5">Auditeurs</span>
+                                </div>
+                            )}
+                            {stats.reviews_count > 0 && (
+                                <div className={`flex flex-col flex-1 ${(stats.avg_rating !== null || stats.listeners_count > 0) ? 'pl-4' : ''}`}>
+                                    <span className="font-display italic text-[26px] text-text-warm leading-none">{stats.reviews_count.toLocaleString()}</span>
+                                    <span className="text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary mt-1.5">Critiques</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {networkListeners.length > 0 && (
+                        <NetworkListenersSection listeners={networkListeners} />
+                    )}
+                </section>
             )}
 
             {/* Admin tools */}
@@ -373,26 +401,35 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                 const isMultiDisc = discNos.length > 1;
                 return (
                     <section className="border-t border-border-divider pt-10 mb-20">
-                        <h2 className="text-h2 text-text-primary mb-8">Morceaux</h2>
+                        <div className="mb-8">
+                            <h2 className="text-h2 text-text-primary">Morceaux</h2>
+                            {(trackCount > 0 || totalDurationMs > 0) && (
+                                <p className="text-sm text-text-tertiary mt-1">
+                                    {trackCount > 0 && `${trackCount} morceau${trackCount > 1 ? "x" : ""}`}
+                                    {trackCount > 0 && totalDurationMs > 0 && " · "}
+                                    {totalDurationMs > 0 && msToDuration(totalDurationMs)}
+                                </p>
+                            )}
+                        </div>
                         {isMultiDisc ? (
                             discNos.map((disc) => {
                                 const discTracks = allTracks.filter((t) => t.disc_no === disc);
                                 return (
                                     <div key={disc} className="mb-8">
-                                        <p className="text-[11px] text-text-tertiary uppercase tracking-widest mb-3">
+                                        <p className="text-label text-text-tertiary uppercase tracking-widest mb-3">
                                             Disque {disc}
                                         </p>
                                         {discTracks.map((t) => {
                                             const tStat = (tracksStats as Map<string, any>)?.get(t.id);
                                             return (
                                                 <div key={t.id} className="flex items-baseline gap-4 py-2 group">
-                                                    <span className="text-text-tertiary tabular-nums flex-shrink-0 w-6 text-right text-[12px]">
+                                                    <span className="font-display italic text-accent text-[16px] w-7 text-right leading-none flex-shrink-0 tabular-nums">
                                                         {t.track_no}
                                                     </span>
-                                                    <Link href={`/tracks/${t.id}`} className="flex-1 text-[14px] text-text-primary hover:text-[#8E6F5E] transition-colors truncate">
+                                                    <Link href={`/tracks/${t.id}`} className="flex-1 text-meta text-text-primary hover:text-[#8E6F5E] transition-colors truncate">
                                                         {t.title}
                                                     </Link>
-                                                    <span className="text-text-tertiary tabular-nums flex-shrink-0 text-[12px]">
+                                                    <span className="text-text-tertiary tabular-nums flex-shrink-0 text-label">
                                                         {msToMMSS(t.duration_ms)}
                                                     </span>
                                                 </div>
@@ -408,13 +445,13 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                                     return (
                                         <div key={t.id}>
                                             <div className="flex items-baseline gap-4 py-2 group">
-                                                <span className="text-text-tertiary tabular-nums flex-shrink-0 w-6 text-right text-[12px]">
+                                                <span className="font-display italic text-accent text-[16px] w-7 text-right leading-none flex-shrink-0 tabular-nums">
                                                     {t.track_no ?? idx + 1}
                                                 </span>
-                                                <Link href={`/tracks/${t.id}`} className="flex-1 text-[14px] text-text-primary hover:text-[#8E6F5E] transition-colors truncate">
+                                                <Link href={`/tracks/${t.id}`} className="flex-1 text-meta text-text-primary hover:text-[#8E6F5E] transition-colors truncate">
                                                     {t.title}
                                                 </Link>
-                                                <span className="text-text-tertiary tabular-nums flex-shrink-0 text-[12px]">
+                                                <span className="text-text-tertiary tabular-nums flex-shrink-0 text-label">
                                                     {msToMMSS(t.duration_ms)}
                                                 </span>
                                             </div>
@@ -473,16 +510,16 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                                         <div className="w-full aspect-square bg-background-tertiary" />
                                     )}
                                 </div>
-                                <p className="text-text-primary font-medium text-[14px] leading-snug mb-0.5 line-clamp-2 group-hover:text-[#8E6F5E] transition-colors duration-150">
+                                <p className="text-text-primary font-medium text-meta leading-snug mb-0.5 line-clamp-2 group-hover:text-[#8E6F5E] transition-colors duration-150">
                                     {a.title}
                                 </p>
-                                <p className="text-text-secondary text-[12px] truncate">{a.artist}</p>
-                                {a.year && <p className="text-text-tertiary text-[12px] mt-0.5">{a.year}</p>}
+                                <p className="text-text-secondary text-label truncate">{a.artist}</p>
+                                {a.year && <p className="text-text-tertiary text-label mt-0.5">{a.year}</p>}
                             </Link>
                         ))}
                     </div>
                 ) : (
-                    <p className="text-[14px] text-text-tertiary">Aucun album similaire trouvé pour le moment.</p>
+                    <p className="text-meta text-text-tertiary">Aucun album similaire trouvé pour le moment.</p>
                 )}
             </section>
 

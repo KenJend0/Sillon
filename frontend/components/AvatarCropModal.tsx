@@ -65,7 +65,7 @@ export default function AvatarCropModal({ imageSrc, onComplete, onCancel }: Avat
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1C1C1C]/20">
             <div className="bg-background rounded-[12px] p-6 max-w-lg w-full mx-4 border border-border">
-                <h2 className="text-[16px] font-medium text-text-primary mb-4">Rogner l'avatar</h2>
+                <h2 className="text-body font-medium font-sans text-text-primary mb-4">Rogner l'avatar</h2>
                 
                 <div className="relative h-80 mb-4 bg-background-secondary rounded-[10px] border border-border">
                     <Cropper

@@ -105,17 +105,17 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
                 <div className="w-full max-w-sm">
                     <Progress />
 
-                    <p className="text-[12px] text-text-tertiary uppercase tracking-widest mb-6">Waveform</p>
+                    <p className="text-label text-text-tertiary uppercase tracking-widest mb-6">Waveform</p>
                     <h1 className="text-h1 text-text-primary mb-2">
                         Bienvenue sur Waveform !
                     </h1>
-                    <p className="text-[14px] text-text-secondary mb-8">
+                    <p className="text-meta text-text-secondary mb-8">
                         Commence par choisir ton pseudo. C'est ce que verront les autres.
                     </p>
 
                     <div className="space-y-3">
                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-text-tertiary select-none">@</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-meta text-text-tertiary select-none">@</span>
                             <input
                                 type="text"
                                 value={username}
@@ -125,7 +125,7 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
                                 autoCapitalize="none"
                                 autoCorrect="off"
                                 maxLength={32}
-                                className={`w-full bg-background-secondary border rounded-[10px] pl-7 pr-10 py-3 text-[14px] text-text-primary placeholder-text-tertiary focus:outline-none transition-colors duration-150 ${
+                                className={`w-full bg-background-secondary border rounded-[10px] pl-7 pr-10 py-3 text-meta text-text-primary placeholder-text-tertiary focus:outline-none transition-colors duration-150 ${
                                     checkState === 'available'
                                         ? 'border-green-500'
                                         : checkState === 'taken' || checkState === 'invalid'
@@ -134,7 +134,7 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
                                 }`}
                             />
                             {/* Icône d'état à droite */}
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] pointer-events-none">
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">
                                 {checkState === 'checking' && (
                                     <span className="text-text-tertiary">…</span>
                                 )}
@@ -149,7 +149,7 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
 
                         {/* Feedback ligne */}
                         <div className="flex items-center justify-between">
-                            <p className={`text-[12px] transition-colors duration-150 ${
+                            <p className={`text-label transition-colors duration-150 ${
                                 checkState === 'invalid' ? 'text-[#C86C6C]' :
                                 checkState === 'too_short' ? 'text-[#C86C6C]' :
                                 checkState === 'taken' ? 'text-[#C86C6C]' :
@@ -163,7 +163,7 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
                                 {(checkState === 'idle' || checkState === 'checking') && 'Entre 3 et 32 caractères · lettres et chiffres uniquement'}
                             </p>
                             {username.length > 0 && (
-                                <p className={`text-[12px] tabular-nums ${username.length < MIN_LENGTH ? 'text-[#C86C6C]' : 'text-text-tertiary'}`}>
+                                <p className={`text-label tabular-nums ${username.length < MIN_LENGTH ? 'text-[#C86C6C]' : 'text-text-tertiary'}`}>
                                     {username.length}/32
                                 </p>
                             )}
@@ -180,7 +180,7 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
                                 checkState === 'checking' ||
                                 checkState === 'idle'
                             }
-                            className="w-full py-3 bg-[#1C1C1C] text-[#F5F3EF] text-[14px] font-medium rounded-[8px] hover:opacity-85 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed mt-2"
+                            className="w-full py-3 bg-[#1C1C1C] text-[#F5F3EF] text-meta font-medium rounded-[8px] hover:opacity-85 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed mt-2"
                         >
                             {loading ? 'En cours...' : 'Continuer →'}
                         </button>
@@ -199,7 +199,7 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
                     <Progress />
 
                     <h1 className="text-h1 text-text-primary mb-2">Qui veux-tu suivre ?</h1>
-                    <p className="text-[14px] text-text-secondary mb-8">
+                    <p className="text-meta text-text-secondary mb-8">
                         Suis des gens pour remplir ton feed avec leurs écoutes.
                     </p>
 
@@ -211,7 +211,7 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
                                         <UserAvatar userId={user.id} src={user.avatar_url} size={40} />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-[14px] font-medium text-text-primary truncate">
+                                        <p className="text-meta font-medium text-text-primary truncate">
                                             @{user.username}
                                         </p>
                                     </div>
@@ -220,7 +220,7 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
                             ))}
                         </div>
                     ) : (
-                        <p className="text-[14px] text-text-tertiary mb-8">
+                        <p className="text-meta text-text-tertiary mb-8">
                             Pas encore de suggestions — tu pourras trouver des gens via la recherche.
                         </p>
                     )}
@@ -228,13 +228,13 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => setStep(3)}
-                            className="text-[14px] text-text-tertiary hover:text-text-primary transition-colors duration-150"
+                            className="text-meta text-text-tertiary hover:text-text-primary transition-colors duration-150"
                         >
                             Passer
                         </button>
                         <button
                             onClick={() => setStep(3)}
-                            className="flex-1 py-3 bg-[#1C1C1C] text-[#F5F3EF] text-[14px] font-medium rounded-[8px] hover:opacity-85 transition-opacity"
+                            className="flex-1 py-3 bg-[#1C1C1C] text-[#F5F3EF] text-meta font-medium rounded-[8px] hover:opacity-85 transition-opacity"
                         >
                             Continuer →
                         </button>
@@ -252,7 +252,7 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
                 <Progress />
 
                 <h1 className="text-h1 text-text-primary mb-2">C'est parti !</h1>
-                <p className="text-[14px] text-text-secondary mb-10">
+                <p className="text-meta text-text-secondary mb-10">
                     Commence par ajouter un album à ton profil.
                 </p>
 
@@ -269,8 +269,8 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
                     className="flex items-center justify-between w-full px-4 py-4 bg-[#1C1C1C] text-[#F5F3EF] rounded-[12px] hover:opacity-85 transition-opacity"
                 >
                     <div>
-                        <p className="text-[14px] font-medium">Ajouter un album</p>
-                        <p className="text-[12px] text-[#F5F3EF]/60 mt-0.5">Commence à construire ton profil</p>
+                        <p className="text-meta font-medium">Ajouter un album</p>
+                        <p className="text-label text-[#F5F3EF]/60 mt-0.5">Commence à construire ton profil</p>
                     </div>
                     <span className="text-[20px] leading-none ml-4">→</span>
                 </Link>

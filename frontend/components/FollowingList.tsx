@@ -15,8 +15,8 @@ export default async function FollowingList({
 
   if (!result.success) {
     return (
-      <main className="max-w-page mx-auto px-4 py-8 pb-24">
-        <BackButton />
+      <main className="max-w-page mx-auto px-4 pt-4 pb-24">
+        <BackButton label="Profil" />
         <p className="text-text-tertiary text-[14px] mt-6">
           Impossible de charger les abonnements.
         </p>
@@ -27,7 +27,7 @@ export default async function FollowingList({
   const users = result.items || [];
 
   return (
-    <main className="max-w-page mx-auto px-4 py-8 pb-24">
+    <main className="max-w-page mx-auto px-4 pt-4 pb-24">
       <BackButton />
 
       <div className="mt-6 mb-8">

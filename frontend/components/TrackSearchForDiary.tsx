@@ -6,7 +6,7 @@ import { searchMusicBrainzRecordings, importTrackFromMusicBrainz } from "@/app/a
 import { mergeAndRank } from "@/lib/searchRanking";
 import { showToast } from "@/components/Toast";
 import { CoverImage } from "@/components/CoverImage";
-import { Music } from "lucide-react";
+import { Music, Search } from "lucide-react";
 
 const LIMIT = 6;
 
@@ -148,21 +148,27 @@ export default function TrackSearchForDiary({ onSelectTrack }: Props) {
 
     return (
         <div className="relative w-full">
-            <input
-                ref={inputRef}
-                type="text"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Rechercher un titre..."
-                className="w-full px-4 py-3 bg-background-secondary border border-border rounded-[10px] text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] focus:ring-0"
-            />
+            <div className="relative">
+                <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-accent pointer-events-none flex-shrink-0" />
+                <input
+                    ref={inputRef}
+                    type="text"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="Rechercher un titre…"
+                    className="w-full pl-11 pr-4 py-3 bg-[#FAF8F4] border border-[#D8D3CB] rounded-[14px] text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] focus:ring-0 transition-colors duration-150"
+                />
+            </div>
 
             {showDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-background border border-border rounded-[12px] z-50 overflow-hidden shadow-lg">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-[#FAF8F4] border border-[#D8D3CB] rounded-[14px] z-50 overflow-hidden shadow-[0_8px_24px_-4px_rgba(42,37,32,0.12)]">
                     {loading ? (
-                        <div className="p-4 text-center text-[14px] text-text-tertiary">Chargement…</div>
+                        <div className="flex items-center gap-2 px-4 py-4 text-[14px] text-text-tertiary">
+                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent flex-shrink-0" />
+                            Chargement…
+                        </div>
                     ) : results.length === 0 && !loadingExtended ? (
-                        <div className="p-4 text-center text-[14px] text-text-tertiary">Aucun résultat</div>
+                        <div className="px-4 py-4 text-[14px] text-text-tertiary">Aucun résultat</div>
                     ) : (
                         <div>
                             {results.map((item) => (
@@ -170,17 +176,17 @@ export default function TrackSearchForDiary({ onSelectTrack }: Props) {
                                     key={`${item.source}-${item.id}`}
                                     onClick={() => handleSelect(item)}
                                     disabled={!!importingId}
-                                    className={`w-full flex items-center gap-3 px-3 py-2.5 border-b border-border last:border-b-0 text-left transition-colors duration-150 ${
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 border-b border-[#ECE8E1] last:border-b-0 text-left transition-colors duration-150 ${
                                         importingId === item.id
-                                            ? "cursor-wait bg-background-secondary"
+                                            ? "cursor-wait bg-[#ECE8E1]"
                                             : importingId
                                             ? "opacity-40 cursor-default"
-                                            : "hover:bg-background-secondary cursor-pointer"
+                                            : "hover:bg-[#ECE8E1] cursor-pointer"
                                     }`}
                                 >
-                                    <div className="w-10 h-10 rounded-[6px] overflow-hidden flex-shrink-0 bg-background-tertiary flex items-center justify-center">
+                                    <div className="w-10 h-10 rounded-[6px] overflow-hidden flex-shrink-0 bg-[#E4DFD6] flex items-center justify-center">
                                         {importingId === item.id ? (
-                                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-[#8E6F5E]" />
+                                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
                                         ) : item.coverUrl ? (
                                             <CoverImage
                                                 src={item.coverUrl}
@@ -195,7 +201,7 @@ export default function TrackSearchForDiary({ onSelectTrack }: Props) {
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-[14px] text-text-primary truncate leading-snug">
+                                        <p className="text-[14px] text-text-primary truncate leading-snug">
                                             {importingId === item.id ? "Import en cours…" : item.title}
                                         </p>
                                         {importingId !== item.id && item.subtitle && (
@@ -207,8 +213,8 @@ export default function TrackSearchForDiary({ onSelectTrack }: Props) {
                                 </button>
                             ))}
                             {loadingExtended && (
-                                <div className="flex items-center gap-1.5 px-3 py-2 border-t border-border">
-                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-[#8E6F5E] opacity-50" />
+                                <div className="flex items-center gap-1.5 px-3 py-2 border-t border-[#ECE8E1]">
+                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-accent opacity-40" />
                                     <span className="text-[11px] text-text-disabled">Recherche étendue…</span>
                                 </div>
                             )}

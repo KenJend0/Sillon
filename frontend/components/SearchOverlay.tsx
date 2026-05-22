@@ -44,12 +44,12 @@ function ResultRow({
       className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-[8px] transition-colors duration-150 ${
         importing
           ? "cursor-wait opacity-70"
-          : "hover:bg-background-secondary cursor-pointer"
+          : "hover:bg-[#ECE8E1] cursor-pointer"
       }`}
     >
       {/* Thumbnail */}
       <div
-        className={`flex-shrink-0 w-10 h-10 bg-background-tertiary overflow-hidden flex items-center justify-center ${
+        className={`flex-shrink-0 w-10 h-10 bg-[#E4DFD6] overflow-hidden flex items-center justify-center ${
           isRound ? "rounded-full" : "rounded-[6px]"
         }`}
       >
@@ -75,15 +75,15 @@ function ResultRow({
         {importing ? (
           <div className="flex items-center gap-2">
             <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-[#8E6F5E] flex-shrink-0" />
-            <span className="text-[13px] text-text-secondary">Import en cours…</span>
+            <span className="text-sm text-text-secondary">Import en cours…</span>
           </div>
         ) : (
           <>
-            <p className="text-[14px] text-text-primary font-medium truncate leading-snug">
+            <p className="text-meta text-text-primary font-medium truncate leading-snug">
               {item.title}
             </p>
             {item.subtitle && (
-              <p className="text-[12px] text-text-tertiary truncate mt-0.5 leading-snug">
+              <p className="text-label text-text-tertiary truncate mt-0.5 leading-snug">
                 {item.subtitle}
                 {item.kind === "album" && item.releaseDate && (
                   <span className="text-text-disabled"> · {item.releaseDate.substring(0, 4)}</span>
@@ -387,33 +387,40 @@ export default function SearchOverlay() {
   return (
     <>
       {/* Trigger */}
-      <div onClick={() => setIsOpen(true)} className="w-full max-w-2xl mx-auto">
-        <div className="bg-background-secondary hover:bg-background-tertiary rounded-[10px] px-4 py-3 flex items-center gap-2 cursor-pointer transition-colors duration-150">
-          <Search size={15} className="text-text-tertiary flex-shrink-0" />
-          <span className="text-[14px] text-text-tertiary">
-            Rechercher un album, un artiste, ou un profil
+      <div className="w-full max-w-2xl mx-auto">
+        <div
+          onClick={() => setIsOpen(true)}
+          className="bg-[#FAF8F4] border border-[#D8D3CB] rounded-[14px] px-4 py-3 flex items-center gap-3 cursor-pointer transition-all duration-150 hover:border-accent hover:shadow-sm"
+        >
+          <Search size={18} className="text-accent flex-shrink-0" />
+          <span className="flex-1 text-[14px] text-text-tertiary truncate">
+            Album, titre, artiste, profil…
+          </span>
+          <span className="hidden sm:inline-flex items-center gap-1 bg-background-secondary border border-[#D8D3CB] text-text-tertiary text-[10px] font-medium px-1.5 py-0.5 rounded-[5px] flex-shrink-0">
+            <span>⌘</span><span>K</span>
           </span>
         </div>
+
       </div>
 
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-[#1C1C1C]/20 z-50 flex items-start justify-center"
+          className="fixed inset-0 bg-[#2A2520]/20 z-50 flex items-start justify-center"
           onClick={() => setIsOpen(false)}
         >
           <div
-            className="bg-background w-full max-w-2xl rounded-b-[14px] mt-0 max-h-[88vh] overflow-hidden flex flex-col border border-border border-t-0 shadow-lg"
+            className="bg-[#FAF8F4] w-full max-w-2xl rounded-b-[16px] mt-0 max-h-[88vh] overflow-hidden flex flex-col border border-[#D8D3CB] border-t-0 shadow-[0_8px_32px_-4px_rgba(42,37,32,0.14)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-4 pt-4 pb-0 border-b border-border">
-              <div className="flex items-center gap-2 mb-3">
-                <Search size={16} className="text-text-tertiary flex-shrink-0" />
+            <div className="px-4 pt-4 pb-0 border-b border-[#D8D3CB]">
+              <div className="flex items-center gap-3 mb-3">
+                <Search size={17} className="text-accent flex-shrink-0" />
                 <input
                   ref={inputRef}
                   type="text"
-                  placeholder="Rechercher un album, un titre, un artiste..."
+                  placeholder="Album, titre, artiste, profil…"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   className="flex-1 bg-transparent text-[15px] text-text-primary placeholder-text-tertiary focus:outline-none"
@@ -444,10 +451,10 @@ export default function SearchOverlay() {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`text-[13px] font-medium pb-3 border-b-2 transition-colors duration-150 ${
+                    className={`text-sm pb-3 border-b-2 transition-colors duration-150 ${
                       activeTab === tab
-                        ? "text-text-primary border-[#8E6F5E]"
-                        : "text-text-tertiary border-transparent hover:text-text-secondary"
+                        ? "font-medium text-[#2A2520] border-[#8E6F5E]"
+                        : "font-normal text-text-tertiary border-transparent hover:text-[#6B6B6B]"
                     }`}
                   >
                     {tabLabels[tab]}
@@ -462,7 +469,7 @@ export default function SearchOverlay() {
               {!q.trim() ? (
                 recentSearches.length > 0 ? (
                   <div>
-                    <p className="text-[11px] text-text-tertiary font-medium uppercase tracking-[0.08em] px-3 mb-2">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-text-disabled px-3 mb-2">
                       Recherches récentes
                     </p>
                     <div className="space-y-0.5">
@@ -470,10 +477,10 @@ export default function SearchOverlay() {
                         <div
                           key={i}
                           onClick={() => setQ(search)}
-                          className="flex items-center justify-between px-3 py-2 hover:bg-background-secondary rounded-[8px] transition-colors cursor-pointer group"
+                          className="flex items-center justify-between px-3 py-2.5 hover:bg-[#ECE8E1] rounded-[8px] transition-colors cursor-pointer group"
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <Clock size={14} className="text-text-disabled flex-shrink-0" />
+                            <Clock size={13} className="text-text-disabled flex-shrink-0" />
                             <span className="text-[14px] text-text-primary truncate">{search}</span>
                           </div>
                           <button
@@ -482,7 +489,7 @@ export default function SearchOverlay() {
                               const updated = removeRecentSearch(search);
                               setRecentSearches(updated);
                             }}
-                            className="text-text-disabled hover:text-text-primary transition-colors flex-shrink-0 ml-2"
+                            className="text-text-disabled hover:text-text-secondary transition-colors flex-shrink-0 ml-2"
                           >
                             <X size={12} />
                           </button>
@@ -491,15 +498,14 @@ export default function SearchOverlay() {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-text-tertiary text-[13px] px-3 py-4">
-                    Commencez à taper pour rechercher
+                  <p className="font-display italic text-[15px] text-text-tertiary px-3 py-5">
+                    Album, titre, artiste, profil…
                   </p>
                 )
               ) : loading ? (
-                /* Initial loading */
-                <div className="flex items-center gap-2 px-3 py-4">
-                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-[#8E6F5E]" />
-                  <span className="text-[13px] text-text-tertiary">Recherche…</span>
+                <div className="flex items-center gap-2 px-3 py-5">
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
+                  <span className="text-[14px] text-text-tertiary">Recherche…</span>
                 </div>
               ) : (
                 <>
@@ -515,16 +521,16 @@ export default function SearchOverlay() {
                       ))}
                     </div>
                   ) : !loadingExtended ? (
-                    <p className="text-text-tertiary text-[13px] px-3 py-4">
+                    <p className="text-[14px] text-text-tertiary px-3 py-5">
                       Aucun résultat pour{" "}
-                      <span className="font-medium text-text-secondary">« {q} »</span>
+                      <em className="font-display italic not-italic text-text-secondary" style={{ fontStyle: 'italic' }}>« {q} »</em>
                     </p>
                   ) : null}
 
                   {/* Extended loading indicator */}
                   {loadingExtended && (
                     <div className="flex items-center gap-1.5 px-3 py-2 mt-1">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-[#8E6F5E] opacity-50" />
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-accent opacity-40" />
                       <span className="text-[11px] text-text-disabled">Recherche étendue…</span>
                     </div>
                   )}
@@ -533,15 +539,13 @@ export default function SearchOverlay() {
                   {q.trim() && activeTab !== "users" && (
                     <button
                       onClick={handleSeeAll}
-                      className="flex items-center gap-1.5 px-3 py-2.5 mt-2 w-full text-[13px] text-text-tertiary hover:text-[#8E6F5E] transition-colors duration-150 group"
+                      className="flex items-center gap-1.5 px-3 py-2.5 mt-1 w-full text-[13px] text-text-tertiary hover:text-accent transition-colors duration-150 group border-t border-[#ECE8E1] mt-2"
                     >
-                      <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
-                      {hasMoreResults ? (
-                        <>Plus de résultats disponibles — voir tout pour{" "}</>
-                      ) : (
-                        <>Voir tous les résultats pour{" "}</>
-                      )}
-                      <span className="font-medium text-text-secondary ml-1">« {q} »</span>
+                      <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+                      <span>
+                        {hasMoreResults ? "Plus de résultats — voir tout pour " : "Voir tous les résultats pour "}
+                        <em className="font-display italic not-italic text-text-secondary" style={{ fontStyle: 'italic' }}>« {q} »</em>
+                      </span>
                     </button>
                   )}
                 </>

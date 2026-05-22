@@ -36,7 +36,7 @@ export default function Header() {
             >
                 {/* LOGO — à gauche */}
                 <Link href="/" className="flex items-center space-x-2">
-                    <span className="text-h2 font-medium tracking-tight text-text-primary">
+                    <span className="font-display italic text-[22px] leading-none text-text-warm">
                         Waveform
                     </span>
                 </Link>

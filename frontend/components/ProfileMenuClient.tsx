@@ -60,7 +60,7 @@ export default function ProfileMenuClient() {
           <Link
             href="/settings"
             onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-[14px] text-text-primary"
+            className="flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-meta text-text-primary"
           >
             <Settings size={16} />
             Éditer profil
@@ -68,7 +68,7 @@ export default function ProfileMenuClient() {
           <Link
             href="/settings/favorite-albums"
             onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-[14px] text-text-primary"
+            className="flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-meta text-text-primary"
           >
             <Heart size={16} />
             Albums favoris
@@ -76,7 +76,7 @@ export default function ProfileMenuClient() {
           <Link
             href="/legal"
             onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-[14px] text-text-primary"
+            className="flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-meta text-text-primary"
           >
             <FileText size={16} />
             Légal & infos
@@ -85,7 +85,7 @@ export default function ProfileMenuClient() {
             <Link
               href="/admin"
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-[14px] text-text-primary"
+              className="flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-meta text-text-primary"
             >
               <Shield size={16} />
               Admin
@@ -94,7 +94,7 @@ export default function ProfileMenuClient() {
           <button
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-[14px] border-t border-border-divider text-[#C86C6C] text-left disabled:opacity-50"
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-meta border-t border-border-divider text-[#C86C6C] text-left disabled:opacity-50"
           >
             <LogOut size={16} />
             {isLoggingOut ? "Déconnexion..." : "Se déconnecter"}

@@ -34,7 +34,7 @@ export default async function ListPage({ params }: PageProps) {
     const isOwner = !!user && user.id === list.user_id;
 
     return (
-        <main className="px-6 py-6 pb-28 lg:pb-10 max-w-page lg:max-w-5xl mx-auto">
+        <main className="px-6 pt-4 pb-28 lg:pb-10 max-w-page lg:max-w-5xl mx-auto">
             <div className="mb-6">
                 <BackButton />
             </div>

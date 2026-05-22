@@ -121,10 +121,10 @@ export default function AddToListButton({
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={handleOpen}
-                className={`flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] font-medium transition-colors duration-150 border ${
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-[8px] text-sm font-medium transition-colors duration-150 ${
                     isInAny
-                        ? "border-text-primary text-text-primary bg-transparent hover:bg-background-secondary"
-                        : "border-border text-text-secondary bg-transparent hover:text-text-primary hover:border-text-primary"
+                        ? "text-accent border border-accent bg-transparent hover:bg-background-secondary"
+                        : "text-text-tertiary bg-transparent hover:text-text-primary"
                 }`}
             >
                 {isInAny ? (

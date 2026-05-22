@@ -331,7 +331,7 @@ export default function ProfileSettings() {
             <div className="flex items-center justify-center py-24">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8E6F5E] mx-auto mb-4"></div>
-                    <p className="text-text-secondary text-[14px]">Chargement...</p>
+                    <p className="text-text-secondary text-meta">Chargement...</p>
                 </div>
             </div>
         );
@@ -342,10 +342,10 @@ export default function ProfileSettings() {
             <div className="mx-auto max-w-page lg:max-w-5xl px-4 md:px-6 pb-28 lg:pb-12">
                 <div className="pt-8 pb-6">
                     <h1 className="text-h1 text-text-primary mb-2">Paramètres</h1>
-                    <p className="text-[14px] text-text-tertiary">Personnalise ton profil et ton compte.</p>
+                    <p className="text-meta text-text-tertiary">Personnalise ton profil et ton compte.</p>
                 </div>
                 <div className="flex items-center justify-between gap-4 px-4 py-4 bg-background-secondary border border-border rounded-[12px]">
-                    <p className="text-[14px] text-text-secondary leading-snug">
+                    <p className="text-meta text-text-secondary leading-snug">
                         Crée un compte pour accéder à tes paramètres.
                     </p>
                     <div className="flex items-center gap-3 flex-shrink-0">
@@ -363,9 +363,9 @@ export default function ProfileSettings() {
 
     return (
         <div className="pb-24">
-            <div className="max-w-page mx-auto px-6 py-12">
+            <div className="max-w-page mx-auto px-6 pt-4 pb-12">
                 <div className="mb-8">
-                    <BackButton fallbackHref="/me" className="mb-6 flex items-center gap-2 text-[14px] text-text-secondary hover:text-text-primary transition-colors duration-150" />
+                    <BackButton label="Mon profil" fallbackHref="/me" className="mb-6" />
                     <h1 className="text-h1 text-text-primary mb-1">Modifier le profil</h1>
                 </div>
 
@@ -404,7 +404,7 @@ export default function ProfileSettings() {
                                         disabled={uploading}
                                         className="hidden"
                                     />
-                                    <span className="inline-flex items-center text-[14px] text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-150 disabled:opacity-50">
+                                    <span className="inline-flex items-center text-meta text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-150 disabled:opacity-50">
                                         {uploading ? "Upload..." : "Changer la photo"}
                                     </span>
                                 </label>
@@ -412,17 +412,17 @@ export default function ProfileSettings() {
                                 {profile.avatar_url && !uploading && (
                                     confirmDeleteAvatar ? (
                                         <div className="flex items-center gap-3">
-                                            <span className="text-[12px] text-text-secondary">Supprimer ?</span>
+                                            <span className="text-label text-text-secondary">Supprimer ?</span>
                                             <button
                                                 onClick={deleteAvatar}
-                                                className="text-[12px] text-[#C86C6C] hover:opacity-75 transition-opacity"
+                                                className="text-label text-[#C86C6C] hover:opacity-75 transition-opacity"
                                             >
                                                 Oui
                                             </button>
-                                            <span className="text-[12px] text-text-disabled">·</span>
+                                            <span className="text-label text-text-disabled">·</span>
                                             <button
                                                 onClick={() => setConfirmDeleteAvatar(false)}
-                                                className="text-[12px] text-text-tertiary hover:text-text-primary transition-colors duration-150"
+                                                className="text-label text-text-tertiary hover:text-text-primary transition-colors duration-150"
                                             >
                                                 Annuler
                                             </button>
@@ -430,7 +430,7 @@ export default function ProfileSettings() {
                                     ) : (
                                         <button
                                             onClick={() => setConfirmDeleteAvatar(true)}
-                                            className="text-[14px] text-text-tertiary hover:text-[#C86C6C] transition-colors duration-150"
+                                            className="text-meta text-text-tertiary hover:text-[#C86C6C] transition-colors duration-150"
                                         >
                                             Supprimer la photo
                                         </button>
@@ -448,16 +448,16 @@ export default function ProfileSettings() {
 
                     {/* Bio */}
                     <div className="py-4 border-b border-border-divider">
-                        <label className="block text-[14px] text-text-primary mb-2">Bio</label>
+                        <label className="block text-meta text-text-primary mb-2">Bio</label>
                         <textarea
                             value={profile.bio ?? ""}
                             onChange={(e) => setProfile({ ...profile, bio: e.target.value || null })}
                             placeholder="Parlez un peu de vous..."
                             maxLength={500}
                             rows={3}
-                            className="w-full bg-background-secondary border border-border hover:border-[#8E6F5E] focus:border-[#8E6F5E] rounded-[10px] px-3 py-2 text-[14px] text-text-primary placeholder-text-tertiary focus:outline-none transition-colors duration-150 resize-none"
+                            className="w-full bg-background-secondary border border-border hover:border-[#8E6F5E] focus:border-[#8E6F5E] rounded-[10px] px-3 py-2 text-meta text-text-primary placeholder-text-tertiary focus:outline-none transition-colors duration-150 resize-none"
                         />
-                        <p className="text-[12px] text-text-tertiary mt-1">
+                        <p className="text-label text-text-tertiary mt-1">
                             {(profile.bio ?? "").length}/500 caractères
                         </p>
                     </div>
@@ -471,21 +471,21 @@ export default function ProfileSettings() {
                     <div className="py-4 border-b border-border-divider">
                         <div className="flex items-start justify-between gap-4 mb-3">
                             <div className="min-w-0 flex-1">
-                                <p className="text-[14px] text-text-primary mb-1">Nom d'utilisateur</p>
-                                <p className="text-[14px] text-text-secondary font-mono">@{profile.username || "Non défini"}</p>
+                                <p className="text-meta text-text-primary mb-1">Nom d'utilisateur</p>
+                                <p className="text-meta text-text-secondary font-mono">@{profile.username || "Non défini"}</p>
                             </div>
                             {!showUsernameForm && (
                                 <button
                                     onClick={() => setShowUsernameForm(true)}
                                     disabled={!!profile.username_changed}
-                                    className="text-[14px] text-text-secondary hover:text-text-primary transition-colors duration-150 flex-shrink-0 disabled:opacity-50"
+                                    className="text-meta text-text-secondary hover:text-text-primary transition-colors duration-150 flex-shrink-0 disabled:opacity-50"
                                 >
                                     Changer
                                 </button>
                             )}
                         </div>
                         {profile.username_changed && !showUsernameForm && (
-                            <p className="text-[12px] text-text-tertiary">
+                            <p className="text-label text-text-tertiary">
                                 Vous avez déjà changé votre pseudo.
                             </p>
                         )}
@@ -502,19 +502,19 @@ export default function ProfileSettings() {
                                     }}
                                     onBlur={checkUsername}
                                     placeholder="Nouveau pseudo"
-                                    className="w-full bg-background border border-border hover:border-[#8E6F5E] focus:border-[#8E6F5E] rounded-[10px] px-3 py-2 text-[14px] text-text-primary placeholder-text-tertiary focus:outline-none transition-colors duration-150"
+                                    className="w-full bg-background border border-border hover:border-[#8E6F5E] focus:border-[#8E6F5E] rounded-[10px] px-3 py-2 text-meta text-text-primary placeholder-text-tertiary focus:outline-none transition-colors duration-150"
                                 />
-                                <p className="text-[12px] text-text-tertiary">
+                                <p className="text-label text-text-tertiary">
                                     2-32 caractères (lettres, chiffres, _, ., -)
                                 </p>
                                 {usernameCheckState === "invalid" && (
-                                    <p className="text-[12px] text-[#C86C6C]">Pseudo invalide</p>
+                                    <p className="text-label text-[#C86C6C]">Pseudo invalide</p>
                                 )}
                                 {usernameCheckState === "taken" && (
-                                    <p className="text-[12px] text-[#C86C6C]">Pseudo déjà pris</p>
+                                    <p className="text-label text-[#C86C6C]">Pseudo déjà pris</p>
                                 )}
                                 {usernameCheckState === "available" && (
-                                    <p className="text-[12px] text-text-secondary">Pseudo disponible</p>
+                                    <p className="text-label text-text-secondary">Pseudo disponible</p>
                                 )}
                                 <div className="flex gap-2">
                                     <button
@@ -526,7 +526,7 @@ export default function ProfileSettings() {
                                             newUsername.trim() === (profile.username || "") ||
                                             !!profile.username_changed
                                         }
-                                        className="text-[14px] text-text-secondary hover:text-text-primary transition-colors duration-150 disabled:opacity-50"
+                                        className="text-meta text-text-secondary hover:text-text-primary transition-colors duration-150 disabled:opacity-50"
                                     >
                                         {changingUsername ? "..." : "Confirmer"}
                                     </button>
@@ -537,13 +537,13 @@ export default function ProfileSettings() {
                                             setNewUsername("");
                                             setUsernameCheckState("idle");
                                         }}
-                                        className="text-[14px] text-text-secondary hover:text-text-primary transition-colors duration-150"
+                                        className="text-meta text-text-secondary hover:text-text-primary transition-colors duration-150"
                                     >
                                         Annuler
                                     </button>
                                 </div>
                                 <div className="bg-background-tertiary border border-border rounded-[8px] p-2">
-                                    <p className="text-[12px] text-text-secondary">
+                                    <p className="text-label text-text-secondary">
                                         Vous ne pourrez changer votre pseudo qu'une seule fois.
                                     </p>
                                 </div>
@@ -553,8 +553,8 @@ export default function ProfileSettings() {
 
                     {/* Email (read-only) */}
                     <div className="py-4 border-b border-border-divider">
-                        <p className="text-[14px] text-text-primary mb-1">Adresse e-mail</p>
-                        <p className="text-[14px] text-text-secondary font-mono">{profile.email}</p>
+                        <p className="text-meta text-text-primary mb-1">Adresse e-mail</p>
+                        <p className="text-meta text-text-secondary font-mono">{profile.email}</p>
                     </div>
                 </section>
 
@@ -562,7 +562,7 @@ export default function ProfileSettings() {
                 <div className="pt-4">
                     <button
                         onClick={saveProfile}
-                        className="w-full py-3 bg-[#1C1C1C] hover:opacity-85 text-[#F5F3EF] text-[14px] font-medium transition-opacity rounded-[8px]"
+                        className="w-full py-3 bg-[#1C1C1C] hover:opacity-85 text-[#F5F3EF] text-meta font-medium transition-opacity rounded-[8px]"
                     >
                         Enregistrer les modifications
                     </button>
@@ -576,17 +576,17 @@ export default function ProfileSettings() {
                         {!showDeleteZone ? (
                             <button
                                 onClick={() => setShowDeleteZone(true)}
-                                className="text-[14px] text-text-tertiary hover:text-[#C86C6C] transition-colors duration-150"
+                                className="text-meta text-text-tertiary hover:text-[#C86C6C] transition-colors duration-150"
                             >
                                 Supprimer mon compte
                             </button>
                         ) : (
                             <div className="p-4 border border-[#C86C6C]/30 rounded-[12px] bg-background-secondary space-y-4">
-                                <p className="text-[14px] text-text-secondary leading-relaxed">
+                                <p className="text-meta text-text-secondary leading-relaxed">
                                     Cette action est <span className="text-text-primary font-medium">irréversible</span>. Ton profil, ton journal, tes écoutes et toutes tes données seront supprimés définitivement.
                                 </p>
                                 <div>
-                                    <label className="block text-[12px] text-text-tertiary mb-2">
+                                    <label className="block text-label text-text-tertiary mb-2">
                                         Saisis ton pseudo <span className="text-text-primary font-mono">@{profile.username}</span> pour confirmer
                                     </label>
                                     <input
@@ -594,21 +594,21 @@ export default function ProfileSettings() {
                                         value={deleteConfirmText}
                                         onChange={(e) => setDeleteConfirmText(e.target.value)}
                                         placeholder={profile.username || ""}
-                                        className="w-full bg-background border border-border hover:border-[#C86C6C] focus:border-[#C86C6C] rounded-[10px] px-3 py-2 text-[14px] text-text-primary placeholder-text-tertiary focus:outline-none transition-colors duration-150"
+                                        className="w-full bg-background border border-border hover:border-[#C86C6C] focus:border-[#C86C6C] rounded-[10px] px-3 py-2 text-meta text-text-primary placeholder-text-tertiary focus:outline-none transition-colors duration-150"
                                     />
                                 </div>
                                 <div className="flex items-center gap-3 pt-1">
                                     <button
                                         onClick={handleDeleteAccount}
                                         disabled={deleteConfirmText !== profile.username || deleting}
-                                        className="text-[14px] text-[#C86C6C] hover:opacity-75 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="text-meta text-[#C86C6C] hover:opacity-75 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
                                     >
                                         {deleting ? "Suppression..." : "Supprimer définitivement"}
                                     </button>
                                     <span className="text-text-disabled">·</span>
                                     <button
                                         onClick={() => { setShowDeleteZone(false); setDeleteConfirmText(""); }}
-                                        className="text-[14px] text-text-tertiary hover:text-text-primary transition-colors duration-150"
+                                        className="text-meta text-text-tertiary hover:text-text-primary transition-colors duration-150"
                                     >
                                         Annuler
                                     </button>

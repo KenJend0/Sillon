@@ -63,25 +63,47 @@ function CoverCollage({ urls }: { urls: (string | null)[] }) {
 export default function ListCard({ list, href }: Props) {
     return (
         <Link href={href} className="group block">
-            <CoverCollage urls={list.cover_urls} />
-            <div className="mt-2">
-                <p className="text-[13px] text-text-primary font-medium leading-snug line-clamp-2 group-hover:text-[#8E6F5E] transition-colors">
-                    {list.title}
-                </p>
-                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                    <span className="text-[11px] text-text-tertiary">
-                        {list.item_count} {list.item_count === 1 ? "item" : "items"}
+            <div className="relative">
+                <CoverCollage urls={list.cover_urls} />
+                {list.creator_username && (
+                    <span className="absolute top-2 left-2 flex items-center gap-1.5 bg-paper-hi/90 border border-border rounded-full pl-0.5 pr-2 py-0.5 backdrop-blur-sm z-10">
+                        <span className="rounded-full overflow-hidden border border-rule flex-shrink-0" style={{ width: 18, height: 18 }}>
+                            {list.creator_avatar ? (
+                                <img src={list.creator_avatar} alt="" width={18} height={18} className="object-cover w-full h-full" />
+                            ) : (
+                                <span className="w-full h-full bg-accent/20 block" />
+                            )}
+                        </span>
+                        <span className="text-[10px] font-medium text-text-primary leading-none">@{list.creator_username}</span>
                     </span>
+                )}
+            </div>
+            <div className="mt-2">
+                <div className="flex items-baseline justify-between gap-2">
+                    <p className="font-display font-normal text-sm text-text-warm leading-snug line-clamp-2 group-hover:text-accent transition-colors">
+                        {list.title}
+                    </p>
+                    <span className="inline-flex items-baseline gap-1.5 flex-shrink-0 font-display italic text-[15px] text-accent leading-none">
+                        {list.item_count}
+                        <span className="font-sans not-italic text-[10px] tracking-[0.12em] uppercase text-text-tertiary opacity-80">
+                            {list.item_count === 1 ? 'item' : 'items'}
+                        </span>
+                    </span>
+                </div>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    {!list.is_public && (
+                        <span className="inline-flex items-center gap-1 font-display italic text-sm text-text-secondary">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="5" y="11" width="14" height="9" rx="1.5"/>
+                                <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+                            </svg>
+                            privée
+                        </span>
+                    )}
                     {list.likes_count > 0 && (
                         <>
-                            <span className="text-text-disabled text-[10px]">·</span>
-                            <span className="text-[11px] text-text-tertiary">♥ {list.likes_count}</span>
-                        </>
-                    )}
-                    {!list.is_public && (
-                        <>
-                            <span className="text-text-disabled text-[10px]">·</span>
-                            <span className="text-[11px] text-text-disabled">Privée</span>
+                            {!list.is_public && <span className="text-text-disabled text-[10px]">·</span>}
+                            <span className="text-label text-text-tertiary">♥ {list.likes_count}</span>
                         </>
                     )}
                 </div>

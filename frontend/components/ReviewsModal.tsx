@@ -85,7 +85,7 @@ export default function ReviewsModal({
             <div className="bg-background rounded-[12px] max-w-2xl w-full max-h-[80vh] flex flex-col border border-border">
                 {/* Header */}
                 <div className="flex justify-between items-center px-6 py-4 border-b border-border-divider">
-                    <h2 className="text-[16px] font-medium text-text-primary">Critiques</h2>
+                    <h2 className="text-body font-medium font-sans text-text-primary">Critiques</h2>
                     <button
                         onClick={onClose}
                         className="p-1.5 hover:bg-background-secondary rounded-[8px] transition-colors duration-150"
@@ -98,7 +98,7 @@ export default function ReviewsModal({
                 <div className="flex border-b border-border-divider px-6">
                     <button
                         onClick={() => handleTabChange("all")}
-                        className={`px-4 py-3 text-[14px] font-medium transition-colors duration-150 ${
+                        className={`px-4 py-3 text-meta font-medium transition-colors duration-150 ${
                             currentTab === "all"
                                 ? "border-b-2 border-[#1C1C1C] text-text-primary"
                                 : "text-text-secondary hover:text-text-primary"
@@ -109,7 +109,7 @@ export default function ReviewsModal({
                     {userId && hasFollowing && (
                         <button
                             onClick={() => handleTabChange("friends")}
-                            className={`px-4 py-3 text-[14px] font-medium transition-colors duration-150 ${
+                            className={`px-4 py-3 text-meta font-medium transition-colors duration-150 ${
                                 currentTab === "friends"
                                     ? "border-b-2 border-[#1C1C1C] text-text-primary"
                                     : "text-text-secondary hover:text-text-primary"
@@ -121,7 +121,7 @@ export default function ReviewsModal({
                     {userId && (
                         <button
                             onClick={() => handleTabChange("my")}
-                            className={`px-4 py-3 text-[14px] font-medium transition-colors duration-150 ${
+                            className={`px-4 py-3 text-meta font-medium transition-colors duration-150 ${
                                 currentTab === "my"
                                     ? "border-b-2 border-[#1C1C1C] text-text-primary"
                                     : "text-text-secondary hover:text-text-primary"
@@ -135,9 +135,9 @@ export default function ReviewsModal({
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto px-6 py-4">
                     {loading && items.length === 0 ? (
-                        <p className="text-[14px] text-text-tertiary">Chargement...</p>
+                        <p className="text-meta text-text-tertiary">Chargement...</p>
                     ) : items.length === 0 ? (
-                        <p className="text-[14px] text-text-tertiary">
+                        <p className="text-meta text-text-tertiary">
                             {currentTab === "my"
                                 ? "Vous n'avez pas encore critiqué cet album"
                                 : currentTab === "friends"
@@ -152,7 +152,7 @@ export default function ReviewsModal({
                             {hasMore && (
                                 <button
                                     onClick={loadMore}
-                                    className="w-full mt-4 px-4 py-2.5 bg-background-secondary hover:bg-background-tertiary text-text-primary rounded-[8px] text-[14px] font-medium transition-colors duration-150"
+                                    className="w-full mt-4 px-4 py-2.5 bg-background-secondary hover:bg-background-tertiary text-text-primary rounded-[8px] text-meta font-medium transition-colors duration-150"
                                 >
                                     Charger plus
                                 </button>
@@ -177,16 +177,16 @@ function ReviewItem({ review }: { review: Review }) {
                 <div className="flex items-baseline gap-1">
                     <Link
                         href={profileLink}
-                        className="text-[14px] font-medium text-text-primary hover:text-[#8E6F5E] transition-colors duration-150"
+                        className="text-meta font-medium text-text-primary hover:text-[#8E6F5E] transition-colors duration-150"
                     >
                         {displayName}
                     </Link>
-                    <span className="text-[12px] text-text-tertiary">
+                    <span className="text-label text-text-tertiary">
                         · {new Date(review.created_at).toLocaleDateString('fr-FR')}
                     </span>
                 </div>
                 {review.rating !== null && (
-                    <span className="text-[14px] text-text-primary">
+                    <span className="text-meta text-text-primary">
                         {review.rating}/10
                     </span>
                 )}
@@ -194,7 +194,7 @@ function ReviewItem({ review }: { review: Review }) {
 
             {/* Text */}
             {review.review_body && (
-                <p className="text-[14px] text-text-secondary leading-relaxed">
+                <p className="text-meta text-text-secondary leading-relaxed">
                     {review.review_body}
                 </p>
             )}

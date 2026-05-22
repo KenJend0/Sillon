@@ -179,7 +179,7 @@ export default async function ArtistPage({ params }: PageProps) {
     const similarArtists = similarArtistsRaw;
 
     return (
-        <main className="max-w-page mx-auto px-4 py-8 pb-24">
+        <main className="max-w-page mx-auto px-4 pt-4 pb-24">
             <BackButton />
             <ArtistPageContent
                 artist={artist}

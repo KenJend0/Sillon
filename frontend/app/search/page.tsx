@@ -83,14 +83,14 @@ function AlbumRow({
         {importing ? (
           <div className="flex items-center gap-2">
             <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-[#8E6F5E] flex-shrink-0" />
-            <span className="text-[14px] text-text-secondary">Import en cours…</span>
+            <span className="text-meta text-text-secondary">Import en cours…</span>
           </div>
         ) : (
           <>
             <p className="font-medium text-text-primary truncate leading-snug group-hover:text-[#8E6F5E] transition-colors duration-150">
               {album.title}
             </p>
-            <p className="text-[13px] text-text-secondary truncate mt-0.5 leading-snug">
+            <p className="text-sm text-text-secondary truncate mt-0.5 leading-snug">
               {album.artistName}
               {album.releaseDate && (
                 <span className="text-text-disabled"> · {album.releaseDate.substring(0, 4)}</span>
@@ -121,7 +121,7 @@ function ArtistRow({ artist, imageUrl }: { artist: ArtistSearchResult; imageUrl?
           {artist.name}
         </p>
         {(artist.type || artist.country) && (
-          <p className="text-[13px] text-text-secondary truncate mt-0.5 leading-snug">
+          <p className="text-sm text-text-secondary truncate mt-0.5 leading-snug">
             {[artist.type, artist.country].filter(Boolean).join(" · ")}
           </p>
         )}
@@ -148,7 +148,7 @@ function UserRow({ user }: { user: SearchResultUI }) {
           {user.title}
         </p>
         {user.subtitle && (
-          <p className="text-[13px] text-text-tertiary truncate mt-0.5 leading-snug">{user.subtitle}</p>
+          <p className="text-sm text-text-tertiary truncate mt-0.5 leading-snug">{user.subtitle}</p>
         )}
       </div>
     </Link>
@@ -192,7 +192,7 @@ function TrackRow({
         {importing ? (
           <div className="flex items-center gap-2">
             <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-[#8E6F5E] flex-shrink-0" />
-            <span className="text-[14px] text-text-secondary">Import en cours…</span>
+            <span className="text-meta text-text-secondary">Import en cours…</span>
           </div>
         ) : (
           <>
@@ -200,7 +200,7 @@ function TrackRow({
               {track.title}
             </p>
             {track.subtitle && (
-              <p className="text-[13px] text-text-secondary truncate mt-0.5 leading-snug">
+              <p className="text-sm text-text-secondary truncate mt-0.5 leading-snug">
                 {track.subtitle}
               </p>
             )}
@@ -447,15 +447,15 @@ export default function SearchPage() {
 
   return (
     <main className="pb-20 max-w-page mx-auto">
-      <div className="px-6 pt-6 pb-0">
-        <BackButton className="mb-4 flex items-center gap-2 text-[14px] text-text-secondary hover:text-text-primary transition-colors duration-150" />
+      <div className="px-6 pt-4 pb-0">
+        <BackButton className="mb-4" />
         {q ? (
           <>
             <h1 className="text-h2 text-text-primary">« {q} »</h1>
-            <p className="text-[13px] text-text-tertiary mt-1 mb-6">{filterLabel[filter]}</p>
+            <p className="text-sm text-text-tertiary mt-1 mb-6">{filterLabel[filter]}</p>
           </>
         ) : (
-          <p className="text-[14px] text-text-tertiary py-12 text-center">
+          <p className="text-meta text-text-tertiary py-12 text-center">
             Utilisez la recherche (Cmd+K) pour trouver des albums, artistes ou profils.
           </p>
         )}
@@ -467,7 +467,7 @@ export default function SearchPage() {
           <div className="flex flex-col items-center justify-center py-16 space-y-3">
             <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-[#8E6F5E]" />
             {searchTimeout && (
-              <p className="text-[12px] text-text-tertiary">La recherche prend du temps, merci de patienter…</p>
+              <p className="text-label text-text-tertiary">La recherche prend du temps, merci de patienter…</p>
             )}
           </div>
         )}
@@ -475,14 +475,14 @@ export default function SearchPage() {
         {/* Error */}
         {!loading && searchError && q && (
           <div className="text-center py-16 space-y-2">
-            <p className="text-[14px] text-text-tertiary">Une erreur s'est produite lors de la recherche.</p>
-            <p className="text-[12px] text-text-disabled">Vérifiez votre connexion et réessayez.</p>
+            <p className="text-meta text-text-tertiary">Une erreur s'est produite lors de la recherche.</p>
+            <p className="text-label text-text-disabled">Vérifiez votre connexion et réessayez.</p>
           </div>
         )}
 
         {/* No results */}
         {!loading && !searchError && q && !hasResults && (
-          <div className="text-center py-16 text-[14px] text-text-tertiary">
+          <div className="text-center py-16 text-meta text-text-tertiary">
             Aucun résultat pour{" "}
             <span className="font-medium text-text-primary">« {q} »</span>
           </div>
@@ -495,10 +495,10 @@ export default function SearchPage() {
             {(filter === "all" || filter === "albums") && albums.length > 0 && (
               <section>
                 {filter === "all" && (
-                  <h2 className="text-[13px] font-medium text-text-tertiary uppercase tracking-[0.07em] mb-3">Albums</h2>
+                  <h2 className="text-sm font-medium text-text-tertiary uppercase tracking-[0.07em] mb-3">Albums</h2>
                 )}
                 {filter === "albums" && (
-                  <p className="text-[13px] text-text-tertiary mb-3">{allAlbums.length} albums trouvés</p>
+                  <p className="text-sm text-text-tertiary mb-3">{allAlbums.length} albums trouvés</p>
                 )}
                 <div className="space-y-0.5">
                   {albums.map((album) => (
@@ -514,7 +514,7 @@ export default function SearchPage() {
                 {allAlbums.length > albumsLimit && (
                   <button
                     onClick={() => { const next = albumsLimit + 8; setAlbumsLimit(next); setAlbums(allAlbums.slice(0, next)); }}
-                    className="mt-4 w-full py-2.5 text-[13px] text-text-secondary border border-border rounded-[8px] hover:border-[#8E6F5E] hover:text-text-primary transition-colors duration-150"
+                    className="mt-4 w-full py-2.5 text-sm text-text-secondary border border-border rounded-[8px] hover:border-[#8E6F5E] hover:text-text-primary transition-colors duration-150"
                   >
                     Afficher plus ({allAlbums.length - albumsLimit} restants)
                   </button>
@@ -526,10 +526,10 @@ export default function SearchPage() {
             {(filter === "all" || filter === "artists") && artists.length > 0 && (
               <section>
                 {filter === "all" && (
-                  <h2 className="text-[13px] font-medium text-text-tertiary uppercase tracking-[0.07em] mb-3">Artistes</h2>
+                  <h2 className="text-sm font-medium text-text-tertiary uppercase tracking-[0.07em] mb-3">Artistes</h2>
                 )}
                 {filter === "artists" && (
-                  <p className="text-[13px] text-text-tertiary mb-3">{allArtists.length} artistes trouvés</p>
+                  <p className="text-sm text-text-tertiary mb-3">{allArtists.length} artistes trouvés</p>
                 )}
                 <div className="space-y-0.5">
                   {artists.map((artist) => (
@@ -539,7 +539,7 @@ export default function SearchPage() {
                 {allArtists.length > artistsLimit && (
                   <button
                     onClick={() => { const next = artistsLimit + 8; setArtistsLimit(next); setArtists(allArtists.slice(0, next)); }}
-                    className="mt-4 w-full py-2.5 text-[13px] text-text-secondary border border-border rounded-[8px] hover:border-[#8E6F5E] hover:text-text-primary transition-colors duration-150"
+                    className="mt-4 w-full py-2.5 text-sm text-text-secondary border border-border rounded-[8px] hover:border-[#8E6F5E] hover:text-text-primary transition-colors duration-150"
                   >
                     Afficher plus ({allArtists.length - artistsLimit} restants)
                   </button>
@@ -550,7 +550,7 @@ export default function SearchPage() {
             {/* Tracks */}
             {filter === "tracks" && tracks.length > 0 && (
               <section>
-                <p className="text-[13px] text-text-tertiary mb-3">{allTracks.length} titres trouvés</p>
+                <p className="text-sm text-text-tertiary mb-3">{allTracks.length} titres trouvés</p>
                 <div className="space-y-0.5">
                   {tracks.map((track) => (
                     <TrackRow
@@ -565,7 +565,7 @@ export default function SearchPage() {
                 {allTracks.length > tracksLimit && (
                   <button
                     onClick={() => { const next = tracksLimit + 8; setTracksLimit(next); setTracks(allTracks.slice(0, next)); }}
-                    className="mt-4 w-full py-2.5 text-[13px] text-text-secondary border border-border rounded-[8px] hover:border-[#8E6F5E] hover:text-text-primary transition-colors duration-150"
+                    className="mt-4 w-full py-2.5 text-sm text-text-secondary border border-border rounded-[8px] hover:border-[#8E6F5E] hover:text-text-primary transition-colors duration-150"
                   >
                     Afficher plus ({allTracks.length - tracksLimit} restants)
                   </button>
@@ -577,10 +577,10 @@ export default function SearchPage() {
             {(filter === "all" || filter === "users") && users.length > 0 && (
               <section>
                 {filter === "all" && (
-                  <h2 className="text-[13px] font-medium text-text-tertiary uppercase tracking-[0.07em] mb-3">Profils</h2>
+                  <h2 className="text-sm font-medium text-text-tertiary uppercase tracking-[0.07em] mb-3">Profils</h2>
                 )}
                 {filter === "users" && (
-                  <p className="text-[13px] text-text-tertiary mb-3">{allUsers.length} profils trouvés</p>
+                  <p className="text-sm text-text-tertiary mb-3">{allUsers.length} profils trouvés</p>
                 )}
                 <div className="space-y-0.5">
                   {users.map((user) => (
@@ -590,7 +590,7 @@ export default function SearchPage() {
                 {allUsers.length > usersLimit && (
                   <button
                     onClick={() => { const next = usersLimit + 8; setUsersLimit(next); setUsers(allUsers.slice(0, next)); }}
-                    className="mt-4 w-full py-2.5 text-[13px] text-text-secondary border border-border rounded-[8px] hover:border-[#8E6F5E] hover:text-text-primary transition-colors duration-150"
+                    className="mt-4 w-full py-2.5 text-sm text-text-secondary border border-border rounded-[8px] hover:border-[#8E6F5E] hover:text-text-primary transition-colors duration-150"
                   >
                     Afficher plus ({allUsers.length - usersLimit} restants)
                   </button>

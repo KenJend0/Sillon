@@ -60,7 +60,7 @@ export default function BottomSheet({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-divider flex-shrink-0">
-          <h2 className="text-[16px] font-medium text-text-primary">{title}</h2>
+          <h2 className="text-body font-medium font-sans text-text-primary">{title}</h2>
           <button
             onClick={onClose}
             className="p-1.5 hover:bg-background-secondary rounded-[8px] transition-colors duration-150 flex-shrink-0"

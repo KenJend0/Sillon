@@ -16,6 +16,8 @@ export type UserList = {
     cover_urls: (string | null)[];
     likes_count: number;
     is_liked?: boolean;
+    creator_username?: string;
+    creator_avatar?: string | null;
 };
 
 export type ListItem = {
@@ -176,7 +178,7 @@ export async function getPublicLists(limit = 6): Promise<UserList[]> {
 
     const { data: lists } = await supabase
         .from('user_lists')
-        .select('id, user_id, title, description, is_public, is_default, created_at')
+        .select('id, user_id, title, description, is_public, is_default, created_at, profiles(username, avatar_url)')
         .eq('is_public', true)
         .eq('is_default', false)
         .order('created_at', { ascending: false })
@@ -190,6 +192,8 @@ export async function getPublicLists(limit = 6): Promise<UserList[]> {
         .map((list: any) => ({
             ...list,
             ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [], likes_count: 0 }),
+            creator_username: list.profiles?.username ?? undefined,
+            creator_avatar: list.profiles?.avatar_url ?? null,
         }))
         .sort((a: UserList, b: UserList) => b.likes_count - a.likes_count);
 }

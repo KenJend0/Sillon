@@ -29,9 +29,9 @@ export function UserAvatar({ userId, src, size = 18, className = "" }: UserAvata
   return (
     <div
       className={`flex-shrink-0 rounded-full bg-background-tertiary flex items-center justify-center ${className}`}
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, maxWidth: "100%", maxHeight: "100%" }}
     >
-      <User size={Math.round(size * 0.55)} className="text-text-tertiary" />
+      <User size={Math.round(size * 0.45)} className="text-text-tertiary" />
     </div>
   );
 }

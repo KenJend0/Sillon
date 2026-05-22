@@ -32,22 +32,44 @@ export default function BottomNav() {
     ];
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 border-t border-border flex justify-around items-center md:hidden z-50 bg-background/95 backdrop-blur-sm h-[calc(60px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)]">
+        <nav className="fixed left-5 right-5 bottom-3 md:hidden z-50 flex items-center justify-around
+                        bg-[#FAF8F4]/92 backdrop-blur-md border border-border rounded-[20px]
+                        px-2 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]
+                        shadow-[0_8px_20px_-8px_rgba(60,40,20,0.18),0_1px_2px_rgba(0,0,0,0.04)]">
             {navItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
+
+                if (item.href === "/add") {
+                    return (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className="flex h-10 min-w-10 flex-col items-center justify-center gap-0.5 text-[9px] leading-none text-text-warm"
+                        >
+                            <span className="flex h-6 w-6 items-center justify-center rounded-[8px] bg-text-warm text-[#FAF8F4]
+                                            shadow-[0_4px_10px_-2px_rgba(60,40,20,0.3)]"
+                                  style={{ transform: 'rotate(-4deg)' }}>
+                                <Icon />
+                            </span>
+                            <span className="text-[9px] leading-none">Ajouter</span>
+                        </Link>
+                    );
+                }
+
                 return (
                     <Link
                         key={item.href}
                         href={item.href}
-                        className={`flex flex-col items-center justify-center gap-1 px-4 py-2 transition-colors duration-150 ${
-                            active
-                                ? "text-text-primary"
-                                : "text-text-tertiary hover:text-text-secondary"
+                        className={`relative flex h-10 min-w-10 flex-col items-center justify-center gap-0.5 transition-colors duration-150 ${
+                            active ? "text-text-warm" : "text-text-tertiary"
                         }`}
                     >
+                        {active && (
+                            <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-accent rounded-full" />
+                        )}
                         <Icon />
-                        <span className="text-[10px] leading-none">{item.label}</span>
+                        <span className="text-[9px] leading-none">{item.label}</span>
                     </Link>
                 );
             })}
@@ -55,22 +77,23 @@ export default function BottomNav() {
             {/* Profile */}
             <Link
                 href="/me"
-                className={`flex flex-col items-center justify-center gap-1 px-4 py-2 transition-colors duration-150 ${
-                    isActive("/me")
-                        ? "text-text-primary"
-                        : "text-text-tertiary hover:text-text-secondary"
+                className={`relative flex h-10 min-w-10 flex-col items-center justify-center gap-0.5 transition-colors duration-150 ${
+                    isActive("/me") ? "text-text-warm" : "text-text-tertiary"
                 }`}
             >
+                {isActive("/me") && (
+                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-accent rounded-full" />
+                )}
                 {authUser ? (
-                    <div className={`w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border flex items-center justify-center ${
-                        isActive("/me") ? "border-[#1C1C1C]" : "border-border"
+                    <div className={`h-[22px] w-[22px] rounded-full overflow-hidden flex-shrink-0 border flex items-center justify-center ${
+                        isActive("/me") ? "border-accent" : "border-border"
                     }`}>
-                        <UserAvatar userId={authUser.id} src={profile?.avatar_url} size={24} />
+                        <UserAvatar userId={authUser.id} src={profile?.avatar_url} size={22} />
                     </div>
                 ) : (
                     <ProfileIcon />
                 )}
-                <span className="text-[10px] leading-none">Profil</span>
+                <span className="text-[9px] leading-none">Moi</span>
             </Link>
         </nav>
     );
