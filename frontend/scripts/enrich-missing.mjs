@@ -348,27 +348,37 @@ async function searchSpotifyTrack(artist, title) {
   if (!token) return null;
   const titleLow = title.toLowerCase();
   const artistLow = artist.toLowerCase();
-  // Try strict quoted search first, then loose keyword fallback
   const queries = [
     encodeURIComponent(`track:"${title}" artist:"${artist}"`),
     encodeURIComponent(`${title} ${artist}`),
   ];
   for (const q of queries) {
-    try {
-      const res = await fetch(
-        `https://api.spotify.com/v1/search?q=${q}&type=track&limit=10`,
-        { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(6000) },
-      );
-      if (!res.ok) continue;
-      const data = await res.json();
-      const items = data.tracks?.items ?? [];
-      const match = items.find(
-        (r) =>
-          r.name.toLowerCase().includes(titleLow.slice(0, 6)) &&
-          r.artists.some((a) => a.name.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase())),
-      );
-      if (match) return match.external_urls?.spotify ?? null;
-    } catch { continue; }
+    let attempt = 0;
+    while (attempt < 3) {
+      try {
+        const res = await fetch(
+          `https://api.spotify.com/v1/search?q=${q}&type=track&limit=10`,
+          { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) },
+        );
+        if (res.status === 429) {
+          const retryAfter = parseInt(res.headers.get('retry-after') ?? '10', 10);
+          console.warn(`      ⏳ Spotify rate limit — attente ${retryAfter}s`);
+          await delay(retryAfter * 1000);
+          attempt++;
+          continue;
+        }
+        if (!res.ok) break;
+        const data = await res.json();
+        const items = data.tracks?.items ?? [];
+        const match = items.find(
+          (r) =>
+            r.name.toLowerCase().includes(titleLow.slice(0, 6)) &&
+            r.artists.some((a) => a.name.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase())),
+        );
+        if (match) return match.external_urls?.spotify ?? null;
+        break;
+      } catch { break; }
+    }
   }
   return null;
 }
@@ -376,28 +386,37 @@ async function searchSpotifyTrack(artist, title) {
 async function searchAppleMusicTrack(artist, title) {
   const titleLow = title.toLowerCase();
   const artistLow = artist.toLowerCase();
-  // Try "artist title" then "title" alone as fallback
   const terms = [
     encodeURIComponent(`${artist} ${title}`),
     encodeURIComponent(title),
   ];
   for (const term of terms) {
-    try {
-      const res = await fetch(
-        `https://itunes.apple.com/search?term=${term}&entity=song&limit=10`,
-        { signal: AbortSignal.timeout(6000) },
-      );
-      if (!res.ok) continue;
-      const data = await res.json();
-      const results = data.results ?? [];
-      const match = results.find(
-        (r) =>
-          r.wrapperType === 'track' &&
-          r.trackName?.toLowerCase().includes(titleLow.slice(0, 6)) &&
-          r.artistName?.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase()),
-      );
-      if (match) return match.trackViewUrl ?? null;
-    } catch { continue; }
+    let attempt = 0;
+    while (attempt < 3) {
+      try {
+        const res = await fetch(
+          `https://itunes.apple.com/search?term=${term}&entity=song&limit=10`,
+          { signal: AbortSignal.timeout(8000) },
+        );
+        if (res.status === 429) {
+          console.warn(`      ⏳ Apple Music rate limit — attente 10s`);
+          await delay(10_000);
+          attempt++;
+          continue;
+        }
+        if (!res.ok) break;
+        const data = await res.json();
+        const results = data.results ?? [];
+        const match = results.find(
+          (r) =>
+            r.wrapperType === 'track' &&
+            r.trackName?.toLowerCase().includes(titleLow.slice(0, 6)) &&
+            r.artistName?.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase()),
+        );
+        if (match) return match.trackViewUrl ?? null;
+        break;
+      } catch { break; }
+    }
   }
   return null;
 }
