@@ -10,6 +10,7 @@ export type TrendingAlbum = {
     cover_url: string;
     discover_kind: string;
     score?: number;
+    delta?: number | null; // positif = montée, négatif = descente, null = nouveau
 };
 
 export type DiscoveryAlbum = {
@@ -31,6 +32,7 @@ export type SimilarUser = {
     username: string;
     avatar_url: string | null;
     taste_match: number; // 0-100
+    shared_albums_count: number;
 };
 
 export type ForYouTrack = {
@@ -46,52 +48,55 @@ export type ForYouTrack = {
  */
 export async function getTrendingThisWeek(limit = 10): Promise<TrendingAlbum[]> {
     const supabase = createSupabaseAnon();
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const now = Date.now();
+    const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const fourteenDaysAgo = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [{ data: recentEntries }, { data: recentSaves }] = await Promise.all([
-        supabase
-            .from('diary_entries')
-            .select('album_id, albums(id, title, cover_url, artists(name))')
-            .gte('created_at', sevenDaysAgo)
-            .eq('is_public', true)
-            .limit(200),
-        supabase
-            .from('saved_albums')
-            .select('album_id, albums(id, title, cover_url, artists(name))')
-            .gte('saved_at', sevenDaysAgo)
-            .limit(200),
+    const [
+        { data: currEntries }, { data: currSaves },
+        { data: prevEntries }, { data: prevSaves },
+    ] = await Promise.all([
+        supabase.from('diary_entries').select('album_id, albums(id, title, cover_url, artists(name))').gte('created_at', sevenDaysAgo).eq('is_public', true).limit(200),
+        supabase.from('saved_albums').select('album_id, albums(id, title, cover_url, artists(name))').gte('saved_at', sevenDaysAgo).limit(200),
+        supabase.from('diary_entries').select('album_id').gte('created_at', fourteenDaysAgo).lt('created_at', sevenDaysAgo).eq('is_public', true).limit(200),
+        supabase.from('saved_albums').select('album_id').gte('saved_at', fourteenDaysAgo).lt('saved_at', sevenDaysAgo).limit(200),
     ]);
 
     const albumScores = new Map<string, { score: number; title: string; artist_name: string; cover_url: string | null }>();
-
-    for (const entry of [...(recentEntries || []), ...(recentSaves || [])]) {
+    for (const entry of [...(currEntries || []), ...(currSaves || [])]) {
         const album = entry.albums as any;
         if (!album?.id) continue;
         const existing = albumScores.get(album.id);
-        if (existing) {
-            existing.score += 1;
-        } else {
-            albumScores.set(album.id, {
-                score: 1,
-                title: album.title || 'Unknown',
-                artist_name: album.artists?.name || 'Unknown',
-                cover_url: album.cover_url,
-            });
-        }
+        if (existing) existing.score += 1;
+        else albumScores.set(album.id, { score: 1, title: album.title || 'Unknown', artist_name: album.artists?.name || 'Unknown', cover_url: album.cover_url });
     }
+
+    const prevScores = new Map<string, number>();
+    for (const entry of [...(prevEntries || []), ...(prevSaves || [])]) {
+        if (!entry.album_id) continue;
+        prevScores.set(entry.album_id, (prevScores.get(entry.album_id) ?? 0) + 1);
+    }
+    const prevRankMap = new Map(
+        [...prevScores.entries()].sort((a, b) => b[1] - a[1]).map(([id], i) => [id, i + 1])
+    );
 
     return [...albumScores.entries()]
         .sort((a, b) => b[1].score - a[1].score)
         .slice(0, limit)
-        .map(([albumId, info]) => ({
-            id: `trending-${albumId}`,
-            album_id: albumId,
-            album_title: info.title,
-            artist_name: info.artist_name,
-            cover_url: info.cover_url || '',
-            discover_kind: 'trending_week',
-            score: info.score,
-        }));
+        .map(([albumId, info], index) => {
+            const currentRank = index + 1;
+            const prevRank = prevRankMap.get(albumId);
+            return {
+                id: `trending-${albumId}`,
+                album_id: albumId,
+                album_title: info.title,
+                artist_name: info.artist_name,
+                cover_url: info.cover_url || '',
+                discover_kind: 'trending_week',
+                score: info.score,
+                delta: prevRank !== undefined ? prevRank - currentRank : null,
+            };
+        });
 }
 
 /**
@@ -322,6 +327,21 @@ export async function getSimilarUsers(limit = 4): Promise<SimilarUser[]> {
 
     if (!profiles) return [];
 
+    const similarUserIds = profiles.map((p) => p.id);
+    const [{ data: myAlbums }, { data: theirAlbums }] = await Promise.all([
+        supabase.from('diary_entries').select('album_id').eq('user_id', user.id),
+        supabase.from('diary_entries').select('user_id, album_id').in('user_id', similarUserIds),
+    ]);
+
+    const myAlbumSet = new Set((myAlbums || []).map((e) => e.album_id).filter(Boolean));
+    const sharedCountMap = new Map<string, number>();
+    for (const entry of theirAlbums || []) {
+        if (!entry.album_id || !entry.user_id) continue;
+        if (myAlbumSet.has(entry.album_id)) {
+            sharedCountMap.set(entry.user_id, (sharedCountMap.get(entry.user_id) ?? 0) + 1);
+        }
+    }
+
     return profiles
         .filter((p) => p.username)
         .map((p) => ({
@@ -329,6 +349,7 @@ export async function getSimilarUsers(limit = 4): Promise<SimilarUser[]> {
             username: p.username!,
             avatar_url: p.avatar_url ?? null,
             taste_match: Math.round((scoreMap.get(p.id) ?? 0) * 100),
+            shared_albums_count: sharedCountMap.get(p.id) ?? 0,
         }))
         .sort((a, b) => b.taste_match - a.taste_match);
 }

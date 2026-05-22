@@ -47,7 +47,7 @@ export default async function ExplorePage() {
                 <h1 className="text-h1 text-text-primary mb-2">
                     Explorer
                 </h1>
-                <p className="text-text-secondary text-[14px]">
+                <p className="text-text-secondary text-meta">
                     Découvre de la musique, des listes et des profils qui correspondent à tes goûts.
                 </p>
                 <div className="mt-4">
@@ -59,14 +59,14 @@ export default async function ExplorePage() {
                 {isEmpty ? (
                     <div className="text-center py-16 space-y-6">
                         <div className="space-y-3">
-                            <p className="text-[16px] text-text-primary font-medium">
+                            <p className="text-body text-text-primary font-medium">
                                 Bienvenue sur Waveform !
                             </p>
-                            <p className="text-[14px] text-text-secondary max-w-md mx-auto">
+                            <p className="text-meta text-text-secondary max-w-md mx-auto">
                                 Commence à découvrir de la musique en recherchant tes albums et artistes préférés.
                             </p>
                         </div>
-                        <p className="text-[12px] text-text-tertiary">
+                        <p className="text-label text-text-tertiary">
                             Utilise la barre de recherche ci-dessus pour trouver n&apos;importe quel album ou artiste
                         </p>
                     </div>
@@ -85,9 +85,11 @@ export default async function ExplorePage() {
                         {communityLists.length > 0 && (
                             <section>
                                 <div className="mb-5">
-                                    <h2 className="text-h2 text-text-primary mb-1">Listes populaires</h2>
-                                    <p className="text-[13px] text-text-secondary">
-                                        Les collections les plus aimées par la communauté.
+                                    <h2 className="text-h2 text-text-primary">
+                                        Listes <em className="italic text-accent-deep">populaires</em>
+                                    </h2>
+                                    <p className="text-sm text-text-secondary mt-1">
+                                        Sélections musicales partagées par la communauté.
                                     </p>
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">

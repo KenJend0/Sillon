@@ -41,10 +41,10 @@ function TrackCard({ track }: { track: TrackWithStats }) {
                     </div>
                 )}
             </div>
-            <p className="text-[13px] text-text-primary font-medium truncate leading-snug group-hover:text-[#8E6F5E] transition-colors">
+            <p className="text-sm text-text-primary font-medium truncate leading-snug group-hover:text-[#8E6F5E] transition-colors">
                 {track.track_title}
             </p>
-            <p className="text-[11px] text-text-tertiary truncate">{track.artist_name}</p>
+            <p className="text-label text-text-tertiary truncate">{track.artist_name}</p>
         </Link>
     );
 }

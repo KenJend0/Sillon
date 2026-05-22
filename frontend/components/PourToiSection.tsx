@@ -21,10 +21,10 @@ function AlbumCard({ album }: { album: ForYouAlbum }) {
                     <div className="w-full h-full bg-background-tertiary" />
                 )}
             </div>
-            <p className="text-[13px] text-text-primary font-medium leading-snug line-clamp-2 group-hover:text-[#8E6F5E] transition-colors duration-150">
+            <p className="font-display font-normal text-sm text-text-warm line-clamp-2 leading-snug group-hover:text-accent transition-colors duration-150">
                 {album.title}
             </p>
-            <p className="text-[11px] text-text-secondary truncate mt-0.5">
+            <p className="text-label text-text-tertiary truncate mt-0.5">
                 {album.artist}
             </p>
         </Link>
@@ -53,10 +53,10 @@ function TrackCard({ track }: { track: ForYouTrack }) {
                     </div>
                 )}
             </div>
-            <p className="text-[13px] text-text-primary font-medium leading-snug line-clamp-2 group-hover:text-[#8E6F5E] transition-colors duration-150">
+            <p className="font-display font-normal text-sm text-text-warm line-clamp-2 leading-snug group-hover:text-accent transition-colors duration-150">
                 {track.track_title}
             </p>
-            <p className="text-[11px] text-text-secondary truncate mt-0.5">
+            <p className="text-label text-text-tertiary truncate mt-0.5">
                 {track.artist}
             </p>
         </Link>
@@ -77,9 +77,11 @@ export default function PourToiSection({ albums, tracks }: Props) {
         <section>
             <div className="flex items-start justify-between mb-3">
                 <div>
-                    <h2 className="text-h2 text-text-primary">Pour toi</h2>
-                    <p className="text-[13px] text-text-secondary mt-1">
-                        Sélectionnés d&apos;après tes notes et tes goûts.
+                    <h2 className="text-h2 text-text-primary">
+                        Pour <em className="italic text-accent-deep">toi</em>
+                    </h2>
+                    <p className="text-sm text-text-secondary mt-1">
+                        Reviens demain pour une nouvelle sélection.
                     </p>
                 </div>
             </div>
@@ -89,7 +91,7 @@ export default function PourToiSection({ albums, tracks }: Props) {
                     <button
                         key={t}
                         onClick={() => setTab(t)}
-                        className={`px-3 py-1 rounded-full text-[12px] font-medium transition-colors ${
+                        className={`px-3 py-1 rounded-full text-label font-medium transition-colors ${
                             tab === t
                                 ? "bg-text-primary text-background"
                                 : "bg-background-secondary text-text-secondary hover:text-text-primary"
@@ -108,7 +110,7 @@ export default function PourToiSection({ albums, tracks }: Props) {
                         ))}
                     </div>
                 ) : (
-                    <p className="text-text-tertiary text-[14px]">Pas encore de recommandations.</p>
+                    <p className="text-text-tertiary text-meta">Pas encore de recommandations.</p>
                 )
             )}
 
@@ -120,7 +122,7 @@ export default function PourToiSection({ albums, tracks }: Props) {
                         ))}
                     </div>
                 ) : (
-                    <p className="text-text-tertiary text-[14px]">Pas encore de recommandations.</p>
+                    <p className="text-text-tertiary text-meta">Pas encore de recommandations.</p>
                 )
             )}
         </section>

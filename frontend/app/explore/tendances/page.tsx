@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import Link from "next/link";
+import BackButton from "@/components/BackButton";
 import { getTrendingThisWeek } from "@/app/actions/explore";
 import { getTrendingTracks } from "@/app/actions/track-diary";
 import TendancesContent from "./TendancesContent";
@@ -13,8 +13,8 @@ export default async function TendancesPage() {
 
     try {
         [albums, tracks] = await Promise.all([
-            getTrendingThisWeek(30),
-            getTrendingTracks(30),
+            getTrendingThisWeek(10),
+            getTrendingTracks(10),
         ]);
     } catch (err) {
         console.error("Tendances fetch failed:", err);
@@ -22,13 +22,8 @@ export default async function TendancesPage() {
 
     return (
         <>
-            <section className="px-6 pt-safe pb-6 max-w-page lg:max-w-5xl mx-auto">
-                <Link
-                    href="/explore"
-                    className="inline-flex items-center gap-1 text-[13px] text-text-secondary hover:text-text-primary transition-colors mb-4"
-                >
-                    ← Explorer
-                </Link>
+            <section className="px-6 pt-[calc(env(safe-area-inset-top)+1rem)] pb-6 max-w-page lg:max-w-5xl mx-auto">
+                <BackButton label="Explorer" fallbackHref="/explore" className="mb-4" />
                 <h1 className="text-h1 text-text-primary mb-1">Tendances</h1>
                 <p className="text-[14px] text-text-secondary">
                     Ce que la communauté écoute en ce moment.

@@ -9,6 +9,29 @@ export default function Loading() {
             </section>
 
             <main className="px-6 lg:px-8 pb-20 space-y-12">
+                {/* Pour toi — section personnalisée */}
+                <section>
+                    <div className="flex items-start justify-between mb-3">
+                        <div>
+                            <div className="h-5 bg-background-secondary rounded w-20 mb-2" />
+                            <div className="h-3.5 bg-background-secondary rounded w-44" />
+                        </div>
+                    </div>
+                    <div className="flex gap-1.5 mb-5">
+                        <div className="h-6 w-16 bg-background-secondary rounded-full" />
+                        <div className="h-6 w-14 bg-background-secondary rounded-full" />
+                    </div>
+                    <div className="flex gap-4 overflow-hidden">
+                        {[0, 1, 2, 3].map((i) => (
+                            <div key={i} className="shrink-0 w-36">
+                                <div className="aspect-square bg-background-secondary rounded-[10px] mb-2" />
+                                <div className="h-3.5 bg-background-secondary rounded w-3/4 mb-1.5" />
+                                <div className="h-3 bg-background-secondary rounded w-1/2" />
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
                 {/* Tendances */}
                 <section>
                     <div className="flex items-start justify-between mb-3">

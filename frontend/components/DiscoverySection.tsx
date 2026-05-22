@@ -9,9 +9,11 @@ export default function DiscoverySection({ albums }: { albums: DiscoveryAlbum[] 
     return (
         <section>
             <div className="mb-5">
-                <h2 className="text-h2 text-text-primary mb-1">Hors de ta bulle</h2>
+                <h2 className="text-h2 text-text-primary mb-1">
+                    Hors de ta <em style={{ fontStyle: 'italic', color: 'var(--color-accent-deep, #5C4538)' }}>bulle</em>
+                </h2>
                 <p className="text-[13px] text-text-secondary">
-                    Albums bien notés d&apos;artistes que tu n&apos;as pas encore explorés.
+                    Des artistes absents de ton journal.
                 </p>
             </div>
             <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide lg:hidden">

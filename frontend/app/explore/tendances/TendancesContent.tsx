@@ -7,10 +7,15 @@ import { CoverImage } from "@/components/CoverImage";
 import { type TrendingAlbum } from "@/app/actions/explore";
 import { type TrackWithStats } from "@/app/actions/track-diary";
 
-function TrackCard({ track }: { track: TrackWithStats }) {
+function TrackCard({ track, rank }: { track: TrackWithStats; rank?: number }) {
     return (
         <Link href={`/tracks/${track.track_id}`} className="group">
             <div className="aspect-square rounded-[8px] overflow-hidden bg-background-secondary relative mb-2">
+                {rank !== undefined && (
+                    <span className="absolute top-0 left-1 z-10 font-display italic text-[40px] leading-none text-accent pointer-events-none select-none" style={{ textShadow: '0 1px 0 #FAF8F4, 1px 1px 0 #FAF8F4, -1px 1px 0 #FAF8F4' }}>
+                        {rank}
+                    </span>
+                )}
                 {track.cover_url ? (
                     <CoverImage
                         src={track.cover_url}
@@ -29,10 +34,10 @@ function TrackCard({ track }: { track: TrackWithStats }) {
                     </div>
                 )}
             </div>
-            <p className="text-[13px] text-text-primary font-medium truncate leading-snug group-hover:text-[#8E6F5E] transition-colors">
+            <p className="font-display font-normal text-sm text-text-warm line-clamp-2 leading-snug group-hover:text-accent transition-colors duration-150">
                 {track.track_title}
             </p>
-            <p className="text-[11px] text-text-tertiary truncate">{track.artist_name}</p>
+            <p className="text-label text-text-tertiary truncate mt-0.5">{track.artist_name}</p>
         </Link>
     );
 }
@@ -52,7 +57,7 @@ export default function TendancesContent({ albums, tracks }: Props) {
                     <button
                         key={t}
                         onClick={() => setTab(t)}
-                        className={`px-3 py-1 rounded-full text-[12px] font-medium transition-colors ${
+                        className={`px-3 py-1 rounded-full text-label font-medium transition-colors ${
                             tab === t
                                 ? "bg-text-primary text-background"
                                 : "bg-background-secondary text-text-secondary hover:text-text-primary"
@@ -66,24 +71,24 @@ export default function TendancesContent({ albums, tracks }: Props) {
             {tab === "albums" && (
                 albums.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-5">
-                        {albums.map((item) => (
-                            <DiscoverCard key={item.id} item={item} />
+                        {albums.map((item, index) => (
+                            <DiscoverCard key={item.id} item={item} rank={index + 1} />
                         ))}
                     </div>
                 ) : (
-                    <p className="text-text-tertiary text-[14px]">Rien pour le moment.</p>
+                    <p className="text-text-tertiary text-meta">Rien pour le moment.</p>
                 )
             )}
 
             {tab === "titres" && (
                 tracks.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-5">
-                        {tracks.map((track) => (
-                            <TrackCard key={track.track_id} track={track} />
+                        {tracks.map((track, index) => (
+                            <TrackCard key={track.track_id} track={track} rank={index + 1} />
                         ))}
                     </div>
                 ) : (
-                    <p className="text-text-tertiary text-[14px]">Rien pour le moment.</p>
+                    <p className="text-text-tertiary text-meta">Rien pour le moment.</p>
                 )
             )}
         </>
