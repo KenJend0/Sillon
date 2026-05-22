@@ -10,7 +10,7 @@ on:
         type: boolean
         default: false
       limit:
-        description: 'Nombre max d'albums par phase (vide = tout traiter)'
+        description: "Nombre max d'albums par phase (vide = tout traiter)"
         type: string
         required: false
 
