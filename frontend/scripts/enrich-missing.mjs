@@ -716,6 +716,34 @@ async function runPhase3() {
 //   Per-track Spotify search is banned — causes extreme rate limiting (63000s retry-after).
 // Apple Music + Deezer: per-track search (more lenient rate limits).
 
+async function searchSpotifyAlbumId(artist, title, token) {
+  if (!token) return null;
+  try {
+    const q = encodeURIComponent(`album:"${title}" artist:"${artist}"`);
+    const res = await fetch(
+      `https://api.spotify.com/v1/search?q=${q}&type=album&limit=5`,
+      { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) },
+    );
+    if (res.status === 429) {
+      const wait = Math.min(parseInt(res.headers.get('retry-after') ?? '10', 10), 30);
+      await delay(wait * 1000);
+      return searchSpotifyAlbumId(artist, title, token);
+    }
+    if (!res.ok) return null;
+    const data = await res.json();
+    const items = data.albums?.items ?? [];
+    const titleLow = title.toLowerCase();
+    const artistLow = artist.toLowerCase();
+    const match = items.find(
+      (r) =>
+        r.name.toLowerCase().includes(titleLow.slice(0, 6)) &&
+        r.artists.some((a) => a.name.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase())),
+    ) ?? items[0];
+    const url = match?.external_urls?.spotify;
+    return url?.match(/album\/([A-Za-z0-9]+)/)?.[1] ?? null;
+  } catch { return null; }
+}
+
 async function fetchSpotifyAlbumTracks(spotifyAlbumId, token) {
   // Returns Map: "disc-trackNo" → spotify track URL
   const map = new Map();
@@ -788,7 +816,11 @@ async function runPhase4() {
   const byAlbum = new Map();
   for (const track of toEnrich) {
     if (!byAlbum.has(track.album_id)) {
-      byAlbum.set(track.album_id, { artistName: track.albums?.artists?.name ?? '', tracks: [] });
+      byAlbum.set(track.album_id, {
+        artistName: track.albums?.artists?.name ?? '',
+        albumTitle:  track.albums?.title ?? '',
+        tracks: [],
+      });
     }
     byAlbum.get(track.album_id).tracks.push(track);
   }
@@ -796,11 +828,16 @@ async function runPhase4() {
   const spotifyToken = await getSpotifyToken();
   let done = 0, skipped = 0, albumIdx = 0;
 
-  for (const [albumId, { artistName, tracks }] of byAlbum) {
+  for (const [albumId, { artistName, albumTitle, tracks }] of byAlbum) {
     console.log(`  Album [${++albumIdx}/${byAlbum.size}] — ${artistName} (${tracks.length} titre(s))`);
 
-    // Fetch all Spotify track URLs for this album in one API call
-    const spotifyAlbumId = spotifyAlbumIdByAlbum.get(albumId);
+    // Fetch all Spotify track URLs for this album in one API call.
+    // If the album has no cached Spotify URL, search for it first (1 call).
+    let spotifyAlbumId = spotifyAlbumIdByAlbum.get(albumId);
+    if (!spotifyAlbumId && spotifyToken) {
+      spotifyAlbumId = await searchSpotifyAlbumId(artistName, albumTitle, spotifyToken);
+      await delay(200);
+    }
     const spotifyTrackMap = await fetchSpotifyAlbumTracks(spotifyAlbumId, spotifyToken);
     if (spotifyAlbumId) await delay(200); // gentle pause between Spotify album calls
 
