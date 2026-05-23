@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import AuthForm from '@/components/AuthForm';
@@ -20,7 +20,9 @@ export default function AuthPage() {
     return (
         <div className="flex items-center justify-center min-h-[calc(100vh-120px)] px-6">
             <div className="w-full max-w-sm">
-                <AuthForm />
+                <Suspense fallback={null}>
+                    <AuthForm />
+                </Suspense>
 
                 <p className="text-center text-[12px] text-text-tertiary mt-8">
                     En continuant, tu acceptes nos{" "}
