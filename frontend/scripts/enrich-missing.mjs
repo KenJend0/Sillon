@@ -223,7 +223,8 @@ async function fetchLastFm(artistName, title, rgMbid) {
 
   if (!data?.album) return empty;
 
-  const rawTags = data.album.tags?.tag ?? [];
+  const rawTagsRaw = data.album.tags?.tag ?? [];
+  const rawTags = Array.isArray(rawTagsRaw) ? rawTagsRaw : (rawTagsRaw ? [rawTagsRaw] : []);
   const tags = rawTags.map((t, i) => ({
     name: t.name.toLowerCase().trim(),
     count: Math.max(1, 10 - i),
@@ -911,7 +912,8 @@ async function main() {
     await runPhase1();
     await runPhase2();
     await runPhase3();
-    await runPhase4();
+    // Phase 4 (track streaming links) runs via backfill-track-streaming.yml (6h timeout).
+    // Once the initial backfill is complete, re-enable it here — daily cost will be minimal.
   }
 
   console.log('✅  Enrichissement terminé.');
