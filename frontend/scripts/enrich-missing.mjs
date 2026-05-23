@@ -384,8 +384,15 @@ async function searchSpotifyTrack(artist, title) {
   return null;
 }
 
+function titleMatches(candidate, target) {
+  // Normalize both sides: lowercase, strip quotes/punctuation noise, collapse spaces
+  const norm = (s) => s.toLowerCase().replace(/[''`"]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  const c = norm(candidate);
+  const t = norm(target);
+  return c === t || c.startsWith(t) || t.startsWith(c) || c.includes(t) || t.includes(c);
+}
+
 async function searchAppleMusicTrack(artist, title) {
-  const titleLow = title.toLowerCase();
   const artistLow = artist.toLowerCase();
   const terms = [
     encodeURIComponent(`${artist} ${title}`),
@@ -396,7 +403,7 @@ async function searchAppleMusicTrack(artist, title) {
     while (attempt < 3) {
       try {
         const res = await fetch(
-          `https://itunes.apple.com/search?term=${term}&entity=song&limit=10`,
+          `https://itunes.apple.com/search?term=${term}&entity=song&limit=15`,
           { signal: AbortSignal.timeout(8000) },
         );
         if (res.status === 429) {
@@ -407,14 +414,17 @@ async function searchAppleMusicTrack(artist, title) {
         }
         if (!res.ok) break;
         const data = await res.json();
-        const results = data.results ?? [];
-        const match = results.find(
+        const results = (data.results ?? []).filter((r) => r.wrapperType === 'track');
+        // 1st pass: title + artist match
+        const withArtist = results.find(
           (r) =>
-            r.wrapperType === 'track' &&
-            r.trackName?.toLowerCase().includes(titleLow.slice(0, 6)) &&
+            titleMatches(r.trackName ?? '', title) &&
             r.artistName?.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase()),
         );
-        if (match) return match.trackViewUrl ?? null;
+        if (withArtist) return withArtist.trackViewUrl ?? null;
+        // 2nd pass: title only (artist search already constrains the query)
+        const titleOnly = results.find((r) => titleMatches(r.trackName ?? '', title));
+        if (titleOnly) return titleOnly.trackViewUrl ?? null;
         break;
       } catch { break; }
     }
@@ -424,23 +434,25 @@ async function searchAppleMusicTrack(artist, title) {
 
 async function searchDeezerTrack(artist, title) {
   try {
-    const q = encodeURIComponent(`artist:"${artist}" track:"${title}"`); // track:, not album:
+    const q = encodeURIComponent(`artist:"${artist}" track:"${title}"`);
     const res = await fetch(
-      `https://api.deezer.com/search/track?q=${q}&limit=5`, // /search/track, not /search/album
+      `https://api.deezer.com/search/track?q=${q}&limit=10`,
       { signal: AbortSignal.timeout(6000) },
     );
     if (!res.ok) return null;
     const data = await res.json();
     const results = data.data ?? [];
-    const titleLow = title.toLowerCase();
     const artistLow = artist.toLowerCase();
-    const match =
-      results.find(
-        (r) =>
-          r.title.toLowerCase().includes(titleLow.slice(0, 6)) &&
-          r.artist.name.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase()),
-      ) ?? results[0];
-    return match?.link ?? null;
+    // 1st pass: title + artist match
+    const withArtist = results.find(
+      (r) =>
+        titleMatches(r.title ?? '', title) &&
+        r.artist.name.toLowerCase().includes(artistLow.split(' ')[0].toLowerCase()),
+    );
+    if (withArtist) return withArtist.link ?? null;
+    // 2nd pass: title only
+    const titleOnly = results.find((r) => titleMatches(r.title ?? '', title));
+    return titleOnly?.link ?? null;
   } catch { return null; }
 }
 
@@ -746,27 +758,38 @@ async function searchSpotifyAlbumId(artist, title, token) {
 }
 
 async function fetchSpotifyAlbumTracks(spotifyAlbumId, token) {
-  // Returns Map: "disc-trackNo" → spotify track URL
-  const map = new Map();
-  if (!spotifyAlbumId || !token) return map;
+  // Returns { byPosition: Map<"disc-trackNo", url>, byTitle: Map<normalizedTitle, url> }
+  // byTitle is the primary match strategy — covers NULL track_no in DB.
+  const byPosition = new Map();
+  const byTitle    = new Map();
+  if (!spotifyAlbumId || !token) return { byPosition, byTitle };
   try {
-    const res = await fetch(
-      `https://api.spotify.com/v1/albums/${spotifyAlbumId}/tracks?limit=50`,
-      { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) },
-    );
-    if (res.status === 429) {
-      const wait = Math.min(parseInt(res.headers.get('retry-after') ?? '10', 10), 30);
-      console.warn(`    ⏳ Spotify rate limit — attente ${wait}s`);
-      await delay(wait * 1000);
-      return fetchSpotifyAlbumTracks(spotifyAlbumId, token); // one retry
-    }
-    if (!res.ok) return map;
-    const data = await res.json();
-    for (const t of data.items ?? []) {
-      map.set(`${t.disc_number ?? 1}-${t.track_number}`, t.external_urls?.spotify ?? null);
+    // Paginate in case album has >50 tracks
+    let url = `https://api.spotify.com/v1/albums/${spotifyAlbumId}/tracks?limit=50`;
+    while (url) {
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (res.status === 429) {
+        const wait = Math.min(parseInt(res.headers.get('retry-after') ?? '10', 10), 30);
+        console.warn(`    ⏳ Spotify rate limit — attente ${wait}s`);
+        await delay(wait * 1000);
+        continue; // retry same url
+      }
+      if (!res.ok) break;
+      const data = await res.json();
+      for (const t of data.items ?? []) {
+        const trackUrl = t.external_urls?.spotify ?? null;
+        byPosition.set(`${t.disc_number ?? 1}-${t.track_number}`, trackUrl);
+        // Normalize: lowercase, strip leading/trailing punctuation, collapse spaces
+        const norm = t.name.toLowerCase().replace(/[''`]/g, "'").replace(/\s+/g, ' ').trim();
+        byTitle.set(norm, trackUrl);
+      }
+      url = data.next ?? null; // pagination
     }
   } catch { /* best-effort */ }
-  return map;
+  return { byPosition, byTitle };
 }
 
 async function runPhase4() {
@@ -845,9 +868,12 @@ async function runPhase4() {
     for (const track of tracks) {
       console.log(`    → ${track.title}`);
       try {
-        // Spotify: position-based lookup from album tracklist (no per-track search)
-        const posKey = `${track.disc_no ?? 1}-${track.track_no}`;
-        const spot = spotifyTrackMap.get(posKey) ?? null;
+        // Spotify: title-based lookup first (covers NULL track_no), position as fallback
+        const normTitle = track.title.toLowerCase().replace(/[''`]/g, "'").replace(/\s+/g, ' ').trim();
+        const posKey    = `${track.disc_no ?? 1}-${track.track_no}`;
+        const spot = spotifyTrackMap.byTitle.get(normTitle)
+          ?? spotifyTrackMap.byPosition.get(posKey)
+          ?? null;
 
         // Apple Music + Deezer: per-track search
         await delay(110);
