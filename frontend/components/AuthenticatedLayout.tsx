@@ -21,26 +21,12 @@ export default function AuthenticatedLayout({ children }: Props) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
 
-  console.log('[AuthenticatedLayout] render — loading:', loading, '| user:', !!user, '| pathname:', pathname);
-
-  // Afficher un loader pendant le chargement initial de la session
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8E6F5E] mx-auto mb-4"></div>
-          <p className="text-text-secondary text-meta">Chargement...</p>
-        </div>
-      </div>
-    );
-  }
-
   const hideNav = NO_NAV_PATHS.some(path => pathname.startsWith(path));
-  const showBottomNav = MAIN_NAV_PAGES.includes(pathname);
+  const showBottomNav = !loading && MAIN_NAV_PAGES.includes(pathname);
 
   return (
     <BottomSheetProvider>
-      {user && !hideNav && <Header />}
+      {!loading && user && !hideNav && <Header />}
       <main>{children}</main>
       {showBottomNav && <BottomNav />}
     </BottomSheetProvider>
