@@ -36,7 +36,8 @@ export default function FeedCardReviewCreated({
     setLikesCount(event.likes_count ?? 0);
   }, [event.entry_id, event.is_liked, event.likes_count]);
 
-  const handleLike = async () => {
+  const handleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!currentUserId) {
       showToast("Connecte-toi pour aimer cette revue", "error");
       return;
