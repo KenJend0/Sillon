@@ -21,6 +21,8 @@ export default function AuthenticatedLayout({ children }: Props) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
 
+  console.log('[AuthenticatedLayout] render — loading:', loading, '| user:', !!user, '| pathname:', pathname);
+
   // Afficher un loader pendant le chargement initial de la session
   if (loading) {
     return (

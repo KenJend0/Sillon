@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import Toast from "@/components/Toast";
 import { AuthProvider } from "@/lib/AuthContext";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import DebugErrorBoundary from "@/components/DebugErrorBoundary";
 import { BackgroundColorProvider } from "@/lib/BackgroundColorContext";
 import { BackgroundWrapper } from "@/components/BackgroundWrapper";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
@@ -75,9 +76,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <BackgroundColorProvider>
             <BackgroundWrapper>
-              <AuthenticatedLayout>
-                  {children}
-              </AuthenticatedLayout>
+              <DebugErrorBoundary>
+                <AuthenticatedLayout>
+                    {children}
+                </AuthenticatedLayout>
+              </DebugErrorBoundary>
               <NavigationTracker />
               <Toast />
               <Analytics />
