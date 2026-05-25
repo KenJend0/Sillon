@@ -344,38 +344,38 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                 />
             )}
 
-            {/* ========== Stats + réseau ========== */}
-            {(stats.avg_rating !== null || stats.listeners_count > 0 || stats.reviews_count > 0 || networkListeners.length > 0) && (
-                <section className="border-t border-border-divider pt-6 mb-10">
-                    {(stats.avg_rating !== null || stats.listeners_count > 0 || stats.reviews_count > 0) && (
-                        <div className={`flex ${networkListeners.length > 0 ? 'mb-4' : ''}`}>
-                            {stats.avg_rating !== null && (
-                                <div className={`flex flex-col flex-1 ${(stats.listeners_count > 0 || stats.reviews_count > 0) ? 'border-r border-rule pr-4' : ''}`}>
-                                    <span className="font-display italic text-[26px] text-text-warm leading-none">
-                                        {stats.avg_rating.toFixed(1).replace('.', ',')}
-                                        <span className="font-sans not-italic text-[10px] tracking-[0.16em] uppercase text-text-tertiary ml-1 align-[1px]">/10</span>
-                                    </span>
-                                    <span className="text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary mt-1.5">Moyenne</span>
-                                </div>
-                            )}
-                            {stats.listeners_count > 0 && (
-                                <div className={`flex flex-col flex-1 ${stats.reviews_count > 0 ? 'border-r border-rule' : ''} ${stats.avg_rating !== null ? 'px-4' : 'pr-4'}`}>
-                                    <span className="font-display italic text-[26px] text-text-warm leading-none">{stats.listeners_count.toLocaleString()}</span>
-                                    <span className="text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary mt-1.5">Auditeurs</span>
-                                </div>
-                            )}
-                            {stats.reviews_count > 0 && (
-                                <div className={`flex flex-col flex-1 ${(stats.avg_rating !== null || stats.listeners_count > 0) ? 'pl-4' : ''}`}>
-                                    <span className="font-display italic text-[26px] text-text-warm leading-none">{stats.reviews_count.toLocaleString()}</span>
-                                    <span className="text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary mt-1.5">Critiques</span>
-                                </div>
-                            )}
+            {/* ========== Activité réseau ========== */}
+            {networkListeners.length > 0 && (
+                <div className="mb-5">
+                    <NetworkListenersSection listeners={networkListeners} />
+                </div>
+            )}
+
+            {/* ========== Stats ========== */}
+            {(stats.avg_rating !== null || stats.listeners_count > 0 || stats.reviews_count > 0) && (
+                <div className="flex w-full border-t border-b border-rule py-3 mb-10">
+                    {stats.avg_rating !== null && (
+                        <div className={`flex flex-col flex-1 ${(stats.listeners_count > 0 || stats.reviews_count > 0) ? 'border-r border-rule pr-4' : ''}`}>
+                            <span className="font-display italic text-[26px] text-text-warm leading-none">
+                                {stats.avg_rating.toFixed(1).replace('.', ',')}
+                                <span className="font-sans not-italic text-[10px] tracking-[0.16em] uppercase text-text-tertiary ml-1 align-[1px]">/10</span>
+                            </span>
+                            <span className="text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary mt-1.5">Moyenne</span>
                         </div>
                     )}
-                    {networkListeners.length > 0 && (
-                        <NetworkListenersSection listeners={networkListeners} />
+                    {stats.listeners_count > 0 && (
+                        <div className={`flex flex-col flex-1 ${stats.reviews_count > 0 ? 'border-r border-rule' : ''} ${stats.avg_rating !== null ? 'px-4' : 'pr-4'}`}>
+                            <span className="font-display italic text-[26px] text-text-warm leading-none">{stats.listeners_count.toLocaleString()}</span>
+                            <span className="text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary mt-1.5">Auditeurs</span>
+                        </div>
                     )}
-                </section>
+                    {stats.reviews_count > 0 && (
+                        <div className={`flex flex-col flex-1 ${(stats.avg_rating !== null || stats.listeners_count > 0) ? 'pl-4' : ''}`}>
+                            <span className="font-display italic text-[26px] text-text-warm leading-none">{stats.reviews_count.toLocaleString()}</span>
+                            <span className="text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary mt-1.5">Critiques</span>
+                        </div>
+                    )}
+                </div>
             )}
 
             {/* Admin tools */}
@@ -400,7 +400,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                 const discNos = [...new Set(allTracks.map((t) => t.disc_no))].filter(Boolean).sort();
                 const isMultiDisc = discNos.length > 1;
                 return (
-                    <section className="border-t border-border-divider pt-10 mb-20">
+                    <section className="pt-10 mb-20">
                         <div className="mb-8">
                             <h2 className="text-h2 text-text-primary">Morceaux</h2>
                             {(trackCount > 0 || totalDurationMs > 0) && (

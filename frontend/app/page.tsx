@@ -35,7 +35,8 @@ export default async function HomePage() {
                 </Link>
                 <Link
                     href="/auth"
-                    className="text-[16px] text-text-secondary hover:text-[#8E6F5E] transition-colors duration-150"
+                    className="text-[16px] text-text-secondary hover:text-[#8E6F5E] transition-colors duration-150 !underline underline-offset-2"
+                    style={{ textDecorationColor: 'rgba(0,0,0,0.25)', textDecorationThickness: '1px' }}
                 >
                     Se connecter
                 </Link>

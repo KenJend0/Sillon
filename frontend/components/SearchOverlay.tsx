@@ -451,7 +451,7 @@ export default function SearchOverlay() {
                 {(["albums", "tracks", "artists", "users"] as SearchTab[]).map((tab) => (
                   <button
                     key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    onClick={() => { setActiveTab(tab); inputRef.current?.focus(); }}
                     className={`text-sm pb-3 border-b-2 transition-colors duration-150 ${
                       activeTab === tab
                         ? "font-medium text-[#2A2520] border-[#8E6F5E]"

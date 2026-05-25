@@ -25,7 +25,8 @@ export default function UnauthCTA({
         </Link>
         <Link
           href="/auth?mode=login"
-          className="text-sm text-text-secondary hover:text-accent transition-colors duration-150 underline decoration-2 underline-offset-2"
+          className="text-sm text-text-secondary hover:text-accent transition-colors duration-150 !underline underline-offset-2"
+          style={{ textDecorationColor: 'rgba(0,0,0,0.25)', textDecorationThickness: '1px' }}
         >
           J&apos;ai déjà un compte
         </Link>
