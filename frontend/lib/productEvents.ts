@@ -11,9 +11,12 @@ export const PRODUCT_EVENT_NAMES = [
   'album_import_started',
   'album_import_failed',
   'album_logged',
+  'track_logged',
   'user_followed',
   'review_liked',
   'comment_created',
+  'list_created',
+  'list_item_added',
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];

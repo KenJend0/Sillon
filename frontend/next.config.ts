@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 const nextConfig = {
   experimental: {
     serverActions: {
@@ -42,7 +44,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://coverartarchive.org https://archive.org https://*.archive.org https://*.us.archive.org https://is1-ssl.mzstatic.com https://lastfm.freetls.fastly.net https://i.scdn.co https://lh3.googleusercontent.com https://res.cloudinary.com https://aypyrwqghxkgehibkfob.supabase.co https://api.dicebear.com https://commons.wikimedia.org https://upload.wikimedia.org",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://musicbrainz.org https://coverartarchive.org https://en.wikipedia.org https://fr.wikipedia.org https://de.wikipedia.org https://es.wikipedia.org https://it.wikipedia.org https://ja.wikipedia.org https://pt.wikipedia.org https://www.wikidata.org https://query.wikidata.org https://commons.wikimedia.org",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://musicbrainz.org https://coverartarchive.org https://en.wikipedia.org https://fr.wikipedia.org https://de.wikipedia.org https://es.wikipedia.org https://it.wikipedia.org https://ja.wikipedia.org https://pt.wikipedia.org https://www.wikidata.org https://query.wikidata.org https://commons.wikimedia.org https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
@@ -54,4 +56,26 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Sentry project settings — fill in from https://sentry.io/settings/<org>/projects/<project>/keys/
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // Upload sourcemaps during build so stack traces are readable (not minified)
+  // Requires SENTRY_AUTH_TOKEN in Vercel env vars (build step only, not exposed at runtime)
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  sourcemaps: {
+    // Don't ship sourcemaps to the browser — they're uploaded to Sentry only
+    deleteSourcemapsAfterUpload: true,
+  },
+
+  // Suppress noisy CLI output except in CI
+  silent: !process.env.CI,
+
+  webpack: {
+    // Don't auto-instrument Vercel Cron Monitors (not used)
+    automaticVercelMonitors: false,
+    // Remove Sentry debug logging from client bundle (~20kB saved)
+    treeshake: { removeDebugLogging: true },
+  },
+});

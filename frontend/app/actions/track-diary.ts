@@ -4,6 +4,7 @@ import { getAuthUser, createSupabaseServer, createSupabaseAdmin } from '@/lib/su
 import { fanoutEvent } from './feed';
 import { checkActionRateLimit } from '@/lib/serverRateLimit';
 import { findBannedContentWord } from '@/lib/bannedWords';
+import { logAuthedProductEvent } from '@/lib/productEvents';
 
 export interface UpsertTrackDiaryEntryInput {
   trackId: string;
@@ -114,6 +115,16 @@ export async function upsertTrackDiaryEntry(input: UpsertTrackDiaryEntryInput) {
     } catch (fanoutErr) {
       console.error('track fanout error:', fanoutErr);
     }
+
+    await logAuthedProductEvent('track_logged', {
+      surface: 'diary',
+      properties: {
+        track_id: input.trackId,
+        album_id: input.albumId,
+        rating: input.rating ?? null,
+        has_review: !!(input.reviewBody),
+      },
+    });
 
     return { success: true, data: { id: data.id } };
   } catch (err) {

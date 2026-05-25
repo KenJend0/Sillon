@@ -1,6 +1,7 @@
 'use server';
 
 import { getAuthUser, createSupabaseServer, createSupabaseAnon } from '@/lib/supabase/server';
+import { logAuthedProductEvent } from '@/lib/productEvents';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -532,6 +533,11 @@ export async function createList(data: {
 
     if (error) throw error;
 
+    await logAuthedProductEvent('list_created', {
+      surface: 'lists',
+      properties: { list_id: list.id, is_public: data.isPublic ?? false },
+    });
+
     return { ...list, item_count: 0, cover_urls: [], likes_count: 0 };
 }
 
@@ -573,6 +579,15 @@ export async function toggleListItem(
         list_id: listId,
         album_id: data.albumId ?? null,
         track_id: data.trackId ?? null,
+    });
+
+    await logAuthedProductEvent('list_item_added', {
+      surface: 'lists',
+      properties: {
+        list_id: listId,
+        album_id: data.albumId ?? null,
+        track_id: data.trackId ?? null,
+      },
     });
 
     return { added: true };
