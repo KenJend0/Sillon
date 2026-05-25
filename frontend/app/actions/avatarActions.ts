@@ -45,15 +45,17 @@ export async function uploadAvatar(
 
     if (!urlData?.publicUrl) throw new Error('Failed to get public URL');
 
+    const avatarUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+
     // Update profiles.avatar_url (admin bypasses RLS)
     const { error: updateError } = await admin
       .from('profiles')
-      .update({ avatar_url: urlData.publicUrl })
+      .update({ avatar_url: avatarUrl })
       .eq('id', userId);
 
     if (updateError) throw updateError;
 
-    return { ok: true, avatarUrl: urlData.publicUrl };
+    return { ok: true, avatarUrl };
   } catch (error: any) {
     console.error('Avatar upload error:', error);
     const msg = error?.message || 'Failed to upload avatar';
