@@ -78,26 +78,25 @@ export default function BottomNav() {
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                className={`relative flex h-11 ${itemSizeClass} flex-col items-center justify-center gap-0.5 text-[9px] leading-none ${
+                                className={`relative flex h-11 ${itemSizeClass} items-center justify-center text-[9px] leading-none ${
                                     active ? "text-text-warm" : "text-text-tertiary"
                                 }`}
                             >
                                 {active && (
                                     <span className={`absolute left-1/2 -translate-x-1/2 w-4 h-0.5 bg-accent rounded-full ${isCompact ? "-top-2" : "-top-2.5"}`} />
                                 )}
-                                <span className="flex h-6 w-6 items-center justify-center rounded-[8px] bg-text-warm text-[#FAF8F4]
-                                                shadow-[0_4px_10px_-2px_rgba(60,40,20,0.3)]"
-                                      style={{ transform: 'rotate(-4deg)' }}>
-                                    <Icon />
-                                </span>
                                 <motion.span
-                                    animate={{
-                                        opacity: isCompact ? 0 : 1,
-                                        y: isCompact ? -2 : 0,
-                                        scale: isCompact ? 0.96 : 1,
-                                    }}
+                                    animate={{ y: isCompact ? 0 : -5, rotate: -4 }}
                                     transition={transition}
-                                    className="text-[9px] leading-none overflow-hidden"
+                                    className="flex h-6 w-6 items-center justify-center rounded-[8px] bg-text-warm text-[#FAF8F4]
+                                                shadow-[0_4px_10px_-2px_rgba(60,40,20,0.3)]"
+                                >
+                                    <Icon />
+                                </motion.span>
+                                <motion.span
+                                    animate={{ opacity: isCompact ? 0 : 1 }}
+                                    transition={transition}
+                                    className="absolute bottom-1 text-[9px] leading-none pointer-events-none"
                                 >
                                     Ajouter
                                 </motion.span>
@@ -109,27 +108,27 @@ export default function BottomNav() {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`relative flex h-11 ${itemSizeClass} flex-col items-center justify-center gap-0.5 transition-colors duration-150 ${
+                            className={`relative flex h-11 ${itemSizeClass} items-center justify-center transition-colors duration-150 ${
                                 active ? "text-text-warm" : "text-text-tertiary"
                             }`}
                         >
                             {active && (
                                 <span className={`absolute left-1/2 -translate-x-1/2 w-4 h-0.5 bg-accent rounded-full ${isCompact ? "-top-2" : "-top-2.5"}`} />
                             )}
-                            <span className="relative flex h-6 w-6 items-center justify-center">
+                            <motion.span
+                                animate={{ y: isCompact ? 0 : -5 }}
+                                transition={transition}
+                                className="relative flex h-6 w-6 items-center justify-center"
+                            >
                                 <Icon />
                                 {item.href === "/feed" && unseenActivity && (
                                     <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-accent rounded-full" />
                                 )}
-                            </span>
+                            </motion.span>
                             <motion.span
-                                animate={{
-                                    opacity: isCompact ? 0 : 1,
-                                    y: isCompact ? -2 : 0,
-                                    scale: isCompact ? 0.96 : 1,
-                                }}
+                                animate={{ opacity: isCompact ? 0 : 1 }}
                                 transition={transition}
-                                className="text-[9px] leading-none overflow-hidden"
+                                className="absolute bottom-1 text-[9px] leading-none pointer-events-none"
                             >
                                 {item.label}
                             </motion.span>
@@ -140,14 +139,18 @@ export default function BottomNav() {
                 {/* Profile */}
                 <Link
                     href="/me"
-                    className={`relative flex h-11 ${itemSizeClass} flex-col items-center justify-center gap-0.5 transition-colors duration-150 ${
+                    className={`relative flex h-11 ${itemSizeClass} items-center justify-center transition-colors duration-150 ${
                         isActive("/me") ? "text-text-warm" : "text-text-tertiary"
                     }`}
                 >
                     {isActive("/me") && (
                         <span className={`absolute left-1/2 -translate-x-1/2 w-4 h-0.5 bg-accent rounded-full ${isCompact ? "-top-2" : "-top-2.5"}`} />
                     )}
-                    <span className="flex h-6 w-6 items-center justify-center">
+                    <motion.span
+                        animate={{ y: isCompact ? 0 : -5 }}
+                        transition={transition}
+                        className="flex h-6 w-6 items-center justify-center"
+                    >
                         {authUser ? (
                             <div className={`h-[22px] w-[22px] rounded-full overflow-hidden flex-shrink-0 border flex items-center justify-center ${
                                 isActive("/me") ? "border-accent" : "border-border"
@@ -157,15 +160,11 @@ export default function BottomNav() {
                         ) : (
                             <ProfileIcon />
                         )}
-                    </span>
+                    </motion.span>
                     <motion.span
-                        animate={{
-                            opacity: isCompact ? 0 : 1,
-                            y: isCompact ? -2 : 0,
-                            scale: isCompact ? 0.96 : 1,
-                        }}
+                        animate={{ opacity: isCompact ? 0 : 1 }}
                         transition={transition}
-                        className="text-[9px] leading-none overflow-hidden"
+                        className="absolute bottom-1 text-[9px] leading-none pointer-events-none"
                     >
                         Moi
                     </motion.span>
