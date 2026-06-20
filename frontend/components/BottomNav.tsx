@@ -44,7 +44,14 @@ export default function BottomNav() {
     return (
         <div
             className="fixed inset-x-0 px-9 md:hidden z-50 flex justify-center"
-            style={{ bottom: 'calc(0.25rem + env(safe-area-inset-bottom))' }}
+            style={{
+                bottom: 'calc(0.25rem + env(safe-area-inset-bottom))',
+                // Force sa propre couche de composition GPU : sur iOS Safari, un élément
+                // fixed + backdrop-blur dont le repaint survient pendant un scroll momentum
+                // peut interrompre brutalement le scroll (bug WebKit connu).
+                transform: 'translateZ(0)',
+                willChange: 'transform',
+            }}
         >
             <motion.nav
                 layout
