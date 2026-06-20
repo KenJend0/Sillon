@@ -56,6 +56,14 @@ export default function BottomNav() {
             <motion.nav
                 layout
                 transition={transition}
+                style={{
+                    // C'est cet élément (backdrop-blur + largeur animée) qu'iOS doit repeindre :
+                    // l'isoler sur sa propre couche GPU et limiter la portée du repaint évite
+                    // que la mutation interrompe le scroll momentum en cours.
+                    transform: 'translateZ(0)',
+                    willChange: 'transform',
+                    contain: 'layout style paint',
+                }}
                 className={`flex items-center min-h-11
                             bg-[#FAF8F4]/92 backdrop-blur-md border border-border
                             shadow-[0_8px_20px_-8px_rgba(60,40,20,0.18),0_1px_2px_rgba(0,0,0,0.04)]
