@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, Settings, Heart, FileText, LogOut, Shield } from "lucide-react";
+import { Menu, Settings, Heart, LifeBuoy, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { showToast } from "@/components/Toast";
 
@@ -78,8 +78,8 @@ export default function ProfileMenuClient() {
             onClick={() => setIsOpen(false)}
             className="flex items-center gap-3 px-4 py-3 hover:bg-background-secondary transition-colors duration-150 text-meta text-text-primary"
           >
-            <FileText size={16} />
-            Légal & infos
+            <LifeBuoy size={16} />
+            Aide & support
           </Link>
           {isAdmin && (
             <Link

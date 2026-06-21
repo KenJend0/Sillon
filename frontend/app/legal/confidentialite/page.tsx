@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import LegalSection from "@/components/LegalSection";
 
 export const metadata: Metadata = {
     title: "Politique de confidentialité",
@@ -10,7 +11,7 @@ export default function Confidentialite() {
             <h1 className="text-h1 text-text-primary mb-2">Politique de confidentialité</h1>
             <p className="text-[13px] text-text-tertiary mb-10">Dernière mise à jour : février 2026</p>
 
-            <Section title="Qui sommes-nous ?">
+            <LegalSection title="Qui sommes-nous ?">
                 <p>
                     Waveform est un journal musical social, projet indépendant non commercial.
                     Cette politique décrit quelles données personnelles nous collectons, pourquoi,
@@ -19,9 +20,9 @@ export default function Confidentialite() {
                 <p className="mt-3">
                     Responsable de traitement : Waveform — <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">waveform.contact@proton.me</a>
                 </p>
-            </Section>
+            </LegalSection>
 
-            <Section title="Données collectées">
+            <LegalSection title="Données collectées">
                 <p className="mb-3">Lors de l'utilisation de Waveform, nous collectons :</p>
                 <ul className="space-y-3">
                     <Li label="Compte">
@@ -44,9 +45,9 @@ export default function Confidentialite() {
                     Nous ne collectons aucune donnée de genre, d'âge, de localisation précise,
                     ni aucune information de paiement. Nous n'utilisons pas de cookies publicitaires.
                 </p>
-            </Section>
+            </LegalSection>
 
-            <Section title="Finalités du traitement">
+            <LegalSection title="Finalités du traitement">
                 <table className="w-full text-[13px] border-collapse">
                     <thead>
                         <tr className="border-b border-border-divider">
@@ -73,21 +74,21 @@ export default function Confidentialite() {
                         </tr>
                     </tbody>
                 </table>
-            </Section>
+            </LegalSection>
 
-            <Section title="Conservation des données">
+            <LegalSection title="Conservation des données">
                 <p>
                     Vos données sont conservées tant que votre compte est actif.
                     En cas de suppression du compte, toutes vos données personnelles
-                    (profil, journal, avis, suivis) sont supprimées définitivement sous 30 jours.
+                    (profil, journal, avis, suivis) sont supprimées définitivement et immédiatement.
                 </p>
                 <p className="mt-3">
                     Vous pouvez supprimer votre compte à tout moment depuis{" "}
                     <strong>Réglages → Zone dangereuse → Supprimer mon compte</strong>.
                 </p>
-            </Section>
+            </LegalSection>
 
-            <Section title="Hébergement et transferts">
+            <LegalSection title="Hébergement et transferts">
                 <p>
                     Les données sont hébergées par <strong>Supabase</strong> (infrastructure AWS,
                     région Europe de l'Ouest) et <strong>Vercel</strong> (États-Unis).
@@ -97,9 +98,9 @@ export default function Confidentialite() {
                     Les photos de profil sont stockées dans Supabase Storage.
                     Les données musicales proviennent de MusicBrainz (CC0) et ne sont pas des données personnelles.
                 </p>
-            </Section>
+            </LegalSection>
 
-            <Section title="Vos droits (RGPD)">
+            <LegalSection title="Vos droits (RGPD)">
                 <p className="mb-3">
                     Conformément au Règlement Général sur la Protection des Données (RGPD),
                     vous disposez des droits suivants :
@@ -122,35 +123,24 @@ export default function Confidentialite() {
                     </a>
                     .
                 </p>
-            </Section>
+            </LegalSection>
 
-            <Section title="Cookies">
+            <LegalSection title="Cookies">
                 <p>
                     Waveform utilise uniquement des cookies de session strictement nécessaires
                     au maintien de votre connexion. Aucun cookie publicitaire ou de tracking tiers n'est utilisé.
                 </p>
-            </Section>
+            </LegalSection>
 
-            <Section title="Contact">
+            <LegalSection title="Contact">
                 <p>
                     Pour toute question relative à vos données personnelles :{" "}
                     <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
                         waveform.contact@proton.me
                     </a>
                 </p>
-            </Section>
+            </LegalSection>
         </article>
-    );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-    return (
-        <section className="mb-10">
-            <h2 className="text-[17px] font-medium text-text-primary mb-4 pb-2 border-b border-border-divider">{title}</h2>
-            <div className="text-[14px] text-text-secondary leading-relaxed space-y-2">
-                {children}
-            </div>
-        </section>
     );
 }
 

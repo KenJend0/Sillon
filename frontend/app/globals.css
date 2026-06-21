@@ -44,8 +44,10 @@ html, body {
   color: var(--wf-text);
 }
 
-a {
-  text-decoration: none;
+@layer base {
+  a {
+    text-decoration: none;
+  }
 }
 
 body {

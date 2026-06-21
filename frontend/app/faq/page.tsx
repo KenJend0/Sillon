@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import LegalPageShell from "@/components/LegalPageShell";
+import LegalSection from "@/components/LegalSection";
 
 export const metadata: Metadata = {
     title: "FAQ — Waveform",
@@ -44,8 +45,8 @@ const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[
                 a: (
                     <>
                         Recherche un utilisateur via la barre de recherche ou visite son profil
-                        via son @pseudo. Appuie sur <strong>Suivre</strong>. Tu peux gérer
-                        tes abonnements depuis ton profil → Abonnements / Abonnés.
+                        via son @pseudo. Appuie sur <strong>Suivre</strong>. Tu peux consulter
+                        tes abonnés et tes suivis depuis ton profil.
                     </>
                 ),
             },
@@ -53,10 +54,17 @@ const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[
                 q: "Puis-je rendre mes avis privés ?",
                 a: (
                     <>
-                        Oui. Lors de l'ajout d'une entrée dans ton journal, tu peux basculer
-                        la visibilité sur <em>Privé</em>. Une entrée privée n'apparaît pas dans
-                        ton profil public ni dans le feed de tes abonnés. Tu peux aussi modifier
-                        la visibilité après coup depuis ton journal.
+                        Pas pour l'instant. Toutes les entrées de journal sont publiques et visibles
+                        par tes abonnés. Un réglage de confidentialité par compte est prévu prochainement.
+                    </>
+                ),
+            },
+            {
+                q: "Comment signaler un contenu inapproprié ?",
+                a: (
+                    <>
+                        Utilise le bouton <em>Signaler</em> disponible sur chaque avis ou commentaire.
+                        Notre équipe de modération examine chaque signalement.
                     </>
                 ),
             },
@@ -80,6 +88,18 @@ const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[
                     <>
                         Oui, une seule fois. Va dans <strong>Réglages → Identifiants → Nom d'utilisateur</strong>.
                         Choisis-le bien, car ce changement est définitif.
+                    </>
+                ),
+            },
+            {
+                q: "Je ne reçois pas l'e-mail de confirmation à l'inscription",
+                a: (
+                    <>
+                        Vérifie ton dossier spam. Si le problème persiste, contacte-nous à{" "}
+                        <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                            waveform.contact@proton.me
+                        </a>{" "}
+                        en précisant l'adresse utilisée à l'inscription.
                     </>
                 ),
             },
@@ -146,15 +166,16 @@ const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[
                 ),
             },
             {
-                q: "Un album que je cherche n'est pas disponible. Que faire ?",
+                q: "Un album est manquant ou ses informations sont incorrectes. Que faire ?",
                 a: (
                     <>
                         Si l'album n'apparaît pas dans la recherche, il n'est peut-être pas encore
-                        dans la base MusicBrainz. Tu peux contribuer à MusicBrainz directement sur{" "}
+                        dans la base MusicBrainz. Une information erronée (titre, date, pochette...)
+                        vient aussi de cette base. Dans les deux cas, tu peux contribuer directement sur{" "}
                         <a href="https://musicbrainz.org" target="_blank" rel="noopener noreferrer" className="text-text-primary underline underline-offset-2">
                             musicbrainz.org
                         </a>
-                        . Une fois ajouté là-bas, il deviendra importable sur Waveform.
+                        : la correction ou l'ajout sera repris sur Waveform une fois validé.
                     </>
                 ),
             },
@@ -183,20 +204,8 @@ const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[
 
 export default function FAQ() {
     return (
-        <div className="min-h-screen bg-background">
-            <div className="max-w-2xl mx-auto px-6 py-12 pb-24">
-                <div className="mb-8">
-                    <Link
-                        href="/"
-                        className="inline-flex items-center gap-2 text-meta text-text-secondary hover:text-text-primary transition-colors duration-150 mb-6"
-                    >
-                        ← <span className="underline underline-offset-2">Retour</span>
-                    </Link>
-                    <div className="mb-1">
-                        <span className="text-sm font-medium text-text-tertiary tracking-widest uppercase">Waveform</span>
-                    </div>
-                </div>
-
+        <LegalPageShell>
+            <article>
                 <h1 className="text-h1 text-text-primary mb-2">Questions fréquentes</h1>
                 <p className="text-meta text-text-secondary mb-10">
                     Une autre question ?{" "}
@@ -206,38 +215,19 @@ export default function FAQ() {
                     .
                 </p>
 
-                <div className="space-y-12">
-                    {faq.map((section) => (
-                        <section key={section.category}>
-                            <h2 className="text-[17px] font-medium text-text-primary mb-6 pb-2 border-b border-border-divider">
-                                {section.category}
-                            </h2>
-                            <div className="space-y-6">
-                                {section.questions.map((item) => (
-                                    <div key={item.q}>
-                                        <p className="text-meta font-medium text-text-primary mb-2">{item.q}</p>
-                                        <p className="text-meta text-text-secondary leading-relaxed">{item.a}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    ))}
-                </div>
-
-                <footer className="mt-16 pt-8 border-t border-border-divider">
-                    <nav className="flex flex-wrap gap-x-6 gap-y-2">
-                        <Link href="/legal/mentions-legales" className="text-sm text-text-tertiary hover:text-text-primary transition-colors duration-150">
-                            Mentions légales
-                        </Link>
-                        <Link href="/legal/confidentialite" className="text-sm text-text-tertiary hover:text-text-primary transition-colors duration-150">
-                            Confidentialité
-                        </Link>
-                        <Link href="/legal/cgu" className="text-sm text-text-tertiary hover:text-text-primary transition-colors duration-150">
-                            CGU
-                        </Link>
-                    </nav>
-                </footer>
-            </div>
-        </div>
+                {faq.map((section) => (
+                    <LegalSection key={section.category} title={section.category}>
+                        <div className="space-y-6">
+                            {section.questions.map((item) => (
+                                <div key={item.q}>
+                                    <p className="text-meta font-medium text-text-primary mb-2">{item.q}</p>
+                                    <p className="text-meta text-text-secondary leading-relaxed">{item.a}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </LegalSection>
+                ))}
+            </article>
+        </LegalPageShell>
     );
 }
