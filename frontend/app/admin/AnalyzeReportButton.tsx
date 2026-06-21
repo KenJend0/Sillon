@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
-import { adminAnalyzeContent, type ModerationResult } from '@/app/actions/moderation';
+import { adminAnalyzeContent, type ModerationResult, type ReportedContentType } from '@/app/actions/moderation';
 
 interface Props {
-  contentType: 'diary_entry' | 'diary_comment';
+  contentType: ReportedContentType;
   contentId: string;
 }
 

@@ -6,13 +6,14 @@ import { checkActionRateLimit } from '@/lib/serverRateLimit';
 const ADMIN_IDS = (process.env.ADMIN_USER_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 
 export type ReportReason = 'inappropriate' | 'spam' | 'harassment';
+export type ReportedContentType = 'diary_entry' | 'diary_comment' | 'track_diary_entry' | 'track_diary_comment';
 
 /**
  * Report a diary entry or comment.
  * Silently deduplicates: if the user already reported this content, returns success.
  */
 export async function reportContent(
-  contentType: 'diary_entry' | 'diary_comment' | 'track_diary_entry' | 'track_diary_comment',
+  contentType: ReportedContentType,
   contentId: string,
   reason: ReportReason = 'inappropriate'
 ): Promise<{ success: boolean; error?: string }> {
@@ -102,7 +103,7 @@ export type ModerationResult = {
  * Requires HUGGINGFACE_API_TOKEN in env.
  */
 export async function adminAnalyzeContent(
-  contentType: 'diary_entry' | 'diary_comment',
+  contentType: ReportedContentType,
   contentId: string
 ): Promise<{ success: boolean; result?: ModerationResult; error?: string }> {
   const user = await getAuthUser();
@@ -115,16 +116,18 @@ export async function adminAnalyzeContent(
   const supabase = createSupabaseAdmin();
   let text: string | null = null;
 
-  if (contentType === 'diary_entry') {
+  if (contentType === 'diary_entry' || contentType === 'track_diary_entry') {
+    const table = contentType === 'diary_entry' ? 'diary_entries' : 'track_diary_entries';
     const { data } = await supabase
-      .from('diary_entries')
+      .from(table)
       .select('review_title, review_body')
       .eq('id', contentId)
       .maybeSingle();
     text = [data?.review_title, data?.review_body].filter(Boolean).join(' — ') || null;
   } else {
+    const table = contentType === 'diary_comment' ? 'diary_comments' : 'track_diary_comments';
     const { data } = await supabase
-      .from('diary_comments')
+      .from(table)
       .select('body')
       .eq('id', contentId)
       .maybeSingle();

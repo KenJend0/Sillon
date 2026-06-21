@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { createSupabaseAdmin, getAuthUser } from '@/lib/supabase/server';
+import type { ReportedContentType } from '@/app/actions/moderation';
 import DeleteReportedContentButton from './DeleteReportedContentButton';
 import AnalyzeReportButton from './AnalyzeReportButton';
 import CatalogueAlbums from './CatalogueAlbums';
@@ -121,16 +122,22 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
   const reporterIds = [...new Set(reports.map((r) => r.reporter_id))];
   const entryIds = reports.filter((r) => r.content_type === 'diary_entry').map((r) => r.content_id);
   const commentIds = reports.filter((r) => r.content_type === 'diary_comment').map((r) => r.content_id);
+  const trackEntryIds = reports.filter((r) => r.content_type === 'track_diary_entry').map((r) => r.content_id);
+  const trackCommentIds = reports.filter((r) => r.content_type === 'track_diary_comment').map((r) => r.content_id);
 
-  const [{ data: reporterProfiles }, { data: entryTexts }, { data: commentTexts }] = await Promise.all([
+  const [{ data: reporterProfiles }, { data: entryTexts }, { data: commentTexts }, { data: trackEntryTexts }, { data: trackCommentTexts }] = await Promise.all([
     reporterIds.length > 0 ? supabase.from('profiles').select('id, username').in('id', reporterIds) : Promise.resolve({ data: [] }),
     entryIds.length > 0 ? supabase.from('diary_entries').select('id, review_title, review_body').in('id', entryIds) : Promise.resolve({ data: [] }),
     commentIds.length > 0 ? supabase.from('diary_comments').select('id, body').in('id', commentIds) : Promise.resolve({ data: [] }),
+    trackEntryIds.length > 0 ? supabase.from('track_diary_entries').select('id, review_title, review_body').in('id', trackEntryIds) : Promise.resolve({ data: [] }),
+    trackCommentIds.length > 0 ? supabase.from('track_diary_comments').select('id, body').in('id', trackCommentIds) : Promise.resolve({ data: [] }),
   ]);
 
   const reporterMap = new Map((reporterProfiles ?? []).map((p) => [p.id, p.username]));
   const entryTextMap = new Map((entryTexts ?? []).map((e) => [e.id, e.review_body || e.review_title || null]));
   const commentTextMap = new Map((commentTexts ?? []).map((c) => [c.id, c.body]));
+  const trackEntryTextMap = new Map((trackEntryTexts ?? []).map((e) => [e.id, e.review_body || e.review_title || null]));
+  const trackCommentTextMap = new Map((trackCommentTexts ?? []).map((c) => [c.id, c.body]));
 
 
   const genreSet = new Set((genreData ?? []).map((row) => row.album_id));
@@ -402,16 +409,34 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
           ) : (
             <div className="space-y-2">
               {reports.map((report) => {
-                const text = report.content_type === 'diary_entry'
-                  ? entryTextMap.get(report.content_id)
-                  : commentTextMap.get(report.content_id);
+                const contentType = report.content_type as ReportedContentType;
+                const textMap = {
+                  diary_entry: entryTextMap,
+                  diary_comment: commentTextMap,
+                  track_diary_entry: trackEntryTextMap,
+                  track_diary_comment: trackCommentTextMap,
+                }[contentType];
+                const text = textMap?.get(report.content_id);
+
+                const TYPE_LABELS: Record<ReportedContentType, string> = {
+                  diary_entry: 'Écoute',
+                  diary_comment: 'Commentaire',
+                  track_diary_entry: 'Écoute (track)',
+                  track_diary_comment: 'Commentaire (track)',
+                };
+                const isEntry = contentType === 'diary_entry' || contentType === 'track_diary_entry';
+                const viewHref = contentType === 'diary_entry'
+                  ? `/diary/${report.content_id}`
+                  : contentType === 'track_diary_entry'
+                  ? `/track-diary/${report.content_id}`
+                  : null;
 
                 return (
                   <div key={report.id} className="rounded-[14px] border border-border bg-background px-4 py-3 space-y-2">
                     {/* Meta row */}
                     <div className="flex flex-wrap items-center gap-2">
-                      <Tag tone={report.content_type === 'diary_entry' ? 'neutral' : 'warning'}>
-                        {report.content_type === 'diary_entry' ? 'Écoute' : 'Commentaire'}
+                      <Tag tone={isEntry ? 'neutral' : 'warning'}>
+                        {TYPE_LABELS[contentType] ?? contentType}
                       </Tag>
                       <span className="text-[12px] text-text-tertiary">
                         signalé par <span className="text-text-secondary">@{reporterMap.get(report.reporter_id) ?? '?'}</span>
@@ -433,12 +458,12 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
                     {/* Actions row */}
                     <div className="flex items-center gap-2 pt-1 flex-wrap">
                       <AnalyzeReportButton
-                        contentType={report.content_type as 'diary_entry' | 'diary_comment'}
+                        contentType={contentType}
                         contentId={report.content_id}
                       />
-                      {report.content_type === 'diary_entry' && (
+                      {viewHref && (
                         <Link
-                          href={`/diary/${report.content_id}`}
+                          href={viewHref}
                           className="text-[11px] text-text-tertiary hover:text-text-primary border border-border rounded-full px-2.5 py-1 transition-colors duration-150"
                         >
                           Voir
@@ -446,7 +471,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
                       )}
                       <DeleteReportedContentButton
                         reportId={report.id}
-                        contentType={report.content_type as 'diary_entry' | 'diary_comment'}
+                        contentType={contentType}
                         contentId={report.content_id}
                       />
                     </div>

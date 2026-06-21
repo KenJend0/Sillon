@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { Trash2, X } from 'lucide-react';
-import { adminDeleteContent, adminDismissReport } from '@/app/actions/moderation';
+import { adminDeleteContent, adminDismissReport, type ReportedContentType } from '@/app/actions/moderation';
 
 interface Props {
   reportId: string;
-  contentType: 'diary_entry' | 'diary_comment';
+  contentType: ReportedContentType;
   contentId: string;
 }
 
