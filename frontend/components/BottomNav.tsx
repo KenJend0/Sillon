@@ -83,7 +83,7 @@ export default function BottomNav() {
                                 }`}
                             >
                                 {active && (
-                                    <span className={`absolute left-1/2 -translate-x-1/2 w-4 h-0.5 bg-accent rounded-full ${isCompact ? "-top-2" : "-top-2.5"}`} />
+                                    <span className="absolute left-1/2 -translate-x-1/2 -top-1 w-4 h-0.5 bg-accent rounded-full" />
                                 )}
                                 <motion.span
                                     animate={{ y: isCompact ? 0 : -5, rotate: -4 }}
@@ -113,7 +113,7 @@ export default function BottomNav() {
                             }`}
                         >
                             {active && (
-                                <span className={`absolute left-1/2 -translate-x-1/2 w-4 h-0.5 bg-accent rounded-full ${isCompact ? "-top-2" : "-top-2.5"}`} />
+                                <span className="absolute left-1/2 -translate-x-1/2 -top-1 w-4 h-0.5 bg-accent rounded-full" />
                             )}
                             <motion.span
                                 animate={{ y: isCompact ? 0 : -5 }}
@@ -144,7 +144,7 @@ export default function BottomNav() {
                     }`}
                 >
                     {isActive("/me") && (
-                        <span className={`absolute left-1/2 -translate-x-1/2 w-4 h-0.5 bg-accent rounded-full ${isCompact ? "-top-2" : "-top-2.5"}`} />
+                        <span className="absolute left-1/2 -translate-x-1/2 -top-1 w-4 h-0.5 bg-accent rounded-full" />
                     )}
                     <motion.span
                         animate={{ y: isCompact ? 0 : -5 }}
