@@ -60,7 +60,7 @@ Bugs et frictions identifiés, à régler avant de croître.
 - [x] **Supprimer les pages inutiles** — `/diary/page.tsx` et `/import/page.tsx` supprimées (remplacées par `/add` et auto-import), les liens dans le middleware mis à jour
 - [ ] **Réintroduire like/répondre sur les cartes critique du feed** — boutons retirés (commentés, pas supprimés) dans `FeedCardReviewCreated`/`FeedCardTrackReviewCreated` pour la refonte ligne uniforme ; trouver une UI discrète (icône au survol/coin de carte) sans recharger la ligne
 - [x] **Navigation retour** — `BottomNav` réintroduite sur toutes les pages mobile (plus seulement les 4 hubs), en mode compact hors hubs ; bouton retour unifié sur le composant `BackButton` partagé (`LegalPageShell` utilisait sa propre implémentation)
-- [ ] **Revoir le parcours `/` → `/auth`** — vérifier si l'étape intermédiaire casse l'expérience d'entrée
+- [x] **Revoir le parcours `/` → `/auth`** — `/` redirige systématiquement vers `/explore` (plus de landing intermédiaire) ; gates non-connecté harmonisés sur tout le parcours (recherche, journal, listes, /add, /feed, /me)
 
 ### Layout desktop (version PC)
 - [ ] Refonte du layout pour les écrans larges. garder le design mobile-first intact
@@ -192,7 +192,7 @@ Une fois qu'il y a assez de données.
 
 - [ ] **Refonte design & UX** — passer par une session dédiée avec un agent spécialisé : tokens de couleur, typographie, espacement, composants cohérents
 - [ ] **Refaire `/` et `/auth` avec Claude design** (`/add` déjà refait)
-- [ ] **Repenser `/explore` comme vraie page d'entrée de l'app** — design + contenu, une fois la couverture de tags/recommandations améliorée (V1 Contenu › Enrichissement des tags)
+- [x] **Repenser `/explore` comme vraie page d'entrée de l'app** — design + contenu, une fois la couverture de tags/recommandations améliorée (V1 Contenu › Enrichissement des tags)
 - [ ] **Nav contextuelle** — bouton "+" qui change de label selon le contexte ; risque de complexité pour un gain cosmétique, à examiner seulement si bandwidth
 - [ ] **Dark / light mode** — bascule dans les paramètres, respect du `prefers-color-scheme`
 - [ ] **Design system complet** — documenter les composants de base (boutons, cartes, modals, toasts) pour accélérer les développements futurs
