@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getMyFeed, getPublicFeed } from '@/app/actions/feed';
-import { getAuthUser, createSupabaseServer } from '@/lib/supabase/server';
+import { getAuthUser, userNeedsOnboarding } from '@/lib/supabase/server';
 import FeedInfiniteList from '@/components/feed/FeedInfiniteList';
 import PublicFeedCard from '@/components/feed/PublicFeedCard';
 import MarkActivitySeen from '@/components/feed/MarkActivitySeen';
@@ -41,21 +41,7 @@ export default async function FeedPage() {
   }
 
   // ── Utilisateur connecté ─────────────────────────────────────────────────
-  const supabase = await createSupabaseServer();
-
-  // Redirect to onboarding if user still has a default UUID-like username
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('username')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  const defaultUsername = user.id.substring(0, 8);
-  const needsOnboarding =
-    !profile ||
-    !profile.username ||
-    profile.username === defaultUsername;
-  if (needsOnboarding) {
+  if (await userNeedsOnboarding(user.id)) {
     redirect('/onboarding');
   }
 

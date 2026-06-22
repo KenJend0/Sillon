@@ -80,3 +80,19 @@ export async function getAuthUser() {
 
   return user;
 }
+
+/**
+ * Détermine si un utilisateur connecté doit être redirigé vers /onboarding
+ * (pseudo jamais choisi — encore sur le défaut généré à l'inscription).
+ */
+export async function userNeedsOnboarding(userId: string): Promise<boolean> {
+  const supabase = await createSupabaseServer();
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', userId)
+    .maybeSingle();
+
+  const defaultUsername = userId.substring(0, 8);
+  return !profile || !profile.username || profile.username === defaultUsername;
+}

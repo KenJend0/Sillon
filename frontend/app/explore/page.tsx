@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic';
 
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getAuthUser, userNeedsOnboarding } from "@/lib/supabase/server";
 import { getTrendingThisWeek, getForYouSuggestions, getDiscoveryAlbums, getSimilarUsers, getForYouTracks, getProfileTier } from "@/app/actions/explore";
 import { getPublicLists, type UserList } from "@/app/actions/lists";
 import { getTrendingTracks } from "@/app/actions/track-diary";
@@ -17,6 +19,11 @@ import { type TrendingAlbum, type ForYouAlbum, type DiscoveryResult, type Simila
 import { type TrackWithStats } from "@/app/actions/track-diary";
 
 export default async function ExplorePage() {
+    const user = await getAuthUser();
+    if (user && await userNeedsOnboarding(user.id)) {
+        redirect('/onboarding');
+    }
+
     const tier = await getProfileTier();
     const isEstablished = tier === 'established';
 
