@@ -340,16 +340,11 @@ async function fetchWithRetry(
  */
 export async function searchMusicBrainzAlbums(query: string, _limit = 30): Promise<{ success: boolean; results?: AlbumSearchResult[]; error?: string }> {
   // Check cache first — no auth needed (admin client, public MB data)
-  // Cache hit path skips the getAuthUser() HTTP round-trip entirely (~700ms saved)
   const cacheKey = hashCacheKey(query, 'albums');
   const cached = await getCachedResults<AlbumSearchResult[]>(cacheKey);
   if (cached) {
     return { success: true, results: cached }; // already sorted by releaseCount
   }
-
-  // Cache miss: verify auth before calling MB API
-  const authUser = await getAuthUser();
-  if (!authUser) return { success: false, error: 'not_authenticated' };
 
   try {
     // Expand common apostrophe-less contractions so MB's standard analyser can match them.
@@ -603,10 +598,6 @@ export async function searchMusicBrainzArtists(query: string, limit = 30): Promi
   if (cached) {
     return { success: true, results: cached.slice(0, limit) };
   }
-
-  // Cache miss: verify auth before calling MB API
-  const authUser = await getAuthUser();
-  if (!authUser) return { success: false, error: 'not_authenticated' };
 
   try {
     // Build term-by-term query:

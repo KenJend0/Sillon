@@ -23,7 +23,7 @@ export default async function FeedPage() {
 
         <UnauthCTA
           className="mb-8"
-          title={<>Ton carnet musical t&apos;attend — <em className="italic text-accent-deep">commence par noter un album.</em></>}
+          title={<>Tes likes, commentaires et abonnés t&apos;attendent — <em className="italic text-accent-deep">crée un compte pour suivre ton activité.</em></>}
         />
 
         {/* Feed public */}

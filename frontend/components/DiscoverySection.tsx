@@ -4,8 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { type DiscoveryResult } from "@/app/actions/explore";
 import DiscoverCard from "@/components/DiscoverCard";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function DiscoverySection({ result }: { result: DiscoveryResult }) {
+    const { user } = useAuth();
     const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
     const visible = result.albums.filter((a) => !dismissedIds.has(a.album_id)).slice(0, 5);
@@ -57,7 +59,7 @@ export default function DiscoverySection({ result }: { result: DiscoveryResult }
                                 discover_kind: "discovery",
                                 reason: album.via_username ? `via @${album.via_username}` : undefined,
                             }}
-                            onDismiss={handleDismiss}
+                            onDismiss={user ? handleDismiss : undefined}
                         />
                     </div>
                 ))}
@@ -75,7 +77,7 @@ export default function DiscoverySection({ result }: { result: DiscoveryResult }
                             discover_kind: "discovery",
                             reason: album.via_username ? `via @${album.via_username}` : undefined,
                         }}
-                        onDismiss={handleDismiss}
+                        onDismiss={user ? handleDismiss : undefined}
                     />
                 ))}
             </div>

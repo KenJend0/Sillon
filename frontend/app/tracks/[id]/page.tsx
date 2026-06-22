@@ -168,6 +168,7 @@ export default async function TrackPage({ params }: PageProps) {
                     trackId={id}
                     albumId={t.album_id}
                     artistId={t.artist_id}
+                    userId={user?.id}
                     existingEntry={userEntry ?? null}
                 />
                 <AddToListButton

@@ -17,7 +17,7 @@ type Props = {
  * Toutes les pages sont accessibles — chaque page gère son propre état auth.
  */
 export default function AuthenticatedLayout({ children }: Props) {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
   const pathname = usePathname();
 
   const hideNav = NO_NAV_PATHS.some(path => pathname.startsWith(path));
@@ -27,7 +27,7 @@ export default function AuthenticatedLayout({ children }: Props) {
 
   return (
     <BottomSheetProvider>
-      {!loading && user && !hideNav && <Header />}
+      {!loading && !hideNav && <Header />}
       <main>{children}</main>
       {showBottomNav && <BottomNav />}
     </BottomSheetProvider>

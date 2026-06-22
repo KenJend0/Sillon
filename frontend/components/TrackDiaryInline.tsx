@@ -11,6 +11,7 @@ type Props = {
     trackId: string;
     albumId: string;
     artistId: string;
+    userId?: string;
     existingEntry?: {
         id: string;
         rating: number | null;
@@ -19,7 +20,7 @@ type Props = {
     } | null;
 };
 
-export default function TrackDiaryInline({ trackId, albumId, artistId, existingEntry }: Props) {
+export default function TrackDiaryInline({ trackId, albumId, artistId, userId, existingEntry }: Props) {
     const router = useRouter();
     const today = new Date().toISOString().split("T")[0];
 
@@ -66,7 +67,13 @@ export default function TrackDiaryInline({ trackId, albumId, artistId, existingE
     return (
         <>
             <button
-                onClick={() => setOpen(true)}
+                onClick={() => {
+                    if (!userId) {
+                        showToast("Connecte-toi pour ajouter une écoute à ton journal", "error");
+                        return;
+                    }
+                    setOpen(true);
+                }}
                 className="text-label text-text-secondary hover:text-text-primary px-3 py-1.5 rounded-[8px] transition-colors duration-150 border border-border hover:border-[#8E6F5E]"
             >
                 {existingEntry ? "Ré-écouter" : "Ajouter au journal"}

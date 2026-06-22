@@ -28,44 +28,61 @@ export default function Header() {
         return pathname === href || pathname.startsWith(href + "/");
     };
 
+    if (loading) return null;
+
     return (
-        user && (
-            <header
-                className="hidden md:flex items-center px-8 py-3 border-b border-border sticky top-0 z-50 bg-background"
-            >
-                {/* LOGO — à gauche */}
-                <Link href="/" className="flex items-center gap-2.5">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/logo/mark.svg" alt="" aria-hidden="true" className="h-5 w-auto" />
-                    <span className="font-display italic text-[22px] leading-none text-text-warm">
-                        Waveform
-                    </span>
-                </Link>
+        <header
+            className="hidden md:flex items-center px-8 py-3 border-b border-border sticky top-0 z-50 bg-background"
+        >
+            {/* LOGO — à gauche */}
+            <Link href="/explore" className="flex items-center gap-2.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo/mark.svg" alt="" aria-hidden="true" className="h-5 w-auto" />
+                <span className="font-display italic text-[22px] leading-none text-text-warm">
+                    Waveform
+                </span>
+            </Link>
 
-                {/* NAVIGATION — centrée */}
-                <nav className="flex-1 flex justify-center space-x-6 items-center">
-                    {navItems.map((item) => (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`relative text-meta font-medium px-6 py-2 transition-colors duration-150 ${
-                                isActive(item.href)
-                                    ? "text-text-primary"
-                                    : "text-text-secondary hover:text-text-primary"
-                            }`}
-                        >
-                            {item.label}
-                            {item.href === "/feed" && unseenActivity && (
-                                <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-accent rounded-full" />
-                            )}
-                        </Link>
-                    ))}
-                </nav>
+            {/* NAVIGATION — centrée */}
+            <nav className="flex-1 flex justify-center space-x-6 items-center">
+                {navItems.map((item) => (
+                    <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`relative text-meta font-medium px-6 py-2 transition-colors duration-150 ${
+                            isActive(item.href)
+                                ? "text-text-primary"
+                                : "text-text-secondary hover:text-text-primary"
+                        }`}
+                    >
+                        {item.label}
+                        {item.href === "/feed" && unseenActivity && (
+                            <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-accent rounded-full" />
+                        )}
+                    </Link>
+                ))}
+            </nav>
 
-                {/* MENU PROFIL — à droite */}
+            {/* MENU PROFIL — à droite, ou CTA auth si non connecté */}
+            {user ? (
                 <ProfileMenuClient />
-            </header>
-        )
+            ) : (
+                <div className="flex items-center gap-4">
+                    <Link
+                        href="/auth"
+                        className="text-meta font-medium text-text-secondary hover:text-text-primary transition-colors duration-150"
+                    >
+                        Se connecter
+                    </Link>
+                    <Link
+                        href="/auth?mode=signup"
+                        className="bg-[#1C1C1C] text-[#F5F3EF] px-4 py-2 rounded-[8px] text-meta font-medium hover:opacity-85 transition-opacity duration-150"
+                    >
+                        Créer un compte
+                    </Link>
+                </div>
+            )}
+        </header>
     );
 }
 

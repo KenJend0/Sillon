@@ -6,6 +6,7 @@ import { searchInternal, type SearchResultUI } from "@/app/actions/search";
 import { searchMusicBrainzAlbums, searchMusicBrainzArtists, importAlbumFromMusicBrainz, searchMusicBrainzRecordings, importTrackFromMusicBrainz } from "@/app/actions/musicbrainz";
 import { getArtistImagesByMbids } from "@/app/actions/artists";
 import { showToast } from "@/components/Toast";
+import { useAuth } from "@/lib/AuthContext";
 import { Clock, X, Disc3, User, Search, ArrowRight, Music } from "lucide-react";
 import { CoverImage } from "@/components/CoverImage";
 import {
@@ -25,10 +26,12 @@ function ResultRow({
   item,
   onSelect,
   importing,
+  needsAuth,
 }: {
   item: SearchResultUI;
   onSelect: (item: SearchResultUI) => void;
   importing: boolean;
+  needsAuth: boolean;
 }) {
   const isRound = item.kind === "artist" || item.kind === "user";
   const hasImage = !!item.coverUrl;
@@ -90,6 +93,11 @@ function ResultRow({
                 )}
               </p>
             )}
+            {needsAuth && (
+              <span className="inline-block text-[10px] text-accent bg-[#FAF8F4] border border-[#D8D3CB] rounded-full px-1.5 py-0.5 mt-1">
+                Connecte-toi pour l&apos;ajouter
+              </span>
+            )}
           </>
         )}
       </div>
@@ -103,6 +111,7 @@ function ResultRow({
 
 export default function SearchOverlay() {
   const router = useRouter();
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [q, setQ] = useState("");
   const [activeTab, setActiveTab] = useState<SearchTab>("albums");
@@ -289,6 +298,12 @@ export default function SearchOverlay() {
 
   const handleSelect = useCallback(
     async (item: SearchResultUI) => {
+      const needsImport = item.source === "musicbrainz" && (item.kind === "album" || item.kind === "track");
+      if (needsImport && !user) {
+        showToast("Connecte-toi pour importer cet album ou ce titre", "error");
+        return;
+      }
+
       if (q.trim()) {
         saveRecentSearch(q.trim());
       }
@@ -365,7 +380,7 @@ export default function SearchOverlay() {
         router.push(`/u/${item.slug ?? item.title}`);
       }
     },
-    [q, router]
+    [q, router, user]
   );
 
   const handleSeeAll = () => {
@@ -518,6 +533,7 @@ export default function SearchOverlay() {
                           item={item}
                           onSelect={handleSelect}
                           importing={importingId === item.id}
+                          needsAuth={!user && item.source === "musicbrainz" && (item.kind === "album" || item.kind === "track")}
                         />
                       ))}
                     </div>

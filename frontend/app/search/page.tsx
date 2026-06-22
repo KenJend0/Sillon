@@ -14,6 +14,7 @@ import { Disc3, User, Music } from "lucide-react";
 import { CoverImage } from "@/components/CoverImage";
 import BackButton from "@/components/BackButton";
 import { showToast } from "@/components/Toast";
+import { useAuth } from "@/lib/AuthContext";
 
 import { saveRecentSearch } from '@/lib/recentSearches';
 
@@ -46,11 +47,13 @@ function AlbumRow({
   onImport,
   importing,
   disabled,
+  needsAuth,
 }: {
   album: AlbumSearchResult;
   onImport: (id: string) => void;
   importing: boolean;
   disabled: boolean;
+  needsAuth: boolean;
 }) {
   return (
     <button
@@ -96,6 +99,11 @@ function AlbumRow({
                 <span className="text-text-disabled"> · {album.releaseDate.substring(0, 4)}</span>
               )}
             </p>
+            {needsAuth && (
+              <span className="inline-block text-[10px] text-accent bg-[#FAF8F4] border border-[#D8D3CB] rounded-full px-1.5 py-0.5 mt-1">
+                Connecte-toi pour l&apos;ajouter
+              </span>
+            )}
           </>
         )}
       </div>
@@ -160,11 +168,13 @@ function TrackRow({
   onImport,
   importing,
   disabled,
+  needsAuth,
 }: {
   track: SearchResultUI;
   onImport: (track: SearchResultUI) => void;
   importing: boolean;
   disabled: boolean;
+  needsAuth: boolean;
 }) {
   return (
     <button
@@ -204,6 +214,11 @@ function TrackRow({
                 {track.subtitle}
               </p>
             )}
+            {needsAuth && (
+              <span className="inline-block text-[10px] text-accent bg-[#FAF8F4] border border-[#D8D3CB] rounded-full px-1.5 py-0.5 mt-1">
+                Connecte-toi pour l&apos;ajouter
+              </span>
+            )}
           </>
         )}
       </div>
@@ -217,6 +232,7 @@ function TrackRow({
 
 function SearchPageContent() {
   const router = useRouter();
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const q = searchParams.get("q") || "";
   const filter = (searchParams.get("filter") as FilterType) || "albums";
@@ -388,6 +404,10 @@ function SearchPageContent() {
 
   const handleAlbumImport = async (mbid: string) => {
     if (importingId) return;
+    if (!user) {
+      showToast("Connecte-toi pour importer cet album", "error");
+      return;
+    }
     setImportingId(mbid);
     try {
       const result = await importAlbumFromMusicBrainz(mbid);
@@ -413,6 +433,10 @@ function SearchPageContent() {
   const handleTrackSelect = async (track: SearchResultUI) => {
     if (importingId) return;
     if (track.source === "musicbrainz") {
+      if (!user) {
+        showToast("Connecte-toi pour importer ce titre", "error");
+        return;
+      }
       setImportingId(track.id);
       try {
         const result = await importTrackFromMusicBrainz(
@@ -508,6 +532,7 @@ function SearchPageContent() {
                       onImport={handleAlbumImport}
                       importing={importingId === album.id}
                       disabled={!!importingId}
+                      needsAuth={!user}
                     />
                   ))}
                 </div>
@@ -559,6 +584,7 @@ function SearchPageContent() {
                       onImport={handleTrackSelect}
                       importing={importingId === track.id}
                       disabled={!!importingId}
+                      needsAuth={!user && track.source === "musicbrainz"}
                     />
                   ))}
                 </div>

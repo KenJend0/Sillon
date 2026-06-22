@@ -154,21 +154,16 @@ export default function AddToDiaryButton({
     }
   }
 
-  if (!userId) {
-    return (
-      <button
-        disabled
-        className="text-label text-text-disabled px-3 py-1.5 rounded-[8px] opacity-50 cursor-not-allowed"
-      >
-        {buttonLabel}
-      </button>
-    );
-  }
-
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          if (!userId) {
+            showToast("Connecte-toi pour ajouter une écoute à ton journal", "error");
+            return;
+          }
+          setIsOpen(true);
+        }}
         className="text-sm font-medium bg-accent-deep text-[#FAF8F4] px-4 py-2 rounded-[8px] hover:opacity-90 transition-opacity duration-150"
       >
         {buttonLabel}

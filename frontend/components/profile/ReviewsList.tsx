@@ -9,6 +9,7 @@ import { toggleDiaryLike } from "@/app/actions/diary";
 import { toggleTrackDiaryLike } from "@/app/actions/track-diary";
 import { showToast } from "@/components/Toast";
 import LikesBottomSheet from "@/components/LikesBottomSheet";
+import { useAuth } from "@/lib/AuthContext";
 
 type SortOption = "date_listened" | "personal_rating";
 
@@ -22,6 +23,7 @@ const SORT_LABELS: Record<SortOption, string> = {
 };
 
 export default function ReviewsList({ reviews }: Props) {
+  const { user } = useAuth();
   const [sortBy, setSortBy] = useState<SortOption>("date_listened");
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [openLikesEntry, setOpenLikesEntry] = useState<{ id: string; type: 'album' | 'track' } | null>(null);
@@ -146,16 +148,20 @@ export default function ReviewsList({ reviews }: Props) {
               <div className="flex items-center justify-end gap-4 pt-3 border-t border-rule">
                 <div className="flex items-center gap-4 text-label text-text-tertiary">
                   <span className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleLike(review.id, review.type)}
-                      disabled={likesState[review.id]?.liking}
-                      className="hover:text-like transition-colors duration-150 disabled:opacity-50"
-                    >
-                      <Heart
-                        size={16}
-                        className={likesState[review.id]?.isLiked ? "fill-like text-like" : ""}
-                      />
-                    </button>
+                    {user ? (
+                      <button
+                        onClick={() => handleLike(review.id, review.type)}
+                        disabled={likesState[review.id]?.liking}
+                        className="hover:text-like transition-colors duration-150 disabled:opacity-50"
+                      >
+                        <Heart
+                          size={16}
+                          className={likesState[review.id]?.isLiked ? "fill-like text-like" : ""}
+                        />
+                      </button>
+                    ) : (
+                      <Heart size={16} />
+                    )}
                     {likesState[review.id]?.likesCount > 0 ? (
                       <button
                         onClick={() => setOpenLikesEntry({ id: review.id, type: review.type })}

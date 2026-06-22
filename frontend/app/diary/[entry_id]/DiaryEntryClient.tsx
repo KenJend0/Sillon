@@ -383,6 +383,15 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
         </div>
       </div>
 
+      {!currentUser && (
+        <div className="mt-4 px-4 py-3.5 bg-[#FAF8F4] border border-[#D8D3CB] rounded-[12px]">
+          <p className="text-[13px] text-text-secondary">
+            <Link href="/auth?mode=login" className="font-medium text-text-warm underline hover:text-accent transition-colors">Connecte-toi</Link>
+            {' '}pour liker et commenter cette écoute.
+          </p>
+        </div>
+      )}
+
       <LikesBottomSheet entryId={entry.id} isOpen={showLikesSheet} onClose={() => setShowLikesSheet(false)} count={likesCount} />
 
       {/* ── CTA ────────────────────────────────────────────────── */}
@@ -407,14 +416,7 @@ export default function DiaryEntryClient({ entry, currentUser }: DiaryEntryClien
           <div className="flex-1 h-px bg-[#C9C2B5] self-center ml-1.5" />
         </div>
 
-        {!currentUser ? (
-          <div className="mb-4 px-4 py-3.5 bg-[#FAF8F4] border border-[#D8D3CB] rounded-[12px]">
-            <p className="text-[13px] text-text-secondary">
-              <Link href="/auth/signin" className="font-medium text-text-warm hover:text-accent transition-colors">Connecte-toi</Link>
-              {' '}pour liker et commenter cette écoute.
-            </p>
-          </div>
-        ) : !isAuthor ? (
+        {!currentUser ? null : !isAuthor ? (
           <div className="bg-[#FAF8F4] border border-[#D8D3CB] rounded-[12px] p-3 mb-4 transition-all duration-150 focus-within:border-accent focus-within:shadow-[0_0_0_3px_rgba(142,111,94,0.08)]">
             <div className="flex gap-2.5 items-start">
               <UserAvatar userId={currentUser.id} src={profile?.avatar_url ?? null} size={28} className="mt-0.5 flex-shrink-0" />
