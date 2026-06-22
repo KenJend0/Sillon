@@ -9,6 +9,7 @@ import { useSearchParams } from "next/navigation";
 import { canAttemptAuth } from "@/lib/rateLimit";
 import { showToast } from "@/components/Toast";
 import { trackProductEvent } from "@/lib/productEventsClient";
+import { Eye, EyeOff } from "lucide-react";
 
 type AuthMode = "login" | "signup" | "reset";
 
@@ -25,6 +26,7 @@ export default function AuthForm() {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const urlError = searchParams.get("error");
 
   const navigateAfterAuth = (destination: "/explore" | "/onboarding" = "/explore") => {
@@ -235,15 +237,26 @@ export default function AuthForm() {
             <label className="block text-meta font-medium text-text-secondary mb-1">
               Mot de passe
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••"
-              required
-              minLength={8}
-              className="w-full bg-background border border-border rounded-[10px] px-3 py-2 text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] transition-colors duration-150"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••"
+                required
+                minLength={8}
+                className="w-full bg-background border border-border rounded-[10px] px-3 py-2 pr-10 text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] transition-colors duration-150"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                tabIndex={-1}
+                aria-label={showPassword ? "Cacher le mot de passe" : "Afficher le mot de passe"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary transition-colors duration-150"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             {mode === "signup" && (
               <p className="text-label text-text-tertiary mt-1">Minimum 8 caractères</p>
             )}
