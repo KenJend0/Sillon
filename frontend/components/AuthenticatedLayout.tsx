@@ -21,7 +21,9 @@ export default function AuthenticatedLayout({ children }: Props) {
   const pathname = usePathname();
 
   const hideNav = NO_NAV_PATHS.some(path => pathname.startsWith(path));
-  const showBottomNav = !loading && !!user && !hideNav;
+  // La bottom nav doit rester visible même sans compte : /explore, /lists et les
+  // pages "voir tout" sont désormais navigables par des utilisateurs anonymes.
+  const showBottomNav = !loading && !hideNav;
 
   return (
     <BottomSheetProvider>

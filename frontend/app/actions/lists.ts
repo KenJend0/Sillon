@@ -17,8 +17,10 @@ export type UserList = {
     cover_urls: (string | null)[];
     likes_count: number;
     is_liked?: boolean;
+    is_saved?: boolean;
     creator_username?: string;
     creator_avatar?: string | null;
+    preview_items: string[];
 };
 
 export type ListItem = {
@@ -73,10 +75,10 @@ export type ListTrackItem = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function attachListMeta(listIds: string[], supabase: any): Promise<Map<string, { item_count: number; cover_urls: (string | null)[]; likes_count: number }>> {
+async function attachListMeta(listIds: string[], supabase: any): Promise<Map<string, { item_count: number; cover_urls: (string | null)[]; likes_count: number; preview_items: string[] }>> {
     if (listIds.length === 0) return new Map();
 
-    const [countResults, coverResults, likesResults] = await Promise.all([
+    const [countResults, coverResults, likesResults, previewResults] = await Promise.all([
         supabase
             .from('list_items')
             .select('list_id')
@@ -91,6 +93,11 @@ async function attachListMeta(listIds: string[], supabase: any): Promise<Map<str
             .from('list_likes')
             .select('list_id')
             .in('list_id', listIds),
+        supabase
+            .from('list_items')
+            .select('list_id, albums(title, artists(name)), tracks(title, albums(artists(name)))')
+            .in('list_id', listIds)
+            .order('added_at', { ascending: false }),
     ]);
 
     const countMap = new Map<string, number>();
@@ -112,12 +119,29 @@ async function attachListMeta(listIds: string[], supabase: any): Promise<Map<str
         likesMap.set(row.list_id, (likesMap.get(row.list_id) ?? 0) + 1);
     }
 
-    const meta = new Map<string, { item_count: number; cover_urls: (string | null)[]; likes_count: number }>();
+    const previewMap = new Map<string, string[]>();
+    for (const row of previewResults.data || []) {
+        const existing = previewMap.get(row.list_id) ?? [];
+        if (existing.length >= 3) continue;
+        const album = row.albums as any;
+        const track = row.tracks as any;
+        if (track?.title) {
+            existing.push(`${track.title} – ${track.albums?.artists?.name || 'Unknown'}`);
+        } else if (album?.title) {
+            existing.push(`${album.title} – ${album.artists?.name || 'Unknown'}`);
+        } else {
+            continue;
+        }
+        previewMap.set(row.list_id, existing);
+    }
+
+    const meta = new Map<string, { item_count: number; cover_urls: (string | null)[]; likes_count: number; preview_items: string[] }>();
     for (const id of listIds) {
         meta.set(id, {
             item_count: countMap.get(id) ?? 0,
             cover_urls: coverMap.get(id) ?? [],
             likes_count: likesMap.get(id) ?? 0,
+            preview_items: previewMap.get(id) ?? [],
         });
     }
     return meta;
@@ -144,7 +168,35 @@ export async function getUserLists(userId: string): Promise<UserList[]> {
 
     return lists.map((list: any) => ({
         ...list,
-        ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [] }),
+        ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [], likes_count: 0, preview_items: [] }),
+    }));
+}
+
+/**
+ * Listes que l'utilisateur a sauvegardées (pas les siennes) — onglet "Listes" du profil.
+ */
+export async function getUserSavedLists(userId: string): Promise<UserList[]> {
+    const supabase = await createSupabaseServer();
+
+    const { data: saved } = await (supabase as any)
+        .from('saved_lists')
+        .select('saved_at, user_lists(id, user_id, title, description, is_public, is_default, created_at, profiles(username, avatar_url))')
+        .eq('user_id', userId)
+        .order('saved_at', { ascending: false });
+
+    if (!saved || saved.length === 0) return [];
+
+    const lists = saved.map((s: any) => s.user_lists).filter(Boolean);
+    if (lists.length === 0) return [];
+
+    const meta = await attachListMeta(lists.map((l: any) => l.id), supabase);
+
+    return lists.map((list: any) => ({
+        ...list,
+        ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [], likes_count: 0, preview_items: [] }),
+        creator_username: list.profiles?.username ?? undefined,
+        creator_avatar: list.profiles?.avatar_url ?? null,
+        is_saved: true,
     }));
 }
 
@@ -167,15 +219,19 @@ export async function getPublicUserLists(userId: string): Promise<UserList[]> {
 
     return lists.map((list: any) => ({
         ...list,
-        ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [] }),
+        ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [], likes_count: 0, preview_items: [] }),
     }));
 }
 
 /**
- * Listes publiques populaires — pour la section /explore.
+ * Listes publiques populaires — pour la section /explore et la page /lists.
+ * Trie par nombre de likes sur un pool des listes les plus récentes (pas sur
+ * la base entière) — un compromis simple plutôt qu'un vrai classement par
+ * popularité sur toute la table, suffisant au volume actuel.
  */
 export async function getPublicLists(limit = 6): Promise<UserList[]> {
     const supabase = createSupabaseAnon();
+    const poolSize = Math.min(Math.max(limit * 5, 30), 200);
 
     const { data: lists } = await supabase
         .from('user_lists')
@@ -183,20 +239,34 @@ export async function getPublicLists(limit = 6): Promise<UserList[]> {
         .eq('is_public', true)
         .eq('is_default', false)
         .order('created_at', { ascending: false })
-        .limit(limit);
+        .limit(poolSize);
 
     if (!lists || lists.length === 0) return [];
 
     const meta = await attachListMeta(lists.map((l: any) => l.id), supabase);
 
+    const user = await getAuthUser();
+    let savedIds = new Set<string>();
+    if (user) {
+        const authedSupabase = await createSupabaseServer();
+        const { data: saved } = await (authedSupabase as any)
+            .from('saved_lists')
+            .select('list_id')
+            .eq('user_id', user.id)
+            .in('list_id', lists.map((l: any) => l.id));
+        savedIds = new Set((saved || []).map((s: any) => s.list_id));
+    }
+
     return lists
         .map((list: any) => ({
             ...list,
-            ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [], likes_count: 0 }),
+            ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [], likes_count: 0, preview_items: [] }),
             creator_username: list.profiles?.username ?? undefined,
             creator_avatar: list.profiles?.avatar_url ?? null,
+            is_saved: savedIds.has(list.id),
         }))
-        .sort((a: UserList, b: UserList) => b.likes_count - a.likes_count);
+        .sort((a: UserList, b: UserList) => b.likes_count - a.likes_count)
+        .slice(0, limit);
 }
 
 /**
@@ -222,6 +292,32 @@ export async function toggleListLike(listId: string): Promise<{ liked: boolean }
 
     await supabase.from('list_likes').insert({ user_id: user.id, list_id: listId });
     return { liked: true };
+}
+
+/**
+ * Sauvegarde ou retire une liste publique de sa collection — distinct du like,
+ * sert à la retrouver plus tard plutôt qu'à juste l'apprécier.
+ */
+export async function toggleSaveList(listId: string): Promise<{ saved: boolean }> {
+    const user = await getAuthUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const supabase = await createSupabaseServer();
+
+    const { data: existing } = await (supabase as any)
+        .from('saved_lists')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('list_id', listId)
+        .maybeSingle();
+
+    if (existing) {
+        await (supabase as any).from('saved_lists').delete().eq('id', existing.id);
+        return { saved: false };
+    }
+
+    await (supabase as any).from('saved_lists').insert({ user_id: user.id, list_id: listId });
+    return { saved: true };
 }
 
 /**
@@ -431,6 +527,7 @@ export async function getListWithItems(listId: string): Promise<{
             created_at: list.created_at,
             item_count: items?.length ?? 0,
             cover_urls: [],
+            preview_items: [],
             likes_count: likesCount ?? 0,
             is_liked: !!likeStatus.data,
             creator_username: profile?.username || '',
@@ -538,7 +635,7 @@ export async function createList(data: {
       properties: { list_id: list.id, is_public: data.isPublic ?? false },
     });
 
-    return { ...list, item_count: 0, cover_urls: [], likes_count: 0 };
+    return { ...list, item_count: 0, cover_urls: [], likes_count: 0, preview_items: [] };
 }
 
 /**

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { CoverImage } from "@/components/CoverImage";
+import { dismissRecommendation } from "@/app/actions/explore";
 
 type DiscoverItem = {
     id: string;
@@ -41,7 +42,22 @@ function DeltaBadge({ delta }: { delta: number | null }) {
     );
 }
 
-export default function DiscoverCard({ item, rank }: { item: DiscoverItem; rank?: number }) {
+export default function DiscoverCard({
+    item,
+    rank,
+    onDismiss,
+}: {
+    item: DiscoverItem;
+    rank?: number;
+    onDismiss?: (albumId: string) => void;
+}) {
+    function handleDismiss(e: React.MouseEvent) {
+        e.preventDefault();
+        e.stopPropagation();
+        onDismiss?.(item.album_id);
+        dismissRecommendation(item.album_id);
+    }
+
     return (
         <Link href={`/albums/${item.album_id}`} className="block group">
             {/* Image */}
@@ -64,9 +80,23 @@ export default function DiscoverCard({ item, rank }: { item: DiscoverItem; rank?
                 ) : (
                     <div className="w-full aspect-square bg-background-tertiary" />
                 )}
+                {onDismiss && (
+                    <button
+                        onClick={handleDismiss}
+                        title="Pas pour moi"
+                        className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full bg-text-primary/45 text-background flex items-center justify-center text-sm leading-none hover:bg-text-primary/70 transition-colors duration-150"
+                    >
+                        ×
+                    </button>
+                )}
             </div>
 
             {/* Infos */}
+            {item.reason && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-text-secondary bg-background-secondary border border-border rounded-full px-2 py-0.5 mb-1 max-w-full truncate">
+                    {item.reason}
+                </span>
+            )}
             <p className="font-display font-normal text-sm text-text-warm line-clamp-2 leading-snug group-hover:text-accent transition-colors duration-150">
                 {item.album_title}
             </p>

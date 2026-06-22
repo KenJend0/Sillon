@@ -64,6 +64,19 @@ def fetch_user_tracks(user_id: str) -> set[str]:
     return {row["track_id"] for row in (resp.data or [])}
 
 
+def fetch_dismissed_tracks(user_id: str) -> set[str]:
+    """Return track_ids the user explicitly marked "Pas pour moi"."""
+    client = get_client()
+    resp = (
+        client.table("recommendation_feedback")
+        .select("track_id")
+        .eq("user_id", user_id)
+        .not_.is_("track_id", "null")
+        .execute()
+    )
+    return {row["track_id"] for row in (resp.data or [])}
+
+
 def fetch_neighbour_track_ratings(neighbour_ids: list[str]) -> list[dict]:
     """Return latest high-rated track entries for a list of neighbours."""
     if not neighbour_ids:
@@ -156,7 +169,7 @@ def main(dry_run: bool, method: str, limit: int) -> None:
             continue
 
         neighbour_ids = [n["user_b"] for n in neighbours]
-        seen_tracks = fetch_user_tracks(user_id)
+        seen_tracks = fetch_user_tracks(user_id) | fetch_dismissed_tracks(user_id)
         neighbour_ratings = fetch_neighbour_track_ratings(neighbour_ids)
 
         if not neighbour_ratings:

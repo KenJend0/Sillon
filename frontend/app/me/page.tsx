@@ -7,7 +7,7 @@ import ProfileTabs from "@/components/profile/ProfileTabs";
 import Top3Albums from "@/components/profile/Top3Albums";
 import RatingDistribution from "@/components/profile/RatingDistribution";
 import { getUserDiary, getUserReviewsUnified } from "@/app/actions/diary";
-import { getUserLists, getOrCreateDefaultList } from "@/app/actions/lists";
+import { getUserLists, getUserSavedLists, getOrCreateDefaultList } from "@/app/actions/lists";
 import { getUserTrackDiary } from "@/app/actions/track-diary";
 
 export const revalidate = 0; // Pas de cache, recharger à chaque accès
@@ -51,6 +51,7 @@ export default async function MyProfilePage() {
         diaryEntries,
         reviewsTotalResult,
         userLists,
+        savedLists,
         favoriteAlbumsResult,
         trackEntries,
         unifiedReviews,
@@ -73,6 +74,7 @@ export default async function MyProfilePage() {
             .eq("user_id", user.id)
             .not("review_body", "is", null),
         getUserLists(user.id),
+        getUserSavedLists(user.id),
         supabase
             .from("user_favorite_albums")
             .select("position, album_id, albums (id, title, cover_url, artists (name))")
@@ -152,6 +154,7 @@ export default async function MyProfilePage() {
                         userId={user.id}
                         diaryEntries={diaryEntries}
                         userLists={userLists}
+                        savedLists={savedLists}
                         trackEntries={trackEntries}
                         unifiedReviews={unifiedReviews}
                     />

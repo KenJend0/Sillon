@@ -67,6 +67,18 @@ def fetch_user_albums(user_id: str) -> set[str]:
     return {row["album_id"] for row in (resp.data or [])}
 
 
+def fetch_dismissed_albums(user_id: str) -> set[str]:
+    """Return album_ids the user explicitly marked "Pas pour moi"."""
+    client = get_client()
+    resp = (
+        client.table("recommendation_feedback")
+        .select("album_id")
+        .eq("user_id", user_id)
+        .execute()
+    )
+    return {row["album_id"] for row in (resp.data or [])}
+
+
 def fetch_neighbour_ratings(neighbour_ids: list[str]) -> list[dict]:
     """Return latest high-rated diary entries for a list of neighbour user_ids."""
     if not neighbour_ids:
@@ -172,7 +184,7 @@ def main(dry_run: bool, method: str, limit: int) -> None:
             continue
 
         neighbour_ids = [n["user_b"] for n in neighbours]
-        seen_albums = fetch_user_albums(user_id)
+        seen_albums = fetch_user_albums(user_id) | fetch_dismissed_albums(user_id)
         neighbour_ratings = fetch_neighbour_ratings(neighbour_ids)
 
         scored = score_albums(neighbours, neighbour_ratings, seen_albums)

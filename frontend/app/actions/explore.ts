@@ -2,6 +2,26 @@
 
 import { getAuthUser, createSupabaseServer, createSupabaseAnon } from '@/lib/supabase/server';
 
+export type ProfileTier = 'anonymous' | 'new' | 'established';
+
+/**
+ * Détermine quel assemblage de /explore servir : anonyme, connecté sans
+ * historique ("nouveau"), ou connecté avec un journal suffisant ("établi").
+ * Seuil de 3 entrées — arbitraire mais raisonnable pour amorcer "Pour toi".
+ */
+export async function getProfileTier(): Promise<ProfileTier> {
+    const user = await getAuthUser();
+    if (!user) return 'anonymous';
+
+    const supabase = await createSupabaseServer();
+    const { count } = await supabase
+        .from('diary_entries')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+    return (count ?? 0) >= 3 ? 'established' : 'new';
+}
+
 export type TrendingAlbum = {
     id: string;
     album_id: string;
@@ -18,6 +38,17 @@ export type DiscoveryAlbum = {
     title: string;
     artist: string;
     cover_url: string;
+    via_username?: string | null;
+};
+
+export type DiscoveryResult = {
+    albums: DiscoveryAlbum[];
+    // 'bubble' : filtré par artistes inconnus + signal social (comptes suivis) — le libellé "Hors de ta bulle" tient
+    // 'discover' : repli sur la note pondérée par confiance, sans signal social — libellé neutre "À découvrir"
+    mode: 'bubble' | 'discover';
+    // false pour un anonyme ou un nouveau connecté sans aucun artiste dans son journal —
+    // sert à éviter de parler d'« artistes habituels » à quelqu'un qui n'en a pas.
+    hasTasteProfile: boolean;
 };
 
 export type ForYouAlbum = {
@@ -33,6 +64,7 @@ export type SimilarUser = {
     avatar_url: string | null;
     taste_match: number; // 0-100
     shared_albums_count: number;
+    shared_covers: string[];
 };
 
 export type ForYouTrack = {
@@ -50,7 +82,11 @@ export async function getTrendingThisWeek(limit = 10): Promise<TrendingAlbum[]> 
     const supabase = createSupabaseAnon();
     const now = Date.now();
     const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const fourteenDaysAgo = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString();
+    // Fenêtre de comparaison décalée d'1 jour (pas de 7) : on compare le classement
+    // glissant sur 7j d'aujourd'hui à celui d'hier, pour capter le mouvement
+    // quotidien à l'intérieur de la même semaine glissante plutôt qu'un saut semaine-à-semaine.
+    const oneDayAgo = new Date(now - 1 * 24 * 60 * 60 * 1000).toISOString();
+    const eightDaysAgo = new Date(now - 8 * 24 * 60 * 60 * 1000).toISOString();
 
     const [
         { data: currEntries }, { data: currSaves },
@@ -58,8 +94,8 @@ export async function getTrendingThisWeek(limit = 10): Promise<TrendingAlbum[]> 
     ] = await Promise.all([
         supabase.from('diary_entries').select('album_id, albums(id, title, cover_url, artists(name))').gte('created_at', sevenDaysAgo).eq('is_public', true).limit(200),
         supabase.from('saved_albums').select('album_id, albums(id, title, cover_url, artists(name))').gte('saved_at', sevenDaysAgo).limit(200),
-        supabase.from('diary_entries').select('album_id').gte('created_at', fourteenDaysAgo).lt('created_at', sevenDaysAgo).eq('is_public', true).limit(200),
-        supabase.from('saved_albums').select('album_id').gte('saved_at', fourteenDaysAgo).lt('saved_at', sevenDaysAgo).limit(200),
+        supabase.from('diary_entries').select('album_id').gte('created_at', eightDaysAgo).lt('created_at', oneDayAgo).eq('is_public', true).limit(200),
+        supabase.from('saved_albums').select('album_id').gte('saved_at', eightDaysAgo).lt('saved_at', oneDayAgo).limit(200),
     ]);
 
     const albumScores = new Map<string, { score: number; title: string; artist_name: string; cover_url: string | null }>();
@@ -110,14 +146,25 @@ export async function getForYouSuggestions(limit = 6): Promise<ForYouAlbum[]> {
 
     const supabase = await createSupabaseServer();
 
+    const { data: feedback } = await (supabase as any)
+        .from('recommendation_feedback')
+        .select('album_id')
+        .eq('user_id', user.id);
+    const dismissedIds = new Set((feedback || []).map((f: any) => f.album_id as string));
+
     // Priorité : recommandations pré-calculées par le pipeline ML
-    const { data: precomputed } = await supabase
+    let precomputedQuery = supabase
         .from('user_recommendations')
         .select('album_id, rank, albums(id, title, cover_url, artists(name))')
         .eq('user_id', user.id)
         .eq('method', 'cosine_cf')
         .order('rank')
-        .limit(limit);
+        .limit(limit + dismissedIds.size);
+
+    const { data: precomputedRaw } = await precomputedQuery;
+    const precomputed = (precomputedRaw || [])
+        .filter((row) => !dismissedIds.has(row.album_id))
+        .slice(0, limit);
 
     if (precomputed && precomputed.length > 0) {
         return precomputed.map((row) => {
@@ -181,7 +228,7 @@ export async function getForYouSuggestions(limit = 6): Promise<ForYouAlbum[]> {
     >();
 
     for (const entry of recommendations || []) {
-        if (!entry.album_id || myAllAlbumIds.has(entry.album_id)) continue;
+        if (!entry.album_id || myAllAlbumIds.has(entry.album_id) || dismissedIds.has(entry.album_id)) continue;
         const album = entry.albums as any;
         if (!album?.id) continue;
         const existing = scores.get(album.id);
@@ -201,42 +248,88 @@ export async function getForYouSuggestions(limit = 6): Promise<ForYouAlbum[]> {
 
     if (scores.size === 0) return [];
 
-    return [...scores.entries()]
-
+    const topScores = [...scores.entries()]
         .sort(
             (a, b) =>
                 b[1].neighborCount - a[1].neighborCount ||
                 b[1].total / b[1].neighborCount - a[1].total / a[1].neighborCount
         )
-        .slice(0, limit)
-        .map(([albumId, info]) => ({
-            album_id: albumId,
-            title: info.title,
-            artist: info.artist,
-            cover_url: info.cover,
-        }));
+        .slice(0, limit);
+
+    return topScores.map(([albumId, info]) => ({
+        album_id: albumId,
+        title: info.title,
+        artist: info.artist,
+        cover_url: info.cover,
+    }));
 }
 
 /**
- * Découverte — albums bien notés sur Waveform (avg >= 7, >= 2 auditeurs)
- * dont l'artiste est inconnu de l'utilisateur.
- * Pour un utilisateur non connecté : retourne les mieux notés sans filtre.
+ * Enregistre un signal négatif explicite sur une reco "Pour toi" ("Pas pour moi").
+ * Exclut l'album des recos futures (pipeline ML + fallback Jaccard).
  */
-export async function getDiscoveryAlbums(limit = 6): Promise<DiscoveryAlbum[]> {
-    // Récupérer les artist_ids connus de l'utilisateur (optionnel)
+export async function dismissRecommendation(albumId: string): Promise<{ success: boolean }> {
+    const user = await getAuthUser();
+    if (!user) return { success: false };
+
+    const supabase = await createSupabaseServer();
+    const { error } = await (supabase as any)
+        .from('recommendation_feedback')
+        .upsert({ user_id: user.id, album_id: albumId }, { onConflict: 'user_id,album_id' });
+
+    return { success: !error };
+}
+
+/**
+ * Enregistre un signal négatif explicite sur un titre recommandé ("Pas pour moi").
+ * Exclut le titre des recos futures (pipeline ML titres).
+ */
+export async function dismissTrackRecommendation(trackId: string): Promise<{ success: boolean }> {
+    const user = await getAuthUser();
+    if (!user) return { success: false };
+
+    const supabase = await createSupabaseServer();
+    const { error } = await (supabase as any)
+        .from('recommendation_feedback')
+        .upsert({ user_id: user.id, track_id: trackId }, { onConflict: 'user_id,track_id' });
+
+    return { success: !error };
+}
+
+/**
+ * Découverte — deux modes :
+ * - "bubble" : albums bien notés par des comptes suivis, dont l'artiste est inconnu
+ *   de l'utilisateur (vrai sens de "Hors de ta bulle").
+ * - "discover" : repli quand il n'y a pas de signal social exploitable (pas
+ *   d'abonnement, ou aucun résultat après filtrage) — note moyenne pondérée par
+ *   confiance (note × volume d'auditeurs), libellé neutre "À découvrir".
+ * Pour un utilisateur non connecté : mode "discover" sans filtre d'artiste connu.
+ */
+export async function getDiscoveryAlbums(limit = 6): Promise<DiscoveryResult> {
     let knownArtistIds = new Set<string>();
+    let followedIds: string[] = [];
+    let dismissedIds = new Set<string>();
+    let authedSupabase: Awaited<ReturnType<typeof createSupabaseServer>> | null = null;
+
     try {
         const user = await getAuthUser();
         if (user) {
-            const supabase = await createSupabaseServer();
-            const { data: myAlbums } = await supabase
-                .from('diary_entries')
-                .select('albums(artist_id)')
-                .eq('user_id', user.id);
+            authedSupabase = await createSupabaseServer();
+            const [{ data: myAlbums }, { data: following }, { data: feedback }] = await Promise.all([
+                authedSupabase.from('diary_entries').select('albums(artist_id)').eq('user_id', user.id),
+                authedSupabase.from('follows').select('followee_id').eq('follower_id', user.id),
+                (authedSupabase as any)
+                    .from('recommendation_feedback')
+                    .select('album_id')
+                    .eq('user_id', user.id)
+                    .not('album_id', 'is', null),
+            ]);
             for (const e of myAlbums || []) {
                 const album = e.albums as any;
                 if (album?.artist_id) knownArtistIds.add(album.artist_id);
             }
+            followedIds = (following || []).map((f) => f.followee_id).filter(Boolean) as string[];
+            dismissedIds = new Set((feedback || []).map((f: any) => f.album_id as string));
         }
     } catch {
         // Non authentifié — on continue sans filtre
@@ -244,16 +337,54 @@ export async function getDiscoveryAlbums(limit = 6): Promise<DiscoveryAlbum[]> {
 
     const supabase = createSupabaseAnon();
 
-    // Albums bien notés depuis la vue album_stats
+    // Cas 1 — signal social : albums bien notés par des comptes suivis
+    if (authedSupabase && followedIds.length > 0) {
+        const { data: followedEntries } = await authedSupabase
+            .from('diary_entries')
+            .select('user_id, album_id, rating, albums(id, title, cover_url, artist_id, artists(name))')
+            .in('user_id', followedIds)
+            .gte('rating', 7)
+            .order('rating', { ascending: false })
+            .limit(200);
+
+        const followerUserIds = [...new Set((followedEntries || []).map((e) => e.user_id).filter(Boolean))] as string[];
+        const { data: followerProfiles } = followerUserIds.length > 0
+            ? await supabase.from('profiles').select('id, username').in('id', followerUserIds)
+            : { data: [] };
+        const usernameMap = new Map((followerProfiles || []).map((p) => [p.id, p.username]));
+
+        const seenAlbumIds = new Set<string>();
+        const socialAlbums: DiscoveryAlbum[] = [];
+        for (const entry of followedEntries || []) {
+            const album = entry.albums as any;
+            if (!album?.id || seenAlbumIds.has(album.id)) continue;
+            if (knownArtistIds.has(album.artist_id)) continue;
+            if (dismissedIds.has(album.id)) continue;
+            seenAlbumIds.add(album.id);
+            socialAlbums.push({
+                album_id: album.id,
+                title: album.title || 'Unknown',
+                artist: album.artists?.name || 'Unknown',
+                cover_url: album.cover_url || '',
+                via_username: entry.user_id ? usernameMap.get(entry.user_id) ?? null : null,
+            });
+            if (socialAlbums.length >= limit) break;
+        }
+
+        if (socialAlbums.length > 0) {
+            return { albums: socialAlbums, mode: 'bubble', hasTasteProfile: knownArtistIds.size > 0 };
+        }
+    }
+
+    // Cas 2 — repli : note moyenne pondérée par confiance (note × volume d'auditeurs)
     const { data: stats } = await supabase
         .from('album_stats_mat')
         .select('album_id, avg_rating, listeners_count')
         .gte('avg_rating', 7)
         .gte('listeners_count', 2)
-        .order('avg_rating', { ascending: false })
-        .limit(100);
+        .limit(150);
 
-    if (!stats || stats.length === 0) return [];
+    if (!stats || stats.length === 0) return { albums: [], mode: 'discover', hasTasteProfile: knownArtistIds.size > 0 };
 
     const albumIds = stats.map((s) => s.album_id).filter(Boolean) as string[];
 
@@ -262,25 +393,27 @@ export async function getDiscoveryAlbums(limit = 6): Promise<DiscoveryAlbum[]> {
         .select('id, title, cover_url, artist_id, artists(name)')
         .in('id', albumIds);
 
-    if (!albums) return [];
+    if (!albums) return { albums: [], mode: 'discover', hasTasteProfile: knownArtistIds.size > 0 };
 
-    // Attacher les stats et filtrer les artistes déjà connus
     const statsMap = new Map(stats.map((s) => [s.album_id, s]));
 
-    return albums
-        .filter((a) => !knownArtistIds.has(a.artist_id))
-        .sort((a, b) => {
-            const ra = statsMap.get(a.id)?.avg_rating ?? 0;
-            const rb = statsMap.get(b.id)?.avg_rating ?? 0;
-            return rb - ra;
+    const ranked = albums
+        .filter((a) => !knownArtistIds.has(a.artist_id) && !dismissedIds.has(a.id))
+        .map((a) => {
+            const s = statsMap.get(a.id);
+            const confidence = Math.log((s?.listeners_count ?? 1) + 1);
+            return { album: a, score: (s?.avg_rating ?? 0) * confidence };
         })
+        .sort((a, b) => b.score - a.score)
         .slice(0, limit)
-        .map((a) => ({
-            album_id: a.id,
-            title: a.title,
-            artist: (a.artists as any)?.name || 'Unknown',
-            cover_url: a.cover_url || '',
+        .map(({ album }) => ({
+            album_id: album.id,
+            title: album.title,
+            artist: (album.artists as any)?.name || 'Unknown',
+            cover_url: album.cover_url || '',
         }));
+
+    return { albums: ranked, mode: 'discover', hasTasteProfile: knownArtistIds.size > 0 };
 }
 
 /**
@@ -334,23 +467,35 @@ export async function getSimilarUsers(limit = 4): Promise<SimilarUser[]> {
     ]);
 
     const myAlbumSet = new Set((myAlbums || []).map((e) => e.album_id).filter(Boolean));
-    const sharedCountMap = new Map<string, number>();
+    const sharedAlbumsMap = new Map<string, string[]>();
     for (const entry of theirAlbums || []) {
         if (!entry.album_id || !entry.user_id) continue;
         if (myAlbumSet.has(entry.album_id)) {
-            sharedCountMap.set(entry.user_id, (sharedCountMap.get(entry.user_id) ?? 0) + 1);
+            const existing = sharedAlbumsMap.get(entry.user_id) ?? [];
+            existing.push(entry.album_id);
+            sharedAlbumsMap.set(entry.user_id, existing);
         }
     }
 
+    const allSharedAlbumIds = [...new Set([...sharedAlbumsMap.values()].flat())];
+    const { data: sharedAlbumCovers } = allSharedAlbumIds.length > 0
+        ? await supabase.from('albums').select('id, cover_url').in('id', allSharedAlbumIds)
+        : { data: [] };
+    const coverMap = new Map((sharedAlbumCovers || []).map((a) => [a.id, a.cover_url]));
+
     return profiles
         .filter((p) => p.username)
-        .map((p) => ({
-            user_id: p.id,
-            username: p.username!,
-            avatar_url: p.avatar_url ?? null,
-            taste_match: Math.round((scoreMap.get(p.id) ?? 0) * 100),
-            shared_albums_count: sharedCountMap.get(p.id) ?? 0,
-        }))
+        .map((p) => {
+            const sharedAlbumIds = sharedAlbumsMap.get(p.id) ?? [];
+            return {
+                user_id: p.id,
+                username: p.username!,
+                avatar_url: p.avatar_url ?? null,
+                taste_match: Math.round((scoreMap.get(p.id) ?? 0) * 100),
+                shared_albums_count: sharedAlbumIds.length,
+                shared_covers: sharedAlbumIds.slice(0, 3).map((id) => coverMap.get(id)).filter(Boolean) as string[],
+            };
+        })
         .sort((a, b) => b.taste_match - a.taste_match);
 }
 
@@ -363,13 +508,22 @@ export async function getForYouTracks(limit = 6): Promise<ForYouTrack[]> {
 
     const supabase = await createSupabaseServer();
 
-    const { data } = await (supabase as any)
+    const { data: feedback } = await (supabase as any)
+        .from('recommendation_feedback')
+        .select('track_id')
+        .eq('user_id', user.id)
+        .not('track_id', 'is', null);
+    const dismissedTrackIds = new Set((feedback || []).map((f: any) => f.track_id as string));
+
+    const { data: rawData } = await (supabase as any)
         .from('user_track_recommendations')
         .select('track_id, rank, tracks(id, title, album_id, albums(id, title, cover_url, artists(name)))')
         .eq('user_id', user.id)
         .eq('method', 'cosine_cf')
         .order('rank')
-        .limit(limit);
+        .limit(limit + dismissedTrackIds.size);
+
+    const data = (rawData || []).filter((row: any) => !dismissedTrackIds.has(row.track_id)).slice(0, limit);
 
     if (!data || data.length === 0) return [];
 

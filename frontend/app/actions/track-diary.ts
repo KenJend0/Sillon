@@ -580,17 +580,31 @@ export type TrackWithStats = {
   cover_url: string | null;
   avg_rating: number | null;
   activity_count: number;
+  delta?: number | null; // positif = montée, négatif = descente, null = nouveau
 };
 
 export async function getTrendingTracks(limit = 10): Promise<TrackWithStats[]> {
   const supabase = await createSupabaseServer();
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const now = Date.now();
+  const since = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+  // Fenêtre de comparaison décalée d'1 jour (pas de 7) — voir getTrendingThisWeek
+  // dans app/actions/explore.ts pour le même raisonnement côté albums.
+  const oneDayAgo = new Date(now - 1 * 24 * 60 * 60 * 1000).toISOString();
+  const eightDaysAgo = new Date(now - 8 * 24 * 60 * 60 * 1000).toISOString();
 
-  const { data, error } = await (supabase as any)
-    .from('track_diary_entries')
-    .select('track_id, rating')
-    .gte('created_at', since)
-    .eq('is_public', true);
+  const [{ data, error }, { data: prevData }] = await Promise.all([
+    (supabase as any)
+      .from('track_diary_entries')
+      .select('track_id, rating')
+      .gte('created_at', since)
+      .eq('is_public', true),
+    (supabase as any)
+      .from('track_diary_entries')
+      .select('track_id')
+      .gte('created_at', eightDaysAgo)
+      .lt('created_at', oneDayAgo)
+      .eq('is_public', true),
+  ]);
 
   if (error || !data || data.length === 0) return [];
 
@@ -605,6 +619,14 @@ export async function getTrendingTracks(limit = 10): Promise<TrackWithStats[]> {
     }
     map.set(row.track_id, existing);
   }
+
+  const prevCounts = new Map<string, number>();
+  for (const row of prevData || []) {
+    prevCounts.set(row.track_id, (prevCounts.get(row.track_id) ?? 0) + 1);
+  }
+  const prevRankMap = new Map(
+    [...prevCounts.entries()].sort((a, b) => b[1] - a[1]).map(([id], i) => [id, i + 1])
+  );
 
   const sorted = [...map.entries()]
     .sort((a, b) => b[1].count - a[1].count)
@@ -621,11 +643,13 @@ export async function getTrendingTracks(limit = 10): Promise<TrackWithStats[]> {
   const trackMap = new Map((tracks || []).map((t: any) => [t.id, t]));
 
   return sorted
-    .map(([trackId, stats]) => {
+    .map(([trackId, stats], index) => {
       const track = trackMap.get(trackId) as any;
       if (!track) return null;
       const album = track.albums as any;
       const artist = album?.artists as any;
+      const currentRank = index + 1;
+      const prevRank = prevRankMap.get(trackId);
       return {
         track_id: trackId,
         track_title: track.title || 'Unknown',
@@ -635,6 +659,7 @@ export async function getTrendingTracks(limit = 10): Promise<TrackWithStats[]> {
         album_title: album?.title || 'Unknown',
         cover_url: album?.cover_url || null,
         avg_rating: stats.ratingCount > 0 ? Math.round((stats.totalRating / stats.ratingCount) * 10) / 10 : null,
+        delta: prevRank !== undefined ? prevRank - currentRank : null,
         activity_count: stats.count,
       };
     })

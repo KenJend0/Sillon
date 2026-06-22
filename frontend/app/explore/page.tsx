@@ -1,45 +1,50 @@
 export const dynamic = 'force-dynamic';
 
-import { getAuthUser } from "@/lib/supabase/server";
-import { getTrendingThisWeek, getForYouSuggestions, getDiscoveryAlbums, getSimilarUsers, getForYouTracks } from "@/app/actions/explore";
+import Link from "next/link";
+import { getTrendingThisWeek, getForYouSuggestions, getDiscoveryAlbums, getSimilarUsers, getForYouTracks, getProfileTier } from "@/app/actions/explore";
 import { getPublicLists, type UserList } from "@/app/actions/lists";
 import { getTrendingTracks } from "@/app/actions/track-diary";
+import { getCuratorPick, type CuratorPick } from "@/app/actions/curator";
 import StickySearchBar from "@/components/explore/StickySearchBar";
 import PourToiSection from "@/components/PourToiSection";
+import OnboardingCTASection from "@/components/OnboardingCTASection";
 import DiscoverySection from "@/components/DiscoverySection";
 import SimilarUsersSection from "@/components/SimilarUsersSection";
 import TrendingSection from "@/components/TrendingSection";
+import CuratorPickSection from "@/components/CuratorPickSection";
 import ListCard from "@/components/ListCard";
-import { type TrendingAlbum, type ForYouAlbum, type DiscoveryAlbum, type SimilarUser, type ForYouTrack } from "@/app/actions/explore";
+import { type TrendingAlbum, type ForYouAlbum, type DiscoveryResult, type SimilarUser, type ForYouTrack } from "@/app/actions/explore";
 import { type TrackWithStats } from "@/app/actions/track-diary";
 
 export default async function ExplorePage() {
-    const authUser = await getAuthUser();
-    const isLoggedIn = !!authUser;
+    const tier = await getProfileTier();
+    const isEstablished = tier === 'established';
 
     let trending: TrendingAlbum[] = [];
     let forYou: ForYouAlbum[] = [];
     let forYouTracks: ForYouTrack[] = [];
-    let discovery: DiscoveryAlbum[] = [];
+    let discovery: DiscoveryResult = { albums: [], mode: 'discover', hasTasteProfile: false };
     let similarUsers: SimilarUser[] = [];
     let trendingTracks: TrackWithStats[] = [];
     let communityLists: UserList[] = [];
+    let curatorPick: CuratorPick | null = null;
 
     try {
-        [trending, forYou, forYouTracks, discovery, similarUsers, trendingTracks, communityLists] = await Promise.all([
+        [trending, forYou, forYouTracks, discovery, similarUsers, trendingTracks, communityLists, curatorPick] = await Promise.all([
             getTrendingThisWeek(10),
-            isLoggedIn ? getForYouSuggestions(6) : Promise.resolve([]),
-            isLoggedIn ? getForYouTracks(6) : Promise.resolve([]),
-            isLoggedIn ? getDiscoveryAlbums(10) : Promise.resolve([]),
-            isLoggedIn ? getSimilarUsers(4) : Promise.resolve([]),
+            isEstablished ? getForYouSuggestions(4) : Promise.resolve([]),
+            isEstablished ? getForYouTracks(4) : Promise.resolve([]),
+            getDiscoveryAlbums(10),
+            isEstablished ? getSimilarUsers(4) : Promise.resolve([]),
             getTrendingTracks(10),
             getPublicLists(6),
+            getCuratorPick(),
         ]);
     } catch (err) {
         console.error("Explore data fetch failed:", err);
     }
 
-    const isEmpty = trending.length === 0 && trendingTracks.length === 0 && communityLists.length === 0;
+    const isEmpty = trending.length === 0 && trendingTracks.length === 0 && communityLists.length === 0 && !curatorPick;
 
     return (
         <div>
@@ -71,25 +76,37 @@ export default async function ExplorePage() {
                     </div>
                 ) : (
                     <div className="space-y-12">
-                        {/* Pour toi — recommandations personnalisées (connecté seulement) */}
-                        {isLoggedIn && <PourToiSection albums={forYou} tracks={forYouTracks} />}
+                        {/* Pour toi (établi) ou invitation à noter ses premiers albums (nouveau) */}
+                        {tier === 'established' && <PourToiSection albums={forYou} tracks={forYouTracks} />}
+                        {tier === 'new' && <OnboardingCTASection />}
+
+                        {/* Sélection du créateur — contenu éditorial permanent, indépendant du volume/ML */}
+                        {curatorPick && <CuratorPickSection pick={curatorPick} />}
 
                         {/* Tendances — albums + titres populaires cette semaine */}
                         <TrendingSection albums={trending} tracks={trendingTracks} />
 
-                        {/* Hors de ta bulle — artistes inconnus bien notés (connecté seulement) */}
-                        {isLoggedIn && <DiscoverySection albums={discovery} />}
+                        {/* Hors de ta bulle / À découvrir — selon signal social disponible */}
+                        <DiscoverySection result={discovery} />
 
                         {/* Listes de la communauté */}
                         {communityLists.length > 0 && (
                             <section>
-                                <div className="mb-5">
-                                    <h2 className="text-h2 text-text-primary">
-                                        Listes <em className="italic text-accent-deep">populaires</em>
-                                    </h2>
-                                    <p className="text-sm text-text-secondary mt-1">
-                                        Sélections musicales partagées par la communauté.
-                                    </p>
+                                <div className="flex items-start justify-between mb-5">
+                                    <div>
+                                        <h2 className="text-h2 text-text-primary">
+                                            Listes <em className="italic text-accent-deep">populaires</em>
+                                        </h2>
+                                        <p className="text-sm text-text-secondary mt-1">
+                                            Sélections musicales partagées par la communauté.
+                                        </p>
+                                    </div>
+                                    <Link
+                                        href="/lists"
+                                        className="font-display italic text-sm text-accent border-b border-accent pb-px shrink-0 hover:text-accent-deep hover:border-accent-deep transition-colors mt-1"
+                                    >
+                                        voir tout
+                                    </Link>
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                                     {communityLists.map((list) => (
@@ -103,8 +120,8 @@ export default async function ExplorePage() {
                             </section>
                         )}
 
-                        {/* Goûts similaires (connecté seulement) */}
-                        {isLoggedIn && <SimilarUsersSection users={similarUsers} />}
+                        {/* Goûts similaires — n'a de sens qu'avec un historique établi, pas de fallback ici */}
+                        {tier === 'established' && <SimilarUsersSection users={similarUsers} />}
                     </div>
                 )}
             </main>

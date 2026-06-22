@@ -2,10 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { type ForYouAlbum, type ForYouTrack } from "@/app/actions/explore";
+import { type ForYouAlbum, type ForYouTrack, dismissRecommendation, dismissTrackRecommendation } from "@/app/actions/explore";
 import { CoverImage } from "@/components/CoverImage";
 
-function AlbumCard({ album }: { album: ForYouAlbum }) {
+function AlbumCard({ album, onDismiss }: { album: ForYouAlbum; onDismiss: (albumId: string) => void }) {
+    function handleDismiss(e: React.MouseEvent) {
+        e.preventDefault();
+        e.stopPropagation();
+        onDismiss(album.album_id);
+        dismissRecommendation(album.album_id);
+    }
+
     return (
         <Link href={`/albums/${album.album_id}`} className="block group">
             <div className="rounded-[10px] overflow-hidden bg-background-secondary mb-2 aspect-square relative">
@@ -20,6 +27,13 @@ function AlbumCard({ album }: { album: ForYouAlbum }) {
                 ) : (
                     <div className="w-full h-full bg-background-tertiary" />
                 )}
+                <button
+                    onClick={handleDismiss}
+                    title="Pas pour moi"
+                    className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full bg-text-primary/45 text-background flex items-center justify-center text-sm leading-none hover:bg-text-primary/70 transition-colors duration-150"
+                >
+                    ×
+                </button>
             </div>
             <p className="font-display font-normal text-sm text-text-warm line-clamp-2 leading-snug group-hover:text-accent transition-colors duration-150">
                 {album.title}
@@ -31,7 +45,14 @@ function AlbumCard({ album }: { album: ForYouAlbum }) {
     );
 }
 
-function TrackCard({ track }: { track: ForYouTrack }) {
+function TrackCard({ track, onDismiss }: { track: ForYouTrack; onDismiss: (trackId: string) => void }) {
+    function handleDismiss(e: React.MouseEvent) {
+        e.preventDefault();
+        e.stopPropagation();
+        onDismiss(track.track_id);
+        dismissTrackRecommendation(track.track_id);
+    }
+
     return (
         <Link href={`/tracks/${track.track_id}`} className="block group">
             <div className="rounded-[10px] overflow-hidden bg-background-secondary mb-2 aspect-square relative">
@@ -52,6 +73,13 @@ function TrackCard({ track }: { track: ForYouTrack }) {
                         <span className="text-text-disabled text-2xl">♪</span>
                     </div>
                 )}
+                <button
+                    onClick={handleDismiss}
+                    title="Pas pour moi"
+                    className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full bg-text-primary/45 text-background flex items-center justify-center text-sm leading-none hover:bg-text-primary/70 transition-colors duration-150"
+                >
+                    ×
+                </button>
             </div>
             <p className="font-display font-normal text-sm text-text-warm line-clamp-2 leading-snug group-hover:text-accent transition-colors duration-150">
                 {track.track_title}
@@ -70,8 +98,22 @@ type Props = {
 
 export default function PourToiSection({ albums, tracks }: Props) {
     const [tab, setTab] = useState<"albums" | "titres">("albums");
+    const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+    const [dismissedTrackIds, setDismissedTrackIds] = useState<Set<string>>(new Set());
 
-    if (albums.length === 0 && tracks.length === 0) return null;
+    const visibleAlbums = albums.filter((a) => !dismissedIds.has(a.album_id)).slice(0, 3);
+    const allDismissed = albums.length > 0 && visibleAlbums.length === 0;
+
+    const visibleTracks = tracks.filter((t) => !dismissedTrackIds.has(t.track_id)).slice(0, 3);
+    const allTracksDismissed = tracks.length > 0 && visibleTracks.length === 0;
+
+    function handleDismiss(albumId: string) {
+        setDismissedIds((prev) => new Set(prev).add(albumId));
+    }
+
+    function handleDismissTrack(trackId: string) {
+        setDismissedTrackIds((prev) => new Set(prev).add(trackId));
+    }
 
     return (
         <section>
@@ -103,24 +145,28 @@ export default function PourToiSection({ albums, tracks }: Props) {
             </div>
 
             {tab === "albums" && (
-                albums.length > 0 ? (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 lg:gap-4">
-                        {albums.slice(0, 6).map((album) => (
-                            <AlbumCard key={album.album_id} album={album} />
+                visibleAlbums.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-3 lg:gap-4">
+                        {visibleAlbums.map((album) => (
+                            <AlbumCard key={album.album_id} album={album} onDismiss={handleDismiss} />
                         ))}
                     </div>
+                ) : allDismissed ? (
+                    <p className="text-text-tertiary text-meta">Tu as écarté toutes les suggestions du jour. Reviens demain pour une nouvelle sélection.</p>
                 ) : (
                     <p className="text-text-tertiary text-meta">Pas encore de recommandations.</p>
                 )
             )}
 
             {tab === "titres" && (
-                tracks.length > 0 ? (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 lg:gap-4">
-                        {tracks.slice(0, 6).map((track) => (
-                            <TrackCard key={track.track_id} track={track} />
+                visibleTracks.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-3 lg:gap-4">
+                        {visibleTracks.map((track) => (
+                            <TrackCard key={track.track_id} track={track} onDismiss={handleDismissTrack} />
                         ))}
                     </div>
+                ) : allTracksDismissed ? (
+                    <p className="text-text-tertiary text-meta">Tu as écarté toutes les suggestions du jour. Reviens demain pour une nouvelle sélection.</p>
                 ) : (
                     <p className="text-text-tertiary text-meta">Pas encore de recommandations.</p>
                 )

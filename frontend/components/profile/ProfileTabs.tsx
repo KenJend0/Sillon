@@ -16,6 +16,7 @@ type Props = {
   userId: string;
   diaryEntries: DiaryEntryUI[];
   userLists: UserList[];
+  savedLists?: UserList[];
   trackEntries?: TrackDiaryEntryUI[];
   unifiedReviews?: UnifiedReview[];
 };
@@ -28,7 +29,7 @@ function resolveInitialTab(tab: string | null, isMe: boolean): TabId {
   return "diary";
 }
 
-export default function ProfileTabs({ isMe, userId, diaryEntries, userLists, trackEntries = [], unifiedReviews = [] }: Props) {
+export default function ProfileTabs({ isMe, userId, diaryEntries, userLists, savedLists = [], trackEntries = [], unifiedReviews = [] }: Props) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const initialTab = resolveInitialTab(searchParams.get("tab"), isMe);
@@ -87,7 +88,7 @@ export default function ProfileTabs({ isMe, userId, diaryEntries, userLists, tra
         {activeTab === "reviews" && (
           <ReviewsList reviews={unifiedReviews} />
         )}
-        {activeTab === "lists" && <ListsTab lists={userLists} isOwner={isMe} />}
+        {activeTab === "lists" && <ListsTab lists={userLists} savedLists={savedLists} isOwner={isMe} userId={userId} />}
       </div>
     </div>
   );

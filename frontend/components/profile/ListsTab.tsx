@@ -9,8 +9,12 @@ import { showToast } from "@/components/Toast";
 
 type Props = {
     lists: UserList[];
+    savedLists?: UserList[];
     isOwner?: boolean;
+    userId?: string;
 };
+
+type ListFilter = "mine" | "saved" | "all";
 
 function CreateListForm({ onCreated }: { onCreated: () => void }) {
     const router = useRouter();
@@ -225,16 +229,26 @@ function ListCardWithMenu({ list }: { list: UserList }) {
     );
 }
 
-export default function ListsTab({ lists, isOwner = false }: Props) {
+export default function ListsTab({ lists, savedLists = [], isOwner = false, userId }: Props) {
     const [creating, setCreating] = useState(false);
+    const [filter, setFilter] = useState<ListFilter>("all");
 
-    const isEmpty = lists.length === 0;
+    const showFilter = isOwner && savedLists.length > 0;
+    const displayed = !showFilter
+        ? lists
+        : filter === "mine"
+            ? lists
+            : filter === "saved"
+                ? savedLists
+                : [...lists, ...savedLists];
+
+    const isEmpty = displayed.length === 0;
 
     return (
         <div>
-            {isOwner && (
-                <div className="mb-5">
-                    {creating ? (
+            <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+                {isOwner ? (
+                    creating ? (
                         <CreateListForm onCreated={() => setCreating(false)} />
                     ) : (
                         <button
@@ -246,16 +260,42 @@ export default function ListsTab({ lists, isOwner = false }: Props) {
                             </svg>
                             Nouvelle liste
                         </button>
-                    )}
-                </div>
-            )}
+                    )
+                ) : <span />}
+
+                {showFilter && !creating && (
+                    <div className="flex gap-1.5">
+                        {([
+                            ["all", "Tout"],
+                            ["mine", "Mes listes"],
+                            ["saved", "Sauvegardées"],
+                        ] as const).map(([id, label]) => (
+                            <button
+                                key={id}
+                                onClick={() => setFilter(id)}
+                                className={`px-3 py-1 rounded-full text-label font-medium transition-colors ${
+                                    filter === id
+                                        ? "bg-text-primary text-background"
+                                        : "bg-background-secondary text-text-secondary hover:text-text-primary"
+                                }`}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             {isEmpty && !creating ? (
                 <div className="py-8 text-center">
                     <p className="text-[14px] text-text-secondary mb-1">
-                        {isOwner ? "Tu n'as pas encore de listes." : "Aucune liste publique."}
+                        {!isOwner
+                            ? "Aucune liste publique."
+                            : filter === "saved"
+                                ? "Aucune liste sauvegardée."
+                                : "Tu n'as pas encore de listes."}
                     </p>
-                    {isOwner && (
+                    {isOwner && filter !== "saved" && (
                         <p className="text-[13px] text-text-tertiary">
                             Crée une liste ou ajoute un album depuis sa page.
                         </p>
@@ -263,8 +303,8 @@ export default function ListsTab({ lists, isOwner = false }: Props) {
                 </div>
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-5">
-                    {lists.map((list) =>
-                        isOwner
+                    {displayed.map((list) =>
+                        isOwner && list.user_id === userId
                             ? <ListCardWithMenu key={list.id} list={list} />
                             : <ListCard key={list.id} list={list} href={`/lists/${list.id}`} />
                     )}

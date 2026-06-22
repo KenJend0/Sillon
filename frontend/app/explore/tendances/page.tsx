@@ -13,8 +13,8 @@ export default async function TendancesPage() {
 
     try {
         [albums, tracks] = await Promise.all([
-            getTrendingThisWeek(10),
-            getTrendingTracks(10),
+            getTrendingThisWeek(20),
+            getTrendingTracks(20),
         ]);
     } catch (err) {
         console.error("Tendances fetch failed:", err);

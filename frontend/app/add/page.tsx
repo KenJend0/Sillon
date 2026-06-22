@@ -32,7 +32,7 @@ export default async function AddPage() {
             defaultListItems={defaultListItems}
             defaultListTracks={defaultListTracks}
             initialSuggestions={suggestions}
-            initialDiscovery={discovery}
+            initialDiscovery={discovery.albums}
         />
     );
 }
