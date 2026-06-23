@@ -86,7 +86,7 @@ export default function FeedCardReviewCreated({
   ) : (
     <>
       <ActorLink username={event.actor.username} />
-      <span>{' a noté'}</span>
+      <span>{' a noté un album'}</span>
     </>
   );
 
