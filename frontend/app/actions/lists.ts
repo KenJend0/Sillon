@@ -433,25 +433,33 @@ export async function getDefaultListTracks(limit = 8, listId?: string): Promise<
     const targetListId = await resolveListId(user.id, listId, supabase);
     if (!targetListId) return [];
 
-    const { data: items } = await supabase
-        .from('list_items')
-        .select('id, track_id, added_at, tracks(id, title, album_id, artist_id, albums(id, title, cover_url), artists(name))')
-        .eq('list_id', targetListId)
-        .not('track_id', 'is', null)
-        .order('added_at', { ascending: false })
-        .limit(limit);
+    const [{ data: items }, { data: ratedTracks }] = await Promise.all([
+        supabase
+            .from('list_items')
+            .select('id, track_id, added_at, tracks(id, title, album_id, artist_id, albums(id, title, cover_url), artists(name))')
+            .eq('list_id', targetListId)
+            .not('track_id', 'is', null)
+            .order('added_at', { ascending: false })
+            .limit(limit * 4),
+        supabase.from('track_diary_entries').select('track_id').eq('user_id', user.id),
+    ]);
 
-    return (items || []).map((item: any) => ({
-        id: item.id,
-        track_id: item.track_id,
-        track_title: item.tracks?.title || 'Unknown',
-        artist_name: item.tracks?.artists?.name || 'Unknown',
-        cover_url: item.tracks?.albums?.cover_url ?? null,
-        album_id: item.tracks?.album_id || '',
-        album_title: item.tracks?.albums?.title || '',
-        artist_id: item.tracks?.artist_id || '',
-        added_at: item.added_at,
-    }));
+    const ratedTrackIds = new Set((ratedTracks || []).map((r: any) => r.track_id));
+
+    return (items || [])
+        .filter((item: any) => !ratedTrackIds.has(item.track_id))
+        .slice(0, limit)
+        .map((item: any) => ({
+            id: item.id,
+            track_id: item.track_id,
+            track_title: item.tracks?.title || 'Unknown',
+            artist_name: item.tracks?.artists?.name || 'Unknown',
+            cover_url: item.tracks?.albums?.cover_url ?? null,
+            album_id: item.tracks?.album_id || '',
+            album_title: item.tracks?.albums?.title || '',
+            artist_id: item.tracks?.artist_id || '',
+            added_at: item.added_at,
+        }));
 }
 
 /**
@@ -466,22 +474,30 @@ export async function getDefaultListAlbums(limit = 8, listId?: string): Promise<
     const targetListId = await resolveListId(user.id, listId, supabase);
     if (!targetListId) return [];
 
-    const { data: items } = await supabase
-        .from('list_items')
-        .select('id, album_id, added_at, albums(id, title, cover_url, artists(name))')
-        .eq('list_id', targetListId)
-        .not('album_id', 'is', null)
-        .order('added_at', { ascending: false })
-        .limit(limit);
+    const [{ data: items }, { data: ratedAlbums }] = await Promise.all([
+        supabase
+            .from('list_items')
+            .select('id, album_id, added_at, albums(id, title, cover_url, artists(name))')
+            .eq('list_id', targetListId)
+            .not('album_id', 'is', null)
+            .order('added_at', { ascending: false })
+            .limit(limit * 4),
+        supabase.from('diary_entries').select('album_id').eq('user_id', user.id),
+    ]);
 
-    return (items || []).map((item: any) => ({
-        id: item.id,
-        album_id: item.album_id,
-        album_title: item.albums?.title || 'Unknown',
-        artist_name: item.albums?.artists?.name || 'Unknown',
-        cover_url: item.albums?.cover_url ?? null,
-        added_at: item.added_at,
-    }));
+    const ratedAlbumIds = new Set((ratedAlbums || []).map((r: any) => r.album_id));
+
+    return (items || [])
+        .filter((item: any) => !ratedAlbumIds.has(item.album_id))
+        .slice(0, limit)
+        .map((item: any) => ({
+            id: item.id,
+            album_id: item.album_id,
+            album_title: item.albums?.title || 'Unknown',
+            artist_name: item.albums?.artists?.name || 'Unknown',
+            cover_url: item.albums?.cover_url ?? null,
+            added_at: item.added_at,
+        }));
 }
 
 /**
