@@ -5,9 +5,14 @@ import { useState } from "react";
 type StarRatingProps = {
     value: number | null;
     onChange: (rating: number) => void;
+    // Réduit la taille/le padding de chaque étoile — nécessaire quand la
+    // rangée doit partager sa largeur avec un bouton voisin (ex. la croix
+    // d'annulation sur les cartes mobiles de /add) : à taille normale, les
+    // 10 étoiles dépassent la largeur restante et débordent sous ce bouton.
+    compact?: boolean;
 };
 
-export default function StarRating({ value, onChange }: StarRatingProps) {
+export default function StarRating({ value, onChange, compact }: StarRatingProps) {
     const [hoverValue, setHoverValue] = useState<number | null>(null);
     const currentValue = hoverValue ?? value ?? 0;
 
@@ -24,7 +29,7 @@ export default function StarRating({ value, onChange }: StarRatingProps) {
                         onClick={() => onChange(starValue)}
                         onMouseEnter={() => setHoverValue(starValue)}
                         onMouseLeave={() => setHoverValue(null)}
-                        className="flex items-center justify-center transition-colors duration-150 p-1"
+                        className={`flex items-center justify-center transition-colors duration-150 ${compact ? "p-0.5" : "p-1"}`}
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -32,7 +37,7 @@ export default function StarRating({ value, onChange }: StarRatingProps) {
                             fill={isFilled ? "currentColor" : "none"}
                             stroke={isFilled ? "none" : "currentColor"}
                             strokeWidth={isFilled ? 0 : "1.5"}
-                            className={`w-6 h-6 ${
+                            className={`${compact ? "w-5 h-5" : "w-6 h-6"} ${
                                 isFilled ? "text-text-primary" : "text-[#D8D3CB]"
                             }`}
                         >

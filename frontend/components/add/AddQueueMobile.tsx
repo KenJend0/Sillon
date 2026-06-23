@@ -67,7 +67,6 @@ export default function AddQueueMobile({ initialQueue }: Props) {
     const [rating, setRating] = useState<number | null>(null);
     const [comment, setComment] = useState("");
     const [panelMode, setPanelMode] = useState<PanelMode>("none");
-    const [isSaving, setIsSaving] = useState(false);
     const [ratedCovers, setRatedCovers] = useState<RatedCover[]>([]);
     const [transitioning, setTransitioning] = useState(false);
 
@@ -115,37 +114,37 @@ export default function AddQueueMobile({ initialQueue }: Props) {
         closePanel();
     };
 
-    const saveCurrent = async (ratingValue: number) => {
-        if (!current) return false;
-        setIsSaving(true);
-        try {
-            const result = current.kind === "album"
-                ? await upsertDiaryEntry({
-                    albumId: current.id,
-                    listenedAt: today,
-                    rating: ratingValue,
-                    reviewBody: comment.trim() || undefined,
-                    isPublic: true,
-                })
-                : await upsertTrackDiaryEntry({
-                    trackId: current.id,
-                    albumId: current.albumId,
-                    artistId: current.artistId,
-                    listenedAt: today,
-                    rating: ratingValue,
-                    reviewBody: comment.trim() || undefined,
-                    isPublic: true,
-                });
+    // Envoi en arrière-plan — ne bloque jamais la navigation dans la file.
+    // L'utilisateur a déjà vu la carte passer à la suivante au moment où ça
+    // résout ; une erreur ne peut donc être signalée qu'après coup via toast.
+    const saveInBackground = (item: AddQueueItem, ratingValue: number, commentValue: string) => {
+        const promise = item.kind === "album"
+            ? upsertDiaryEntry({
+                albumId: item.id,
+                listenedAt: today,
+                rating: ratingValue,
+                reviewBody: commentValue.trim() || undefined,
+                isPublic: true,
+            })
+            : upsertTrackDiaryEntry({
+                trackId: item.id,
+                albumId: item.albumId,
+                artistId: item.artistId,
+                listenedAt: today,
+                rating: ratingValue,
+                reviewBody: commentValue.trim() || undefined,
+                isPublic: true,
+            });
 
-            if (result.success) return true;
-            showToast("error" in result && result.error ? result.error : "Erreur lors de l'enregistrement", "error");
-            return false;
-        } catch {
-            showToast("Erreur lors de l'enregistrement", "error");
-            return false;
-        } finally {
-            setIsSaving(false);
-        }
+        promise
+            .then((result) => {
+                if (!result.success) {
+                    showToast("error" in result && result.error ? result.error : `Erreur lors de l'enregistrement de « ${item.title} »`, "error");
+                }
+            })
+            .catch(() => {
+                showToast(`Erreur lors de l'enregistrement de « ${item.title} »`, "error");
+            });
     };
 
     // Noter ne fait qu'une mise à jour locale — rien n'est envoyé au serveur
@@ -159,11 +158,10 @@ export default function AddQueueMobile({ initialQueue }: Props) {
 
     const clearRating = () => setRating(null);
 
-    const handleNext = async () => {
-        if (!current || isSaving) return;
+    const handleNext = () => {
+        if (!current) return;
         if (rating !== null) {
-            const ok = await saveCurrent(rating);
-            if (!ok) return;
+            saveInBackground(current, rating, comment);
             setRatedCovers((prev) => [...prev, { key: `${current.kind}-${current.id}`, coverUrl: current.coverUrl, title: current.title }]);
         }
         advance();
@@ -191,19 +189,8 @@ export default function AddQueueMobile({ initialQueue }: Props) {
         }
     };
 
-    // Le focus est planifié ici, dans le handler de clic d'origine, plutôt que
-    // dans le onAnimationComplete de Framer Motion : la plupart des navigateurs
-    // mobiles n'ouvrent le clavier virtuel que si .focus() est appelé dans la
-    // continuité d'un vrai geste utilisateur — un callback d'animation ne
-    // compte pas comme tel, même s'il déclenche bien le focus DOM.
     const toggleComment = () => {
-        setPanelMode((p) => {
-            const next = p === "comment" ? "none" : "comment";
-            if (next === "comment") {
-                window.setTimeout(() => commentTextareaRef.current?.focus(), LAYOUT_TRANSITION.duration * 1000 + 30);
-            }
-            return next;
-        });
+        setPanelMode((p) => (p === "comment" ? "none" : "comment"));
     };
 
     // Recherche compacte intégrée — la carte ne se réduit que lorsque des
@@ -610,6 +597,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
                                         transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1], layout: LAYOUT_TRANSITION }}
                                         drag={panelMode === "none" && !transitioning ? "x" : false}
                                         dragElastic={0.6}
+                                        dragSnapToOrigin
                                         onDragEnd={handleDragEnd}
                                         onLayoutAnimationStart={() => setTransitioning(true)}
                                         onLayoutAnimationComplete={() => setTransitioning(false)}
@@ -624,7 +612,13 @@ export default function AddQueueMobile({ initialQueue }: Props) {
                                             exit={{ opacity: 0 }}
                                             transition={SOFT_TRANSITION}
                                             onAnimationStart={() => setTransitioning(true)}
-                                            onAnimationComplete={() => setTransitioning(false)}
+                                            onAnimationComplete={() => {
+                                                setTransitioning(false);
+                                                // Focus une fois la transition d'entrée réellement terminée
+                                                // (pas une durée devinée à l'avance) — la carte ne bouge plus
+                                                // quand le clavier pousse la mise en page.
+                                                if (commentOpen) commentTextareaRef.current?.focus();
+                                            }}
                                             className="h-full flex flex-col"
                                         >
                                         {commentOpen ? (
@@ -648,7 +642,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
 
                                                 <div className="mb-3 flex-shrink-0 flex items-center gap-2">
                                                     <div className="flex-1 min-w-0">
-                                                        <StarRating value={rating} onChange={handleRate} />
+                                                        <StarRating value={rating} onChange={handleRate} compact />
                                                     </div>
                                                     {rating !== null && (
                                                         <button
@@ -681,8 +675,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
 
                                                 <button
                                                     onClick={handleNext}
-                                                    disabled={isSaving}
-                                                    className="flex-shrink-0 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-button transition-colors duration-200 disabled:opacity-50"
+                                                    className="flex-shrink-0 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-button transition-colors duration-200"
                                                     style={{ backgroundColor: rating !== null ? "#5C4538" : "#ECE8E1", color: rating !== null ? "#FAF8F4" : "#1C1C1C" }}
                                                 >
                                                     {rating !== null ? "Suivant" : "Passer"}
@@ -709,7 +702,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <div className="flex-1 min-w-0">
-                                                        <StarRating value={rating} onChange={handleRate} />
+                                                        <StarRating value={rating} onChange={handleRate} compact />
                                                     </div>
                                                     {rating !== null && (
                                                         <button
@@ -751,7 +744,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
 
                                                     <div className="mb-3 flex items-center gap-2">
                                                         <div className="flex-1 min-w-0">
-                                                            <StarRating value={rating} onChange={handleRate} />
+                                                            <StarRating value={rating} onChange={handleRate} compact />
                                                         </div>
                                                         {rating !== null && (
                                                             <button
@@ -774,8 +767,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
 
                                                     <button
                                                         onClick={handleNext}
-                                                        disabled={isSaving}
-                                                        className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-button transition-colors duration-200 disabled:opacity-50"
+                                                        className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-button transition-colors duration-200"
                                                         style={{ backgroundColor: rating !== null ? "#5C4538" : "#ECE8E1", color: rating !== null ? "#FAF8F4" : "#1C1C1C" }}
                                                     >
                                                         {rating !== null ? "Suivant" : "Passer"}
