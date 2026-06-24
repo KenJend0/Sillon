@@ -20,7 +20,11 @@ export async function getUserSavedAlbums(
   userId: string,
   limit?: number
 ): Promise<SavedAlbumUI[]> {
-  const supabase = createSupabaseAdmin();
+  const user = await getAuthUser();
+  if (!user || user.id !== userId) return [];
+
+  const supabase = await createSupabaseServer();
+  const safeLimit = typeof limit === 'number' ? Math.min(Math.max(limit, 1), 100) : undefined;
 
   let query = supabase
     .from('saved_albums')
@@ -43,8 +47,8 @@ export async function getUserSavedAlbums(
     .eq('user_id', userId)
     .order('saved_at', { ascending: false });
 
-  if (typeof limit === 'number') {
-    query = query.limit(limit);
+  if (safeLimit) {
+    query = query.limit(safeLimit);
   }
 
   const { data: saved, error } = await query;
