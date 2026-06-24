@@ -35,7 +35,11 @@ export default async function MyProfilePage() {
 
     // Créer le profil + liste "À écouter" par défaut si première connexion
     await ensureProfile();
-    await getOrCreateDefaultList();
+    try {
+        await getOrCreateDefaultList();
+    } catch (error) {
+        console.error('Error ensuring default list:', error);
+    }
 
     // Fetch user profile
     const { data: profile } = await supabase

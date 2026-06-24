@@ -720,7 +720,10 @@ export async function getOrCreateDefaultList(): Promise<string> {
             .eq('user_id', user.id)
             .eq('is_default', true)
             .maybeSingle();
-        return retry!.id;
+        if (!retry) {
+            throw new Error('Default list creation conflict but no default list found on retry');
+        }
+        return retry.id;
     }
 
     if (error) throw error;
