@@ -17,7 +17,7 @@ import {
 import { exportUserData } from "@/app/actions/export";
 import { startLastfmImport } from "@/app/actions/lastfm";
 import { startRymImport, countRymCsvRows } from "@/app/actions/rym";
-import { processImportBatch, getActiveImports } from "@/app/actions/externalImport";
+import { getActiveImports } from "@/app/actions/externalImport";
 import BackButton from "@/components/BackButton";
 import { showToast } from "@/components/Toast";
 
@@ -31,25 +31,6 @@ type Profile = {
 };
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{2,32}$/;
-
-type ImportProgress = { processed: number; total: number; matched: number; skipped: number; failed: number };
-type ImportResult = { matched: number; skipped: number; failed: number };
-
-/** Poll processImportBatch jusqu'à `done`, en notifiant la progression à chaque lot. */
-async function pollImport(
-    importId: string,
-    onProgress: (p: ImportProgress) => void
-): Promise<{ success: true; result: ImportResult } | { success: false; error: string }> {
-    let done = false;
-    while (!done) {
-        const batch = await processImportBatch(importId);
-        if (!batch.success) return { success: false, error: batch.error };
-        onProgress({ processed: batch.processed, total: batch.total, matched: batch.matched, skipped: batch.skipped, failed: batch.failed });
-        done = batch.done;
-        if (done) return { success: true, result: { matched: batch.matched, skipped: batch.skipped, failed: batch.failed } };
-    }
-    return { success: false, error: "unexpected" };
-}
 
 export default function ProfileSettings() {
     const router = useRouter();
@@ -329,13 +310,10 @@ export default function ProfileSettings() {
 
     const [lastfmUsername, setLastfmUsername] = useState("");
     const [lastfmImporting, setLastfmImporting] = useState(false);
-    const [lastfmProgress, setLastfmProgress] = useState<ImportProgress | null>(null);
-    const [lastfmResult, setLastfmResult] = useState<ImportResult | null>(null);
     const [lastfmError, setLastfmError] = useState<string | null>(null);
 
     const handleLastfmImport = async () => {
         setLastfmError(null);
-        setLastfmResult(null);
         setLastfmImporting(true);
         try {
             const start = await startLastfmImport(lastfmUsername);
@@ -344,21 +322,16 @@ export default function ProfileSettings() {
                 setLastfmImporting(false);
                 return;
             }
-            setLastfmProgress({ processed: 0, total: start.total, matched: 0, skipped: 0, failed: 0 });
-            const outcome = await pollImport(start.importId, setLastfmProgress);
-            if (!outcome.success) setLastfmError(outcome.error);
-            else setLastfmResult(outcome.result);
+            // Le traitement est repris par le worker GitHub Actions — pas de polling ici,
+            // les résultats apparaîtront dans le journal/la liste de triage.
         } catch (e: any) {
             console.error("Lastfm import error:", e);
             setLastfmError(e.message || "Erreur lors de l'import");
-        } finally {
             setLastfmImporting(false);
         }
     };
 
     const [rymImporting, setRymImporting] = useState(false);
-    const [rymProgress, setRymProgress] = useState<ImportProgress | null>(null);
-    const [rymResult, setRymResult] = useState<ImportResult | null>(null);
     const [rymError, setRymError] = useState<string | null>(null);
     const [rymPending, setRymPending] = useState<{ fileContent: string; fileName: string; total: number; maxLimit: number } | null>(null);
     const [rymLimitInput, setRymLimitInput] = useState("");
@@ -371,7 +344,6 @@ export default function ProfileSettings() {
         if (!file) return;
 
         setRymError(null);
-        setRymResult(null);
         setRymPending(null);
         setRymCounting(true);
         try {
@@ -402,7 +374,6 @@ export default function ProfileSettings() {
         const limit = Math.min(parseInt(rymLimitInput, 10) || rymPending.total, rymPending.maxLimit);
 
         setRymError(null);
-        setRymResult(null);
         setRymImporting(true);
         try {
             const start = await startRymImport(fileContent, fileName, limit);
@@ -412,46 +383,26 @@ export default function ProfileSettings() {
                 return;
             }
             setRymPending(null);
-            setRymProgress({ processed: 0, total: start.total, matched: 0, skipped: 0, failed: 0 });
-            const outcome = await pollImport(start.importId, setRymProgress);
-            if (!outcome.success) setRymError(outcome.error);
-            else setRymResult(outcome.result);
+            // Le traitement est repris par le worker GitHub Actions — pas de polling ici,
+            // les résultats apparaîtront directement dans le journal.
         } catch (e: any) {
             console.error("RYM import error:", e);
             setRymError(e.message || "Erreur lors de l'import");
-        } finally {
             setRymImporting(false);
         }
     };
 
-    // Reprend l'affichage de la progression si un import est resté en cours
-    // (onglet fermé/page rechargée avant la fin) — le traitement côté serveur
-    // continue de toute façon (cron de secours), mais sans ça /settings ne le
-    // montre plus une fois la page remontée.
+    // Affiche le message "import en cours" si un import est resté en cours
+    // (onglet fermé/page rechargée avant la fin) — le traitement réel se fait
+    // exclusivement côté worker GitHub Actions, /settings ne fait que refléter l'état.
     useEffect(() => {
         (async () => {
             const active = await getActiveImports();
             if (!active.success) return;
 
             for (const imp of active.imports) {
-                const progress = { processed: imp.processed, total: imp.total, matched: imp.matched, skipped: imp.skipped, failed: imp.failed };
-                if (imp.source === "lastfm") {
-                    setLastfmImporting(true);
-                    setLastfmProgress(progress);
-                    pollImport(imp.id, setLastfmProgress).then((outcome) => {
-                        if (!outcome.success) setLastfmError(outcome.error);
-                        else setLastfmResult(outcome.result);
-                        setLastfmImporting(false);
-                    });
-                } else if (imp.source === "rym") {
-                    setRymImporting(true);
-                    setRymProgress(progress);
-                    pollImport(imp.id, setRymProgress).then((outcome) => {
-                        if (!outcome.success) setRymError(outcome.error);
-                        else setRymResult(outcome.result);
-                        setRymImporting(false);
-                    });
-                }
+                if (imp.source === "lastfm") setLastfmImporting(true);
+                else if (imp.source === "rym") setRymImporting(true);
             }
         })();
     }, []);
@@ -775,18 +726,9 @@ export default function ProfileSettings() {
                             <p className="text-meta text-[#C86C6C] mt-2">{lastfmError}</p>
                         )}
 
-                        {lastfmProgress && !lastfmResult && (
+                        {lastfmImporting && (
                             <p className="text-meta text-text-tertiary mt-2">
-                                {lastfmProgress.processed}/{lastfmProgress.total} albums traités...
-                            </p>
-                        )}
-
-                        {lastfmResult && (
-                            <p className="text-meta text-text-secondary mt-2 leading-relaxed">
-                                {lastfmResult.matched} albums ajoutés à ta liste privée &quot;Import Last.fm&quot;
-                                {lastfmResult.skipped > 0 && `, ${lastfmResult.skipped} déjà dans ton journal (ignorés)`}
-                                {lastfmResult.failed > 0 && `, ${lastfmResult.failed} non trouvés`}.
-                                Comme ils ne sont pas notés, tu peux les noter rapidement depuis <span className="text-text-primary">/add</span> (ils apparaîtront dans la file) ou directement depuis ta liste.
+                                Import en cours — tu verras les albums apparaître dans ta liste privée &quot;Import Last.fm&quot; au fur et à mesure.
                             </p>
                         )}
 
@@ -836,25 +778,13 @@ export default function ProfileSettings() {
                             </div>
                         )}
 
-                        {rymImporting && (
-                            <p className="text-meta text-text-tertiary">Import en cours...</p>
-                        )}
-
                         {rymError && (
                             <p className="text-meta text-[#C86C6C] mt-2">{rymError}</p>
                         )}
 
-                        {rymProgress && !rymResult && (
+                        {rymImporting && (
                             <p className="text-meta text-text-tertiary mt-2">
-                                {rymProgress.processed}/{rymProgress.total} albums traités...
-                            </p>
-                        )}
-
-                        {rymResult && (
-                            <p className="text-meta text-text-secondary mt-2 leading-relaxed">
-                                {rymResult.matched} albums ajoutés directement à ton journal avec leurs notes/critiques RYM
-                                {rymResult.skipped > 0 && `, ${rymResult.skipped} déjà présents (notes existantes conservées)`}
-                                {rymResult.failed > 0 && `, ${rymResult.failed} non trouvés (à ajouter manuellement)`}.
+                                Import en cours — tu verras les albums apparaître dans ton journal au fur et à mesure, avec leurs notes/critiques RYM.
                             </p>
                         )}
                     </div>

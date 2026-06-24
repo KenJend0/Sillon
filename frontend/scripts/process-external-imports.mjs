@@ -330,7 +330,7 @@ async function processRow(row) {
     }
 
     if (!DRY_RUN) {
-      await supabase
+      const { error: progressError } = await supabase
         .from('external_imports')
         .update({
           processed_count: i + 1,
@@ -340,16 +340,18 @@ async function processRow(row) {
           last_processed_at: new Date().toISOString(),
         })
         .eq('id', row.id);
+      if (progressError) console.error(`  ⚠ Échec de la mise à jour de progression (item ${i + 1}): ${progressError.message}`);
     }
 
     await delay(DELAY_MS);
   }
 
   if (!DRY_RUN) {
-    await supabase
+    const { error: doneError } = await supabase
       .from('external_imports')
       .update({ status: 'done', completed_at: new Date().toISOString() })
       .eq('id', row.id);
+    if (doneError) console.error(`  ⚠ Échec du passage au statut "done": ${doneError.message}`);
   }
 
   console.log(`  Terminé — ${matched} ajouté(s), ${skipped} déjà présent(s), ${failed} échoué(s).`);
@@ -399,8 +401,12 @@ async function main() {
       claimQuery = row.last_processed_at
         ? claimQuery.eq('last_processed_at', row.last_processed_at)
         : claimQuery.is('last_processed_at', null);
-      const { data: claimed } = await claimQuery.select('id');
+      const { data: claimed, error: claimError } = await claimQuery.select('id');
 
+      if (claimError) {
+        console.error(`\n→ Import ${row.id} — échec du verrou de reprise: ${claimError.message}`);
+        continue;
+      }
       if (!claimed || claimed.length === 0) {
         console.log(`\n→ Import ${row.id} déjà repris ailleurs entre-temps — ignoré.`);
         continue;
