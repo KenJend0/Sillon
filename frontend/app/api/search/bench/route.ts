@@ -2,7 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { searchInternal } from "@/app/actions/search";
 import { searchMusicBrainzAlbums, searchMusicBrainzArtists } from "@/app/actions/musicbrainz";
 import type { SearchResultUI } from "@/app/actions/search";
+import { getAuthUser } from "@/lib/supabase/server";
 import { applyRateLimit } from "@/lib/serverRateLimit";
+
+const ADMIN_IDS = (process.env.ADMIN_USER_IDS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+const MAX_QUERY_LENGTH = 120;
+
+function parseKind(kind: string | null): "albums" | "artists" | "all" | null {
+  if (!kind) return "albums";
+  if (kind === "albums" || kind === "artists" || kind === "all") return kind;
+  return null;
+}
 
 // ---------------------------------------------------------------------------
 // Ranking logic — kept in sync with SearchOverlay.tsx (computeRank / mergeAndRank)
@@ -65,11 +75,17 @@ export async function GET(request: NextRequest) {
   const limited = await applyRateLimit(request);
   if (limited) return limited;
 
+  const user = await getAuthUser();
+  if (!user || !ADMIN_IDS.includes(user.id)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const { searchParams } = new URL(request.url);
-  const q = (searchParams.get("q") || "").trim();
-  const kind = (searchParams.get("kind") || "albums") as "albums" | "artists" | "all";
+  const q = (searchParams.get("q") || "").trim().slice(0, MAX_QUERY_LENGTH);
+  const kind = parseKind(searchParams.get("kind"));
 
   if (!q) return NextResponse.json({ error: "q required" }, { status: 400 });
+  if (!kind) return NextResponse.json({ error: "invalid kind" }, { status: 400 });
 
   const t0 = Date.now();
 
