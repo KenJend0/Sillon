@@ -147,11 +147,15 @@ export async function getForYouSuggestions(limit = 6): Promise<ForYouAlbum[]> {
 
     const supabase = await createSupabaseServer();
 
-    const { data: feedback } = await (supabase as any)
-        .from('recommendation_feedback')
-        .select('album_id')
-        .eq('user_id', user.id);
+    const [{ data: feedback }, { data: ratedAlbums }] = await Promise.all([
+        (supabase as any)
+            .from('recommendation_feedback')
+            .select('album_id')
+            .eq('user_id', user.id),
+        supabase.from('diary_entries').select('album_id').eq('user_id', user.id),
+    ]);
     const dismissedIds = new Set((feedback || []).map((f: any) => f.album_id as string));
+    const ratedAlbumIds = new Set((ratedAlbums || []).map((r) => r.album_id).filter(Boolean));
 
     // Priorité : recommandations pré-calculées par le pipeline ML
     let precomputedQuery = supabase
@@ -160,11 +164,11 @@ export async function getForYouSuggestions(limit = 6): Promise<ForYouAlbum[]> {
         .eq('user_id', user.id)
         .eq('method', 'cosine_cf')
         .order('rank')
-        .limit(limit + dismissedIds.size);
+        .limit(limit + dismissedIds.size + ratedAlbumIds.size);
 
     const { data: precomputedRaw } = await precomputedQuery;
     const precomputed = (precomputedRaw || [])
-        .filter((row) => !dismissedIds.has(row.album_id))
+        .filter((row) => !dismissedIds.has(row.album_id) && !ratedAlbumIds.has(row.album_id))
         .slice(0, limit);
 
     if (precomputed && precomputed.length > 0) {
@@ -509,12 +513,16 @@ export async function getForYouTracks(limit = 6): Promise<ForYouTrack[]> {
 
     const supabase = await createSupabaseServer();
 
-    const { data: feedback } = await (supabase as any)
-        .from('recommendation_feedback')
-        .select('track_id')
-        .eq('user_id', user.id)
-        .not('track_id', 'is', null);
+    const [{ data: feedback }, { data: ratedTracks }] = await Promise.all([
+        (supabase as any)
+            .from('recommendation_feedback')
+            .select('track_id')
+            .eq('user_id', user.id)
+            .not('track_id', 'is', null),
+        supabase.from('track_diary_entries').select('track_id').eq('user_id', user.id),
+    ]);
     const dismissedTrackIds = new Set((feedback || []).map((f: any) => f.track_id as string));
+    const ratedTrackIds = new Set((ratedTracks || []).map((r) => r.track_id).filter(Boolean));
 
     const { data: rawData } = await (supabase as any)
         .from('user_track_recommendations')
@@ -522,9 +530,11 @@ export async function getForYouTracks(limit = 6): Promise<ForYouTrack[]> {
         .eq('user_id', user.id)
         .eq('method', 'cosine_cf')
         .order('rank')
-        .limit(limit + dismissedTrackIds.size);
+        .limit(limit + dismissedTrackIds.size + ratedTrackIds.size);
 
-    const data = (rawData || []).filter((row: any) => !dismissedTrackIds.has(row.track_id)).slice(0, limit);
+    const data = (rawData || [])
+        .filter((row: any) => !dismissedTrackIds.has(row.track_id) && !ratedTrackIds.has(row.track_id))
+        .slice(0, limit);
 
     if (!data || data.length === 0) return [];
 

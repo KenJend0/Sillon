@@ -101,6 +101,18 @@ export async function upsertTrackDiaryEntry(input: UpsertTrackDiaryEntryInput) {
       // Inclure l'acteur lui-même pour son propre feed
       const targets = [...new Set([...followerIds, user.id])];
 
+      // Supprime d'abord les events existants pour cette entrée — sinon un
+      // upsert qui met juste à jour une note déjà notée le même jour duplique
+      // l'event dans le feed des followers (entry_id n'est pas utilisable ici
+      // car il référence diary_entries, pas track_diary_entries — on filtre
+      // donc sur le trackEntryId stocké dans le payload).
+      await supabaseAdmin
+        .from('feed_events')
+        .delete()
+        .eq('type', 'track_diary_entry')
+        .eq('actor_id', user.id)
+        .eq('payload->>trackEntryId', data.id);
+
       await fanoutEvent('track_diary_entry' as any, {
         userId: user.id,
         albumId: input.albumId,

@@ -99,9 +99,17 @@ export async function upsertDiaryEntry(input: UpsertDiaryEntryInput) {
       data = upserted;
     }
 
-    // Fanout to followers
+    // Fanout to followers — supprime d'abord les events existants pour cette
+    // entrée (un upsert qui met juste à jour une note déjà notée le même jour
+    // ne doit pas dupliquer l'event dans le feed des followers).
     try {
-      const fanoutResult = await fanoutEvent('diary_entry', {
+      await createSupabaseAdmin()
+        .from('feed_events')
+        .delete()
+        .eq('type', 'diary_entry')
+        .eq('entry_id', data.id);
+
+      await fanoutEvent('diary_entry', {
         entryId: data.id,
         albumId: input.albumId,
         userId: user.id,
