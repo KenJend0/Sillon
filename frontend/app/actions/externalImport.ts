@@ -30,11 +30,28 @@ export async function processImportBatch(importId: string) {
     return { success: true as const, done: true, ...progressOfImportRow(importRow) };
   }
 
+  // Verrou optimiste : on ne traite ce lot que si on est le seul à avoir "vu" cet état
+  // (last_processed_at inchangé depuis notre lecture) — empêche deux pollers concurrents
+  // (ancien onglet + page remontée, ou client + cron) de traiter le même lot en double.
+  const previousLastProcessedAt = importRow.last_processed_at;
+  let claimQuery = admin.from('external_imports').update({ last_processed_at: new Date().toISOString() }).eq('id', importId);
+  claimQuery = previousLastProcessedAt
+    ? claimQuery.eq('last_processed_at', previousLastProcessedAt)
+    : claimQuery.is('last_processed_at', null);
+  const { data: claimed } = await claimQuery.select('id');
+
+  if (!claimed || claimed.length === 0) {
+    // Un autre poller a déjà pris ce lot — on renvoie l'état actuel sans le retraiter ;
+    // l'appelant rappellera processImportBatch au prochain tick.
+    return { success: true as const, done: false, ...progressOfImportRow(importRow) };
+  }
+
   const items: RawExternalItem[] = importRow.raw_items || [];
   const start = importRow.processed_count;
   const batch = items.slice(start, start + BATCH_SIZE);
 
   let matched = importRow.matched_count;
+  let skipped = importRow.skipped_count ?? 0;
   let failed = importRow.failed_count;
 
   for (const item of batch) {
@@ -49,10 +66,12 @@ export async function processImportBatch(importId: string) {
           admin.from('diary_entries').select('id').eq('user_id', user.id).eq('album_id', albumId).maybeSingle(),
         ]);
 
-        if (!existingItem && !alreadyDiaried) {
-          await toggleListItem(importRow.list_id, { albumId });
+        if (alreadyDiaried) {
+          skipped++; // déjà noté dans le journal — pas besoin de l'ajouter à la liste de triage
+        } else {
+          if (!existingItem) await toggleListItem(importRow.list_id, { albumId });
+          matched++;
         }
-        matched++;
       } else {
         const { data: alreadyDiaried } = await admin
           .from('diary_entries')
@@ -61,7 +80,9 @@ export async function processImportBatch(importId: string) {
           .eq('album_id', albumId)
           .maybeSingle();
 
-        if (!alreadyDiaried) {
+        if (alreadyDiaried) {
+          skipped++; // déjà une note dans le journal — on ne l'écrase pas avec celle de l'import
+        } else {
           await admin.from('diary_entries').insert({
             user_id: user.id,
             album_id: albumId,
@@ -71,8 +92,8 @@ export async function processImportBatch(importId: string) {
             review_body: item.reviewBody || null,
             is_public: true,
           });
+          matched++;
         }
-        matched++;
       }
     } catch {
       failed++;
@@ -90,6 +111,7 @@ export async function processImportBatch(importId: string) {
     .update({
       processed_count: processed,
       matched_count: matched,
+      skipped_count: skipped,
       failed_count: failed,
       status: done ? 'done' : 'matching',
       completed_at: done ? new Date().toISOString() : null,
@@ -103,8 +125,32 @@ export async function processImportBatch(importId: string) {
     total: items.length,
     processed,
     matched,
+    skipped,
     failed,
     listId: importRow.list_id,
+  };
+}
+
+/** Imports en cours (pending/matching) de l'utilisateur — permet à /settings de reprendre l'affichage de la progression au montage. */
+export async function getActiveImports() {
+  const user = await getAuthUser();
+  if (!user) return { success: false as const, error: 'Not authenticated' };
+
+  const admin = createSupabaseAdmin() as any;
+  const { data } = await admin
+    .from('external_imports')
+    .select('id, source, status, total_items, processed_count, matched_count, skipped_count, failed_count, list_id')
+    .eq('user_id', user.id)
+    .in('status', ['pending', 'matching'])
+    .order('created_at', { ascending: false });
+
+  return {
+    success: true as const,
+    imports: (data || []).map((row: any) => ({
+      id: row.id,
+      source: row.source as 'lastfm' | 'rym',
+      ...progressOfImportRow(row),
+    })),
   };
 }
 
@@ -115,7 +161,7 @@ export async function getImportStatus(importId: string) {
   const admin = createSupabaseAdmin() as any;
   const { data: importRow } = await admin
     .from('external_imports')
-    .select('status, source, total_items, processed_count, matched_count, failed_count, list_id')
+    .select('status, source, total_items, processed_count, matched_count, skipped_count, failed_count, list_id')
     .eq('id', importId)
     .eq('user_id', user.id)
     .maybeSingle();

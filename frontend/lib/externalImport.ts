@@ -92,6 +92,7 @@ export function progressOfImportRow(row: any) {
     total: row.total_items,
     processed: row.processed_count,
     matched: row.matched_count,
+    skipped: row.skipped_count ?? 0,
     failed: row.failed_count,
     listId: row.list_id,
   };

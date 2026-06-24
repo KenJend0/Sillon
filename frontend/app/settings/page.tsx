@@ -16,8 +16,8 @@ import {
 } from "@/app/actions/profile";
 import { exportUserData } from "@/app/actions/export";
 import { startLastfmImport } from "@/app/actions/lastfm";
-import { startRymImport } from "@/app/actions/rym";
-import { processImportBatch } from "@/app/actions/externalImport";
+import { startRymImport, countRymCsvRows } from "@/app/actions/rym";
+import { processImportBatch, getActiveImports } from "@/app/actions/externalImport";
 import BackButton from "@/components/BackButton";
 import { showToast } from "@/components/Toast";
 
@@ -31,6 +31,25 @@ type Profile = {
 };
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{2,32}$/;
+
+type ImportProgress = { processed: number; total: number; matched: number; skipped: number; failed: number };
+type ImportResult = { matched: number; skipped: number; failed: number };
+
+/** Poll processImportBatch jusqu'à `done`, en notifiant la progression à chaque lot. */
+async function pollImport(
+    importId: string,
+    onProgress: (p: ImportProgress) => void
+): Promise<{ success: true; result: ImportResult } | { success: false; error: string }> {
+    let done = false;
+    while (!done) {
+        const batch = await processImportBatch(importId);
+        if (!batch.success) return { success: false, error: batch.error };
+        onProgress({ processed: batch.processed, total: batch.total, matched: batch.matched, skipped: batch.skipped, failed: batch.failed });
+        done = batch.done;
+        if (done) return { success: true, result: { matched: batch.matched, skipped: batch.skipped, failed: batch.failed } };
+    }
+    return { success: false, error: "unexpected" };
+}
 
 export default function ProfileSettings() {
     const router = useRouter();
@@ -310,8 +329,8 @@ export default function ProfileSettings() {
 
     const [lastfmUsername, setLastfmUsername] = useState("");
     const [lastfmImporting, setLastfmImporting] = useState(false);
-    const [lastfmProgress, setLastfmProgress] = useState<{ processed: number; total: number; matched: number; failed: number } | null>(null);
-    const [lastfmResult, setLastfmResult] = useState<{ matched: number; failed: number } | null>(null);
+    const [lastfmProgress, setLastfmProgress] = useState<ImportProgress | null>(null);
+    const [lastfmResult, setLastfmResult] = useState<ImportResult | null>(null);
     const [lastfmError, setLastfmError] = useState<string | null>(null);
 
     const handleLastfmImport = async () => {
@@ -325,21 +344,10 @@ export default function ProfileSettings() {
                 setLastfmImporting(false);
                 return;
             }
-            setLastfmProgress({ processed: 0, total: start.total, matched: 0, failed: 0 });
-
-            let done = false;
-            while (!done) {
-                const batch = await processImportBatch(start.importId);
-                if (!batch.success) {
-                    setLastfmError(batch.error);
-                    break;
-                }
-                setLastfmProgress({ processed: batch.processed, total: batch.total, matched: batch.matched, failed: batch.failed });
-                done = batch.done;
-                if (done) {
-                    setLastfmResult({ matched: batch.matched, failed: batch.failed });
-                }
-            }
+            setLastfmProgress({ processed: 0, total: start.total, matched: 0, skipped: 0, failed: 0 });
+            const outcome = await pollImport(start.importId, setLastfmProgress);
+            if (!outcome.success) setLastfmError(outcome.error);
+            else setLastfmResult(outcome.result);
         } catch (e: any) {
             console.error("Lastfm import error:", e);
             setLastfmError(e.message || "Erreur lors de l'import");
@@ -349,41 +357,59 @@ export default function ProfileSettings() {
     };
 
     const [rymImporting, setRymImporting] = useState(false);
-    const [rymProgress, setRymProgress] = useState<{ processed: number; total: number; matched: number; failed: number } | null>(null);
-    const [rymResult, setRymResult] = useState<{ matched: number; failed: number } | null>(null);
+    const [rymProgress, setRymProgress] = useState<ImportProgress | null>(null);
+    const [rymResult, setRymResult] = useState<ImportResult | null>(null);
     const [rymError, setRymError] = useState<string | null>(null);
+    const [rymPending, setRymPending] = useState<{ fileContent: string; fileName: string; total: number; maxLimit: number } | null>(null);
+    const [rymLimitInput, setRymLimitInput] = useState("");
+    const [rymCounting, setRymCounting] = useState(false);
 
-    const handleRymImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleRymFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         e.currentTarget.value = "";
         if (!file) return;
 
         setRymError(null);
         setRymResult(null);
-        setRymImporting(true);
+        setRymPending(null);
+        setRymCounting(true);
         try {
             const fileContent = await file.text();
-            const start = await startRymImport(fileContent, file.name);
+            const counted = await countRymCsvRows(fileContent);
+            if (!counted.success) {
+                setRymError(counted.error);
+                return;
+            }
+            setRymPending({ fileContent, fileName: file.name, total: counted.total, maxLimit: counted.maxLimit });
+            setRymLimitInput(String(counted.defaultLimit));
+        } catch (e: any) {
+            console.error("RYM count error:", e);
+            setRymError(e.message || "Erreur lors de la lecture du fichier");
+        } finally {
+            setRymCounting(false);
+        }
+    };
+
+    const handleRymImport = async () => {
+        if (!rymPending) return;
+        const { fileContent, fileName } = rymPending;
+        const limit = Math.min(parseInt(rymLimitInput, 10) || rymPending.total, rymPending.maxLimit);
+
+        setRymError(null);
+        setRymResult(null);
+        setRymImporting(true);
+        try {
+            const start = await startRymImport(fileContent, fileName, limit);
             if (!start.success) {
                 setRymError(start.error);
                 setRymImporting(false);
                 return;
             }
-            setRymProgress({ processed: 0, total: start.total, matched: 0, failed: 0 });
-
-            let done = false;
-            while (!done) {
-                const batch = await processImportBatch(start.importId);
-                if (!batch.success) {
-                    setRymError(batch.error);
-                    break;
-                }
-                setRymProgress({ processed: batch.processed, total: batch.total, matched: batch.matched, failed: batch.failed });
-                done = batch.done;
-                if (done) {
-                    setRymResult({ matched: batch.matched, failed: batch.failed });
-                }
-            }
+            setRymPending(null);
+            setRymProgress({ processed: 0, total: start.total, matched: 0, skipped: 0, failed: 0 });
+            const outcome = await pollImport(start.importId, setRymProgress);
+            if (!outcome.success) setRymError(outcome.error);
+            else setRymResult(outcome.result);
         } catch (e: any) {
             console.error("RYM import error:", e);
             setRymError(e.message || "Erreur lors de l'import");
@@ -391,6 +417,38 @@ export default function ProfileSettings() {
             setRymImporting(false);
         }
     };
+
+    // Reprend l'affichage de la progression si un import est resté en cours
+    // (onglet fermé/page rechargée avant la fin) — le traitement côté serveur
+    // continue de toute façon (cron de secours), mais sans ça /settings ne le
+    // montre plus une fois la page remontée.
+    useEffect(() => {
+        (async () => {
+            const active = await getActiveImports();
+            if (!active.success) return;
+
+            for (const imp of active.imports) {
+                const progress = { processed: imp.processed, total: imp.total, matched: imp.matched, skipped: imp.skipped, failed: imp.failed };
+                if (imp.source === "lastfm") {
+                    setLastfmImporting(true);
+                    setLastfmProgress(progress);
+                    pollImport(imp.id, setLastfmProgress).then((outcome) => {
+                        if (!outcome.success) setLastfmError(outcome.error);
+                        else setLastfmResult(outcome.result);
+                        setLastfmImporting(false);
+                    });
+                } else if (imp.source === "rym") {
+                    setRymImporting(true);
+                    setRymProgress(progress);
+                    pollImport(imp.id, setRymProgress).then((outcome) => {
+                        if (!outcome.success) setRymError(outcome.error);
+                        else setRymResult(outcome.result);
+                        setRymImporting(false);
+                    });
+                }
+            }
+        })();
+    }, []);
 
     const [exporting, setExporting] = useState(false);
 
@@ -720,7 +778,8 @@ export default function ProfileSettings() {
                         {lastfmResult && (
                             <p className="text-meta text-text-secondary mt-2 leading-relaxed">
                                 {lastfmResult.matched} albums ajoutés à ta liste privée &quot;Import Last.fm&quot;
-                                {lastfmResult.failed > 0 && ` (${lastfmResult.failed} non trouvés)`}.
+                                {lastfmResult.skipped > 0 && `, ${lastfmResult.skipped} déjà dans ton journal (ignorés)`}
+                                {lastfmResult.failed > 0 && `, ${lastfmResult.failed} non trouvés`}.
                                 Comme ils ne sont pas notés, tu peux les noter rapidement depuis <span className="text-text-primary">/add</span> (ils apparaîtront dans la file) ou directement depuis ta liste.
                             </p>
                         )}
@@ -728,16 +787,52 @@ export default function ProfileSettings() {
                         <p className="text-meta text-text-secondary mt-6 mb-3">
                             Export RateYourMusic (CSV) — exporte ton catalogue depuis ton profil RYM (Account → Export catalog), puis importe le fichier ici.
                         </p>
-                        <label className={`inline-block px-4 py-2 text-meta font-medium rounded-[8px] cursor-pointer transition-opacity ${rymImporting ? "opacity-50 cursor-not-allowed" : "hover:opacity-85"} bg-[#1C1C1C] text-[#F5F3EF]`}>
-                            {rymImporting ? "Import..." : "Choisir un fichier CSV"}
-                            <input
-                                type="file"
-                                accept=".csv"
-                                onChange={handleRymImport}
-                                disabled={rymImporting}
-                                className="hidden"
-                            />
-                        </label>
+                        {!rymPending && (
+                            <label className={`inline-block px-4 py-2 text-meta font-medium rounded-[8px] cursor-pointer transition-opacity ${(rymImporting || rymCounting) ? "opacity-50 cursor-not-allowed" : "hover:opacity-85"} bg-[#1C1C1C] text-[#F5F3EF]`}>
+                                {rymCounting ? "Lecture du fichier..." : "Choisir un fichier CSV"}
+                                <input
+                                    type="file"
+                                    accept=".csv"
+                                    onChange={handleRymFileSelect}
+                                    disabled={rymImporting || rymCounting}
+                                    className="hidden"
+                                />
+                            </label>
+                        )}
+
+                        {rymPending && !rymImporting && (
+                            <div className="p-3 border border-border rounded-[10px] bg-background-secondary space-y-2">
+                                <p className="text-meta text-text-secondary">
+                                    {rymPending.total} écoute{rymPending.total > 1 ? "s" : ""} détectée{rymPending.total > 1 ? "s" : ""} dans <span className="text-text-primary">{rymPending.fileName}</span>. Combien veux-tu importer ?
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={rymPending.maxLimit}
+                                        value={rymLimitInput}
+                                        onChange={(e) => setRymLimitInput(e.target.value)}
+                                        className="w-24 bg-background border border-border rounded-[10px] px-3 py-2 text-meta text-text-primary focus:outline-none focus:border-text-secondary transition-colors duration-150"
+                                    />
+                                    <button
+                                        onClick={handleRymImport}
+                                        className="px-4 py-2 bg-[#1C1C1C] hover:opacity-85 text-[#F5F3EF] text-meta font-medium transition-opacity rounded-[8px]"
+                                    >
+                                        Lancer l'import
+                                    </button>
+                                    <button
+                                        onClick={() => setRymPending(null)}
+                                        className="text-meta text-text-tertiary hover:text-text-primary transition-colors duration-150"
+                                    >
+                                        Annuler
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {rymImporting && (
+                            <p className="text-meta text-text-tertiary">Import en cours...</p>
+                        )}
 
                         {rymError && (
                             <p className="text-meta text-[#C86C6C] mt-2">{rymError}</p>
@@ -752,7 +847,8 @@ export default function ProfileSettings() {
                         {rymResult && (
                             <p className="text-meta text-text-secondary mt-2 leading-relaxed">
                                 {rymResult.matched} albums ajoutés directement à ton journal avec leurs notes/critiques RYM
-                                {rymResult.failed > 0 && ` (${rymResult.failed} non trouvés, à ajouter manuellement)`}.
+                                {rymResult.skipped > 0 && `, ${rymResult.skipped} déjà présents (notes existantes conservées)`}
+                                {rymResult.failed > 0 && `, ${rymResult.failed} non trouvés (à ajouter manuellement)`}.
                             </p>
                         )}
                     </div>

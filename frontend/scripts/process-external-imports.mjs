@@ -271,6 +271,7 @@ async function resolveAlbumId(item) {
 async function processRow(row) {
   const items = row.raw_items || [];
   let matched = row.matched_count;
+  let skipped = row.skipped_count ?? 0;
   let failed = row.failed_count;
 
   console.log(`\n→ Import ${row.id} (${row.source}, ${row.source_label}) — ${items.length - row.processed_count} item(s) restant(s)`);
@@ -291,11 +292,14 @@ async function processRow(row) {
           supabase.from('list_items').select('id').eq('list_id', row.list_id).eq('album_id', albumId).maybeSingle(),
           supabase.from('diary_entries').select('id').eq('user_id', row.user_id).eq('album_id', albumId).maybeSingle(),
         ]);
-        if (!existingItem && !alreadyDiaried) {
-          await supabase.from('list_items').insert({ list_id: row.list_id, album_id: albumId });
+        if (alreadyDiaried) {
+          skipped++; // déjà noté dans le journal — pas besoin de l'ajouter à la liste de triage
+          console.log(`  ↷ ${item.artist} — ${item.album} (déjà dans le journal)`);
+        } else {
+          if (!existingItem) await supabase.from('list_items').insert({ list_id: row.list_id, album_id: albumId });
+          matched++;
+          console.log(`  ✓ ${item.artist} — ${item.album}`);
         }
-        matched++;
-        console.log(`  ✓ ${item.artist} — ${item.album}`);
       } else {
         const { data: alreadyDiaried } = await supabase
           .from('diary_entries')
@@ -303,7 +307,10 @@ async function processRow(row) {
           .eq('user_id', row.user_id)
           .eq('album_id', albumId)
           .maybeSingle();
-        if (!alreadyDiaried) {
+        if (alreadyDiaried) {
+          skipped++; // déjà une note dans le journal — on ne l'écrase pas avec celle de l'import
+          console.log(`  ↷ ${item.artist} — ${item.album} (déjà dans le journal)`);
+        } else {
           await supabase.from('diary_entries').insert({
             user_id: row.user_id,
             album_id: albumId,
@@ -313,9 +320,9 @@ async function processRow(row) {
             review_body: item.reviewBody || null,
             is_public: true,
           });
+          matched++;
+          console.log(`  ✓ ${item.artist} — ${item.album}`);
         }
-        matched++;
-        console.log(`  ✓ ${item.artist} — ${item.album}`);
       }
     } catch (err) {
       failed++;
@@ -325,7 +332,13 @@ async function processRow(row) {
     if (!DRY_RUN) {
       await supabase
         .from('external_imports')
-        .update({ processed_count: i + 1, matched_count: matched, failed_count: failed, last_processed_at: new Date().toISOString() })
+        .update({
+          processed_count: i + 1,
+          matched_count: matched,
+          skipped_count: skipped,
+          failed_count: failed,
+          last_processed_at: new Date().toISOString(),
+        })
         .eq('id', row.id);
     }
 
@@ -339,7 +352,7 @@ async function processRow(row) {
       .eq('id', row.id);
   }
 
-  console.log(`  Terminé — ${matched} matché(s), ${failed} échoué(s).`);
+  console.log(`  Terminé — ${matched} ajouté(s), ${skipped} déjà présent(s), ${failed} échoué(s).`);
 }
 
 async function main() {
@@ -375,6 +388,24 @@ async function main() {
   console.log(`${rows.length} import(s) stale à traiter.`);
 
   for (const row of rows) {
+    // Verrou optimiste : même mécanisme que processImportBatch côté app — si un poller
+    // client (onglet rouvert juste à ce moment) a déjà touché la ligne entre notre lecture
+    // et maintenant, on laisse tomber cette ligne plutôt que de la traiter en double.
+    if (!DRY_RUN) {
+      let claimQuery = supabase
+        .from('external_imports')
+        .update({ last_processed_at: new Date().toISOString() })
+        .eq('id', row.id);
+      claimQuery = row.last_processed_at
+        ? claimQuery.eq('last_processed_at', row.last_processed_at)
+        : claimQuery.is('last_processed_at', null);
+      const { data: claimed } = await claimQuery.select('id');
+
+      if (!claimed || claimed.length === 0) {
+        console.log(`\n→ Import ${row.id} déjà repris ailleurs entre-temps — ignoré.`);
+        continue;
+      }
+    }
     await processRow(row);
   }
 

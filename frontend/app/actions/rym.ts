@@ -5,9 +5,22 @@ import { parseRymCsv } from '@/lib/rymCsv';
 import type { RawExternalItem } from '@/lib/externalImport';
 
 const COOLDOWN_HOURS = 24;
-const MAX_ROWS = 500;
+const DEFAULT_ROWS = 500;
+// Garde-fou contre un upload pathologique — pas une limite "normale" : les vrais gros
+// catalogues (700-1000+ écoutes) doivent pouvoir tout importer via le champ côté UI.
+const ABSOLUTE_MAX_ROWS = 2000;
 
-export async function startRymImport(fileContent: string, fileName: string) {
+/** Parse le fichier sans rien créer — permet à l'UI d'afficher le nombre réel d'écoutes avant de lancer l'import. */
+export async function countRymCsvRows(fileContent: string) {
+  try {
+    const parsed = parseRymCsv(fileContent);
+    return { success: true as const, total: parsed.length, defaultLimit: Math.min(parsed.length, DEFAULT_ROWS), maxLimit: ABSOLUTE_MAX_ROWS };
+  } catch {
+    return { success: false as const, error: 'Fichier CSV invalide.' };
+  }
+}
+
+export async function startRymImport(fileContent: string, fileName: string, requestedLimit?: number) {
   const user = await getAuthUser();
   if (!user) return { success: false as const, error: 'Not authenticated' };
 
@@ -29,16 +42,19 @@ export async function startRymImport(fileContent: string, fileName: string) {
     };
   }
 
-  let items: RawExternalItem[];
+  let parsed: RawExternalItem[];
   try {
-    items = parseRymCsv(fileContent).slice(0, MAX_ROWS);
+    parsed = parseRymCsv(fileContent);
   } catch {
     return { success: false as const, error: 'Fichier CSV invalide.' };
   }
 
-  if (items.length === 0) {
+  if (parsed.length === 0) {
     return { success: false as const, error: "Aucun album reconnu dans ce fichier — vérifie que c'est bien un export RYM (Catalog)." };
   }
+
+  const limit = Math.min(requestedLimit && requestedLimit > 0 ? requestedLimit : DEFAULT_ROWS, ABSOLUTE_MAX_ROWS);
+  const items = parsed.slice(0, limit);
 
   const { data: importRow, error } = await admin
     .from('external_imports')
