@@ -2,7 +2,7 @@ name: Process External Imports
 
 on:
   schedule:
-    - cron: '*/15 * * * *'   # toutes les 15 minutes
+    - cron: '7,22,37,52 * * * *'   # toutes les 15 min, décalé des minutes rondes (contention GitHub Actions)
   workflow_dispatch:
     inputs:
       dry_run:
