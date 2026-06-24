@@ -275,6 +275,10 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
                     </div>
                     <span className="text-[20px] leading-none ml-4">→</span>
                 </Link>
+
+                <p className="text-label text-text-tertiary mt-6 text-center">
+                    Déjà des écoutes sur Last.fm ou RateYourMusic ? Tu peux importer ton historique depuis les Réglages.
+                </p>
             </div>
         </div>
     );

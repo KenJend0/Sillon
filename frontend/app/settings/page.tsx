@@ -14,6 +14,10 @@ import {
     checkUsernameAvailability,
     deleteAccount,
 } from "@/app/actions/profile";
+import { exportUserData } from "@/app/actions/export";
+import { startLastfmImport } from "@/app/actions/lastfm";
+import { startRymImport } from "@/app/actions/rym";
+import { processImportBatch } from "@/app/actions/externalImport";
 import BackButton from "@/components/BackButton";
 import { showToast } from "@/components/Toast";
 
@@ -304,6 +308,116 @@ export default function ProfileSettings() {
         }
     };
 
+    const [lastfmUsername, setLastfmUsername] = useState("");
+    const [lastfmImporting, setLastfmImporting] = useState(false);
+    const [lastfmProgress, setLastfmProgress] = useState<{ processed: number; total: number; matched: number; failed: number } | null>(null);
+    const [lastfmResult, setLastfmResult] = useState<{ matched: number; failed: number } | null>(null);
+    const [lastfmError, setLastfmError] = useState<string | null>(null);
+
+    const handleLastfmImport = async () => {
+        setLastfmError(null);
+        setLastfmResult(null);
+        setLastfmImporting(true);
+        try {
+            const start = await startLastfmImport(lastfmUsername);
+            if (!start.success) {
+                setLastfmError(start.error);
+                setLastfmImporting(false);
+                return;
+            }
+            setLastfmProgress({ processed: 0, total: start.total, matched: 0, failed: 0 });
+
+            let done = false;
+            while (!done) {
+                const batch = await processImportBatch(start.importId);
+                if (!batch.success) {
+                    setLastfmError(batch.error);
+                    break;
+                }
+                setLastfmProgress({ processed: batch.processed, total: batch.total, matched: batch.matched, failed: batch.failed });
+                done = batch.done;
+                if (done) {
+                    setLastfmResult({ matched: batch.matched, failed: batch.failed });
+                }
+            }
+        } catch (e: any) {
+            console.error("Lastfm import error:", e);
+            setLastfmError(e.message || "Erreur lors de l'import");
+        } finally {
+            setLastfmImporting(false);
+        }
+    };
+
+    const [rymImporting, setRymImporting] = useState(false);
+    const [rymProgress, setRymProgress] = useState<{ processed: number; total: number; matched: number; failed: number } | null>(null);
+    const [rymResult, setRymResult] = useState<{ matched: number; failed: number } | null>(null);
+    const [rymError, setRymError] = useState<string | null>(null);
+
+    const handleRymImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.currentTarget.value = "";
+        if (!file) return;
+
+        setRymError(null);
+        setRymResult(null);
+        setRymImporting(true);
+        try {
+            const fileContent = await file.text();
+            const start = await startRymImport(fileContent, file.name);
+            if (!start.success) {
+                setRymError(start.error);
+                setRymImporting(false);
+                return;
+            }
+            setRymProgress({ processed: 0, total: start.total, matched: 0, failed: 0 });
+
+            let done = false;
+            while (!done) {
+                const batch = await processImportBatch(start.importId);
+                if (!batch.success) {
+                    setRymError(batch.error);
+                    break;
+                }
+                setRymProgress({ processed: batch.processed, total: batch.total, matched: batch.matched, failed: batch.failed });
+                done = batch.done;
+                if (done) {
+                    setRymResult({ matched: batch.matched, failed: batch.failed });
+                }
+            }
+        } catch (e: any) {
+            console.error("RYM import error:", e);
+            setRymError(e.message || "Erreur lors de l'import");
+        } finally {
+            setRymImporting(false);
+        }
+    };
+
+    const [exporting, setExporting] = useState(false);
+
+    const handleExportData = async () => {
+        setExporting(true);
+        try {
+            const result = await exportUserData();
+            if (!result.success) {
+                showToast(result.error || "Erreur lors de l'export", "error");
+                return;
+            }
+            const blob = new Blob([JSON.stringify(result.data, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            const date = new Date().toISOString().slice(0, 10);
+            a.href = url;
+            a.download = `waveform-export-${profile.username || "moi"}-${date}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e: any) {
+            console.error("Export data error:", e);
+            showToast(e.message || "Erreur lors de l'export", "error");
+        } finally {
+            setExporting(false);
+        }
+    };
+
     const [showDeleteZone, setShowDeleteZone] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState("");
     const [deleting, setDeleting] = useState(false);
@@ -567,6 +681,96 @@ export default function ProfileSettings() {
                         Enregistrer les modifications
                     </button>
                 </div>
+
+                {/* Import historique */}
+                <section className="mt-12">
+                    <div className="border-t border-border-divider pt-8">
+                        <h2 className="text-h2 text-text-tertiary mb-4">Importer ton historique</h2>
+                        <p className="text-meta text-text-secondary mb-3">
+                            Pseudo Last.fm — on récupère tes albums les plus écoutés (nécessite un profil public).
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                value={lastfmUsername}
+                                onChange={(e) => setLastfmUsername(e.target.value)}
+                                placeholder="Pseudo Last.fm"
+                                disabled={lastfmImporting}
+                                className="flex-1 bg-background border border-border rounded-[10px] px-3 py-2 text-meta text-text-primary placeholder-text-tertiary focus:outline-none focus:border-text-secondary transition-colors duration-150"
+                            />
+                            <button
+                                onClick={handleLastfmImport}
+                                disabled={lastfmImporting || !lastfmUsername.trim()}
+                                className="px-4 py-2 bg-[#1C1C1C] hover:opacity-85 text-[#F5F3EF] text-meta font-medium transition-opacity rounded-[8px] disabled:opacity-50"
+                            >
+                                {lastfmImporting ? "Import..." : "Importer"}
+                            </button>
+                        </div>
+
+                        {lastfmError && (
+                            <p className="text-meta text-[#C86C6C] mt-2">{lastfmError}</p>
+                        )}
+
+                        {lastfmProgress && !lastfmResult && (
+                            <p className="text-meta text-text-tertiary mt-2">
+                                {lastfmProgress.processed}/{lastfmProgress.total} albums traités...
+                            </p>
+                        )}
+
+                        {lastfmResult && (
+                            <p className="text-meta text-text-secondary mt-2 leading-relaxed">
+                                {lastfmResult.matched} albums ajoutés à ta liste privée &quot;Import Last.fm&quot;
+                                {lastfmResult.failed > 0 && ` (${lastfmResult.failed} non trouvés)`}.
+                                Comme ils ne sont pas notés, tu peux les noter rapidement depuis <span className="text-text-primary">/add</span> (ils apparaîtront dans la file) ou directement depuis ta liste.
+                            </p>
+                        )}
+
+                        <p className="text-meta text-text-secondary mt-6 mb-3">
+                            Export RateYourMusic (CSV) — exporte ton catalogue depuis ton profil RYM (Account → Export catalog), puis importe le fichier ici.
+                        </p>
+                        <label className={`inline-block px-4 py-2 text-meta font-medium rounded-[8px] cursor-pointer transition-opacity ${rymImporting ? "opacity-50 cursor-not-allowed" : "hover:opacity-85"} bg-[#1C1C1C] text-[#F5F3EF]`}>
+                            {rymImporting ? "Import..." : "Choisir un fichier CSV"}
+                            <input
+                                type="file"
+                                accept=".csv"
+                                onChange={handleRymImport}
+                                disabled={rymImporting}
+                                className="hidden"
+                            />
+                        </label>
+
+                        {rymError && (
+                            <p className="text-meta text-[#C86C6C] mt-2">{rymError}</p>
+                        )}
+
+                        {rymProgress && !rymResult && (
+                            <p className="text-meta text-text-tertiary mt-2">
+                                {rymProgress.processed}/{rymProgress.total} albums traités...
+                            </p>
+                        )}
+
+                        {rymResult && (
+                            <p className="text-meta text-text-secondary mt-2 leading-relaxed">
+                                {rymResult.matched} albums ajoutés directement à ton journal avec leurs notes/critiques RYM
+                                {rymResult.failed > 0 && ` (${rymResult.failed} non trouvés, à ajouter manuellement)`}.
+                            </p>
+                        )}
+                    </div>
+                </section>
+
+                {/* Données */}
+                <section className="mt-12">
+                    <div className="border-t border-border-divider pt-8">
+                        <h2 className="text-h2 text-text-tertiary mb-4">Mes données</h2>
+                        <button
+                            onClick={handleExportData}
+                            disabled={exporting}
+                            className="text-meta text-text-secondary hover:text-text-primary transition-colors duration-150 disabled:opacity-50"
+                        >
+                            {exporting ? "Génération en cours..." : "Télécharger mes données (JSON)"}
+                        </button>
+                    </div>
+                </section>
 
                 {/* Danger Zone */}
                 <section className="mt-16">

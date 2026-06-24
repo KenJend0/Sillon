@@ -12,7 +12,7 @@ Ce qui doit être fait *avant* de dire "V1". Must-haves, pas des features.
 - [x] Page hub `/legal` accessible depuis le hamburger menu
 - [x] Liens CGU + confidentialité cliquables sur la page d'inscription
 - [x] Bandeau consentement analytics — N/A : Vercel Analytics est anonyme et agrégé, exempté de consentement par la CNIL
-- [ ] Export des données utilisateur sur demande (dump JSON diary) — DSAR RGPD → reporté en V1, géré manuellement via email en beta
+- [x] Export des données utilisateur sur demande (dump JSON diary) — bouton self-service dans `/settings`, plus besoin de demande manuelle par email
 - [x] Mettre à jour les pages légales suite à l'ajout de la page support (cohérence des liens/mentions) — `/support` fusionnée dans `/legal` (hub unique), chrome/style partagés, contenu FAQ/légal corrigé pour refléter le comportement réel
 
 ### Onboarding
@@ -120,7 +120,8 @@ Ce qui rend l'app vraiment utilisable au quotidien.
 - [ ] **Améliorer les scores de pertinence** — pondération par popularité (listeners_count, reviews_count), boost exact-match, dé-boost des entrées sans cover ou sans reviews
 
 ### Import & données
-- [ ] **Import historique Last.fm** — vrai onboarding des music nerds ; récupérer les scrobbles et pré-remplir le diary
+- [x] **Import historique Last.fm** — pseudo public → top albums ajoutés à une liste privée "Import Last.fm", notables depuis `/add` ou la liste ; mentionné (texte, sans lien) à l'écran de lancement de l'onboarding, dispo dans `/settings`
+- [x] **Import historique RateYourMusic** — upload du CSV exporté par l'utilisateur depuis son profil RYM ; notes (échelle 0-10, identique à Waveform) et critiques mappées directement en `diary_entries` (pas de liste de triage, contrairement à Last.fm)
 - [ ] **Export RGPD** — dump JSON du diary sur demande (automatisé, pas manuel)
 
 ### Listes (wishlist)

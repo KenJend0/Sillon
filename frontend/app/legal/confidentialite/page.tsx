@@ -109,7 +109,7 @@ export default function Confidentialite() {
                     <Li label="Accès">Consulter vos données via votre profil et votre journal.</Li>
                     <Li label="Rectification">Modifier vos informations depuis les Réglages.</Li>
                     <Li label="Suppression">Supprimer votre compte et toutes vos données depuis les Réglages.</Li>
-                    <Li label="Portabilité">Demander une export de vos données par e-mail.</Li>
+                    <Li label="Portabilité">Télécharger un export JSON de vos données depuis les Réglages.</Li>
                     <Li label="Opposition">Vous opposer à un traitement spécifique par e-mail.</Li>
                 </ul>
                 <p className="mt-4">
