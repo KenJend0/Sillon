@@ -2,12 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import type { EmailOtpType } from '@supabase/supabase-js';
 
+function safeInternalPath(value: string | null): string {
+  if (!value) return '/explore';
+  if (!value.startsWith('/')) return '/explore';
+  if (value.startsWith('//')) return '/explore';
+  if (value.includes('\\')) return '/explore';
+  return value;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
   const token_hash = searchParams.get('token_hash');
   const type = searchParams.get('type') as EmailOtpType | null;
-  const next = searchParams.get('next') ?? '/explore';
+  const next = safeInternalPath(searchParams.get('next'));
 
   const supabase = await createSupabaseServer();
 
