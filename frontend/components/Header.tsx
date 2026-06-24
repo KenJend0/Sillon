@@ -20,7 +20,7 @@ export default function Header() {
         { href: "/explore", label: "Découvrir" },
         { href: "/add", label: "Ajouter" },
         { href: "/feed", label: "Activité" },
-        { href: "/me", label: "Profile" },
+        { href: "/me", label: "Moi" },
     ];
 
     const isActive = (href: string) => {
