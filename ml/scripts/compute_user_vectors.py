@@ -173,6 +173,29 @@ def upsert_in_batches(
     print(f"  [ok] upserted {len(rows)} rows into {table}")
 
 
+def replace_similarities(
+    user_ids: list[str], rows: list[dict], dry_run: bool
+) -> None:
+    """Delete each processed user's previous neighbour rows, then insert the
+    fresh top-N. An upsert alone never removes a pair that fell out of the
+    new top-N, leaving stale (user_a, user_b) rows with outdated scores that
+    keep winning fetch_neighbours()'s `order('score').limit(N)` forever."""
+    if not user_ids:
+        print("  [skip] no users for user_similarity")
+        return
+    if dry_run:
+        print(f"  [dry-run] would replace similarity rows for {len(user_ids)} users with {len(rows)} rows")
+        return
+
+    client = get_client()
+    for i in range(0, len(user_ids), BATCH_SIZE):
+        batch = user_ids[i : i + BATCH_SIZE]
+        client.table("user_similarity").delete().in_("user_a", batch).execute()
+    for i in range(0, len(rows), BATCH_SIZE):
+        client.table("user_similarity").insert(rows[i : i + BATCH_SIZE]).execute()
+    print(f"  [ok] replaced user_similarity with {len(rows)} rows for {len(user_ids)} users")
+
+
 def main(dry_run: bool, top_n: int) -> None:
     print("=== compute_user_vectors ===")
 
@@ -203,17 +226,6 @@ def main(dry_run: bool, top_n: int) -> None:
     now = datetime.now(timezone.utc).isoformat()
     vector_rows = [
         {
-            "user_id": user_ids[i] if not active_mask.all() else active_users[i],
-            "vector": centered[i].tolist(),
-            "album_index": album_index,
-            "n_ratings": int(rating_counts[active_mask][i]),
-            "computed_at": now,
-        }
-        for i in range(len(active_users))
-    ]
-    # Fix: use active_users list directly
-    vector_rows = [
-        {
             "user_id": active_users[i],
             "vector": centered[i].tolist(),
             "album_index": album_index,
@@ -238,7 +250,7 @@ def main(dry_run: bool, top_n: int) -> None:
 
     print("Writing to Supabase...")
     upsert_in_batches("user_taste_vectors", vector_rows, dry_run)
-    upsert_in_batches("user_similarity", sim_rows, dry_run)
+    replace_similarities(active_users, sim_rows, dry_run)
 
     print("Done.")
 

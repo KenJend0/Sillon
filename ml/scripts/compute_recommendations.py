@@ -32,6 +32,7 @@ from utils.supabase_client import get_client
 
 MAX_NEIGHBOURS = 20       # top neighbours to consider per user
 MIN_NEIGHBOUR_RATING = 7  # neighbour must have rated >= this to recommend
+MIN_SUPPORTING_NEIGHBOURS = 2  # an album needs >= this many rating neighbours to be eligible
 MAX_RECS = 20             # max recommendations stored per user
 BATCH_SIZE = 200
 
@@ -111,12 +112,17 @@ def score_albums(
     """
     Weighted average score per candidate album.
     score(album) = Σ(sim × rating) / Σ sim
+
+    Requires MIN_SUPPORTING_NEIGHBOURS distinct neighbours — a single neighbour's
+    rating collapses the weighted average to exactly that rating regardless of
+    how weak the similarity is, letting one-off matches outscore consensus picks.
     """
     sim_map = {n["user_b"]: n["score"] for n in neighbours}
 
     # Accumulate weighted sum and total weight per album
     weighted_sum: dict[str, float] = defaultdict(float)
     weight_total: dict[str, float] = defaultdict(float)
+    neighbour_count: dict[str, int] = defaultdict(int)
 
     for entry in neighbour_ratings:
         album_id = entry["album_id"]
@@ -128,11 +134,12 @@ def score_albums(
             continue
         weighted_sum[album_id] += sim * entry["rating"]
         weight_total[album_id] += sim
+        neighbour_count[album_id] += 1
 
     scored = [
         {"album_id": album_id, "score": weighted_sum[album_id] / weight_total[album_id]}
         for album_id in weighted_sum
-        if weight_total[album_id] > 0
+        if weight_total[album_id] > 0 and neighbour_count[album_id] >= MIN_SUPPORTING_NEIGHBOURS
     ]
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored[:MAX_RECS]

@@ -29,6 +29,7 @@ from utils.supabase_client import get_client
 
 MAX_NEIGHBOURS  = 20
 MIN_TRACK_RATING = 7   # neighbour must have rated >= this to recommend
+MIN_SUPPORTING_NEIGHBOURS = 2  # a track needs >= this many rating neighbours to be eligible
 MAX_RECS        = 20
 BATCH_SIZE      = 200
 
@@ -109,6 +110,7 @@ def score_tracks(
     sim_map = {n["user_b"]: n["score"] for n in neighbours}
     weighted_sum: dict[str, float] = defaultdict(float)
     weight_total: dict[str, float] = defaultdict(float)
+    neighbour_count: dict[str, int] = defaultdict(int)
 
     for entry in neighbour_ratings:
         track_id = entry["track_id"]
@@ -119,11 +121,12 @@ def score_tracks(
             continue
         weighted_sum[track_id] += sim * entry["rating"]
         weight_total[track_id] += sim
+        neighbour_count[track_id] += 1
 
     scored = [
         {"track_id": tid, "score": weighted_sum[tid] / weight_total[tid]}
         for tid in weighted_sum
-        if weight_total[tid] > 0
+        if weight_total[tid] > 0 and neighbour_count[tid] >= MIN_SUPPORTING_NEIGHBOURS
     ]
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored[:limit]
