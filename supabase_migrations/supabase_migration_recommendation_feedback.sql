@@ -43,8 +43,17 @@ CREATE POLICY "users manage own feedback"
 
 DROP INDEX IF EXISTS recommendation_feedback_user_idx;
 
-CREATE UNIQUE INDEX IF NOT EXISTS recommendation_feedback_user_album_idx
-  ON recommendation_feedback (user_id, album_id) WHERE album_id IS NOT NULL;
+-- Index uniques NON partiels : un index partiel (WHERE album_id IS NOT NULL)
+-- n'est jamais retenu par Postgres comme cible d'arbitrage pour ON CONFLICT
+-- à moins de répéter la clause WHERE dans le ON CONFLICT lui-même, ce que
+-- l'upsert Supabase-js (onConflict: 'user_id,album_id') ne fait pas — l'upsert
+-- échouait donc systématiquement. Un index non partiel a le même effet (les
+-- NULL restent distincts entre eux dans un index unique standard) tout en
+-- étant un arbitre valide.
+DROP INDEX IF EXISTS recommendation_feedback_user_album_idx;
+CREATE UNIQUE INDEX recommendation_feedback_user_album_idx
+  ON recommendation_feedback (user_id, album_id);
 
-CREATE UNIQUE INDEX IF NOT EXISTS recommendation_feedback_user_track_idx
-  ON recommendation_feedback (user_id, track_id) WHERE track_id IS NOT NULL;
+DROP INDEX IF EXISTS recommendation_feedback_user_track_idx;
+CREATE UNIQUE INDEX recommendation_feedback_user_track_idx
+  ON recommendation_feedback (user_id, track_id);
