@@ -38,7 +38,7 @@ const CAA_URL = 'https://coverartarchive.org/release-group';
 const DELAY_MS = 1250; // safely above MB's 1 req/s limit
 const STREAMING_RETRY_DAYS = 7;
 const MAX_STREAMING_ATTEMPTS = 5; // au-delà, on arrête de retenter (probable absence réelle sur ces plateformes)
-const PHASE4_DAILY_CAP = 300; // lot quotidien pour Phase 4 — reste largement sous le timeout de 60 min du cron
+const PHASE4_DAILY_CAP = 400; // lot quotidien pour Phase 4 — volontairement conservateur tant que le vrai rate limit Apple Music/Deezer n'est pas connu avec certitude
 
 const DRY_RUN      = process.argv.includes('--dry-run');
 const PHASE4_ONLY  = process.argv.includes('--phase4-only');
@@ -394,6 +394,12 @@ function titleMatches(candidate, target) {
   return c === t || c.startsWith(t) || t.startsWith(c) || c.includes(t) || t.includes(c);
 }
 
+// iTunes Search (Apple Music) n'a pas de limite documentée officiellement, mais en
+// pratique se met à 429 très vite en usage soutenu (observé : ~1 hit sur 5-6 titres
+// même avec un délai de 110ms entre titres, soit ~30 min d'attente pure sur un run
+// de 40 min). On ne retente qu'une seule fois — retenter en boucle sur une IP déjà
+// throttlée (cas fréquent sur les runners GitHub Actions, IP partagée) ne fait que
+// cumuler des attentes de 10s sans rien obtenir de plus.
 async function searchAppleMusicTrack(artist, title) {
   const artistLow = artist.toLowerCase();
   const terms = [
@@ -402,14 +408,14 @@ async function searchAppleMusicTrack(artist, title) {
   ];
   for (const term of terms) {
     let attempt = 0;
-    while (attempt < 3) {
+    while (attempt < 2) {
       try {
         const res = await fetch(
           `https://itunes.apple.com/search?term=${term}&entity=song&limit=15`,
           { signal: AbortSignal.timeout(8000) },
         );
         if (res.status === 429) {
-          console.warn(`      ⏳ Apple Music rate limit — attente 10s`);
+          if (attempt === 0) console.warn(`      ⏳ Apple Music rate limit — attente 10s`);
           await delay(10_000);
           attempt++;
           continue;
@@ -434,13 +440,18 @@ async function searchAppleMusicTrack(artist, title) {
   return null;
 }
 
-async function searchDeezerTrack(artist, title) {
+async function searchDeezerTrack(artist, title, attempt = 0) {
   try {
     const q = encodeURIComponent(`artist:"${artist}" track:"${title}"`);
     const res = await fetch(
       `https://api.deezer.com/search/track?q=${q}&limit=10`,
       { signal: AbortSignal.timeout(6000) },
     );
+    if (res.status === 429 && attempt < 1) {
+      console.warn(`      ⏳ Deezer rate limit — attente 5s`);
+      await delay(5000);
+      return searchDeezerTrack(artist, title, attempt + 1);
+    }
     if (!res.ok) return null;
     const data = await res.json();
     const results = data.data ?? [];
@@ -889,8 +900,10 @@ async function runPhase4(effectiveLimit = LIMIT) {
           ?? spotifyTrackMap.byPosition.get(posKey)
           ?? null;
 
-        // Apple Music + Deezer: per-track search
-        await delay(110);
+        // Apple Music + Deezer: per-track search. Délai relevé de 110ms à 900ms —
+        // à 110ms, ~1 titre sur 5-6 déclenchait un 429 Apple Music (observé en prod :
+        // 181 hits sur un run de 1000 titres, ~30 des 40 minutes passées en attente).
+        await delay(900);
         const [apl, dz] = await Promise.all([
           searchAppleMusicTrack(artistName, track.title),
           searchDeezerTrack(artistName, track.title),
