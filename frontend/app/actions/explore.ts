@@ -81,6 +81,25 @@ export type ForYouTrack = {
  */
 export async function getTrendingThisWeek(limit = 10): Promise<TrendingAlbum[]> {
     const supabase = createSupabaseAnon();
+    const { data: rpcRows, error: rpcError } = await (supabase as any).rpc('get_trending_albums', {
+        result_limit: limit,
+    });
+
+    if (!rpcError && rpcRows) {
+        return rpcRows.map((row: any) => ({
+            id: `trending-${row.album_id}`,
+            album_id: row.album_id,
+            album_title: row.album_title || 'Unknown',
+            artist_name: row.artist_name || 'Unknown',
+            cover_url: row.cover_url || '',
+            discover_kind: 'trending_week',
+            score: row.activity_count ?? 0,
+            delta: row.delta ?? null,
+        }));
+    }
+
+    console.warn('getTrendingThisWeek RPC fallback:', rpcError?.message);
+
     const now = Date.now();
     const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
     // Fenêtre de comparaison décalée d'1 jour (pas de 7) : on compare le classement
@@ -114,7 +133,10 @@ export async function getTrendingThisWeek(limit = 10): Promise<TrendingAlbum[]> 
         prevScores.set(entry.album_id, (prevScores.get(entry.album_id) ?? 0) + 1);
     }
     const prevRankMap = new Map(
-        [...prevScores.entries()].sort((a, b) => b[1] - a[1]).map(([id], i) => [id, i + 1])
+        [...prevScores.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, limit)
+            .map(([id], i) => [id, i + 1])
     );
 
     return [...albumScores.entries()]

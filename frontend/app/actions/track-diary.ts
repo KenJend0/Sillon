@@ -605,6 +605,27 @@ export type TrackWithStats = {
 
 export async function getTrendingTracks(limit = 10): Promise<TrackWithStats[]> {
   const supabase = await createSupabaseServer();
+  const { data: rpcRows, error: rpcError } = await (supabase as any).rpc('get_trending_tracks', {
+    result_limit: limit,
+  });
+
+  if (!rpcError && rpcRows) {
+    return rpcRows.map((row: any) => ({
+      track_id: row.track_id,
+      track_title: row.track_title || 'Unknown',
+      artist_id: row.artist_id || '',
+      artist_name: row.artist_name || 'Unknown',
+      album_id: row.album_id || '',
+      album_title: row.album_title || 'Unknown',
+      cover_url: row.cover_url || null,
+      avg_rating: row.avg_rating !== null && row.avg_rating !== undefined ? Number(row.avg_rating) : null,
+      activity_count: row.activity_count ?? 0,
+      delta: row.delta ?? null,
+    }));
+  }
+
+  console.warn('getTrendingTracks RPC fallback:', rpcError?.message);
+
   const now = Date.now();
   const since = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
   // Fenêtre de comparaison décalée d'1 jour (pas de 7) — voir getTrendingThisWeek
@@ -645,7 +666,10 @@ export async function getTrendingTracks(limit = 10): Promise<TrackWithStats[]> {
     prevCounts.set(row.track_id, (prevCounts.get(row.track_id) ?? 0) + 1);
   }
   const prevRankMap = new Map(
-    [...prevCounts.entries()].sort((a, b) => b[1] - a[1]).map(([id], i) => [id, i + 1])
+    [...prevCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([id], i) => [id, i + 1])
   );
 
   const sorted = [...map.entries()]
@@ -951,4 +975,3 @@ export async function getTrackEntryComments(entryId: string): Promise<TrackDiary
   }
   return topLevel;
 }
-
