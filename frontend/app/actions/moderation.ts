@@ -26,7 +26,7 @@ export async function reportContent(
 
   const supabase = await createSupabaseServer();
 
-  const { error } = await (supabase as any).from('content_reports').insert({
+  const { error } = await supabase.from('content_reports').insert({
     reporter_id: user.id,
     content_type: contentType,
     content_id: contentId,
@@ -71,7 +71,7 @@ export async function adminDeleteContent(
   }
 
   // Clean up the reports for this content
-  await (supabase as any)
+  await supabase
     .from('content_reports')
     .delete()
     .eq('content_type', contentType)
@@ -178,7 +178,7 @@ export async function adminDismissReport(reportId: string): Promise<{ success: b
   if (!user || !ADMIN_IDS.includes(user.id)) return { success: false, error: 'Forbidden' };
 
   const supabase = createSupabaseAdmin();
-  const { error } = await (supabase as any).from('content_reports').delete().eq('id', reportId);
+  const { error } = await supabase.from('content_reports').delete().eq('id', reportId);
 
   if (error) {
     console.error('adminDismissReport error:', error);

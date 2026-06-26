@@ -22,7 +22,7 @@ export type CuratorPick = {
 export async function getCuratorPick(): Promise<CuratorPick | null> {
     const supabase = createSupabaseAnon();
 
-    const { data } = await (supabase as any)
+    const { data } = await supabase
         .from('curator_picks')
         .select('album_id, note, curator_id, albums(title, cover_url, release_date, artists(name)), profiles(username, avatar_url)')
         .order('created_at', { ascending: false })

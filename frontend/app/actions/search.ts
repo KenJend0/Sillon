@@ -110,7 +110,7 @@ export async function searchInternal(
   const albumsQuery = async () => {
     if (kind !== "all" && kind !== "albums") return { data: null };
     if (useTextSearch) {
-      const r = await (supabase as any)
+      const r = await supabase
         .from("albums")
         .select("id, title, cover_url, release_date, artists(name)")
         .neq("type", "Single")
@@ -119,7 +119,7 @@ export async function searchInternal(
       if (!r.error) return r;
       // search_vector column doesn't exist yet — fall back to ILIKE
     }
-    return (supabase as any)
+    return supabase
       .from("albums")
       .select("id, title, cover_url, release_date, artists(name)")
       .neq("type", "Single")
@@ -239,13 +239,13 @@ export async function searchInternal(
   if (needsAlbumFuzzy || needsArtistFuzzy || needsTrackFuzzy) {
     const fuzzyPromises = await Promise.all([
       needsAlbumFuzzy
-        ? (supabase as any).rpc("fuzzy_search_albums", { query_text: trimmed, result_limit: 5 })
+        ? supabase.rpc("fuzzy_search_albums", { query_text: trimmed, result_limit: 5 })
         : Promise.resolve({ data: null, error: null }),
       needsArtistFuzzy
-        ? (supabase as any).rpc("fuzzy_search_artists", { query_text: trimmed, result_limit: 5 })
+        ? supabase.rpc("fuzzy_search_artists", { query_text: trimmed, result_limit: 5 })
         : Promise.resolve({ data: null, error: null }),
       needsTrackFuzzy
-        ? (supabase as any).rpc("fuzzy_search_tracks", { query_text: trimmed, result_limit: 10 })
+        ? supabase.rpc("fuzzy_search_tracks", { query_text: trimmed, result_limit: 10 })
         : Promise.resolve({ data: null, error: null }),
     ]);
 

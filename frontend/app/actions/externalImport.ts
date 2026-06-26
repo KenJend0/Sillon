@@ -17,7 +17,7 @@ export async function getActiveImports() {
   const user = await getAuthUser();
   if (!user) return { success: false as const, error: 'Not authenticated' };
 
-  const admin = createSupabaseAdmin() as any;
+  const admin = createSupabaseAdmin();
   const { data } = await admin
     .from('external_imports')
     .select('id, source, status, total_items, processed_count, matched_count, skipped_count, failed_count, list_id')

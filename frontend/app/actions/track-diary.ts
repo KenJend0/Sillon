@@ -9,8 +9,8 @@ import { logAuthedProductEvent } from '@/lib/productEvents';
 import { diaryValidationMessage, parseDiaryRating, parseListenedAt } from '@/lib/diaryInputValidation';
 
 // Formes des relations imbriquées renvoyées par Supabase (tracks → albums → artists).
-// Les requêtes elles-mêmes restent `as any`-castées car les tables track_diary_*
-// ne sont pas dans les types générés — mais la forme des lignes lues est stable.
+// Les tables track_diary_* sont maintenant dans les types générés, mais les
+// relations imbriquées gardent ces petits types UI pour rester lisibles.
 interface ArtistRef {
   id: string;
   name: string;
@@ -124,7 +124,7 @@ export async function upsertTrackDiaryEntry(input: UpsertTrackDiaryEntryInput) {
       rec_source: input.source ?? null,
     };
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('track_diary_entries')
       .upsert(entryPayload, { onConflict: 'user_id,track_id,listened_at' })
       .select()
@@ -137,7 +137,7 @@ export async function upsertTrackDiaryEntry(input: UpsertTrackDiaryEntryInput) {
 
     // Fanout au feed — on récupère les followers via supabaseAdmin pour garantir
     // que la query n'est pas bloquée par un contexte auth instable (track_diary_entries
-    // n'est pas dans les types générés, ce qui peut affecter le client user-level).
+    // peut affecter le client user-level).
     try {
       const supabaseAdmin = createSupabaseAdmin();
 
@@ -207,7 +207,7 @@ export async function deleteTrackDiaryEntry(entryId: string) {
 
     const supabase = await createSupabaseServer();
 
-    const { data: entry, error: fetchError } = await (supabase as any)
+    const { data: entry, error: fetchError } = await supabase
       .from('track_diary_entries')
       .select('user_id')
       .eq('id', entryId)
@@ -216,7 +216,7 @@ export async function deleteTrackDiaryEntry(entryId: string) {
     if (fetchError || !entry) return { success: false, error: 'Entrée introuvable' };
     if (entry.user_id !== user.id) return { success: false, error: 'Forbidden' };
 
-    const { error: deleteError } = await (supabase as any)
+    const { error: deleteError } = await supabase
       .from('track_diary_entries')
       .delete()
       .eq('id', entryId);
@@ -241,7 +241,7 @@ export async function getLatestTrackDiaryEntry(
 
   const supabase = await createSupabaseServer();
 
-  const { data } = await (supabase as any)
+  const { data } = await supabase
     .from('track_diary_entries')
     .select('id, rating, listened_at, review_title, review_body')
     .eq('user_id', user.id)
@@ -277,14 +277,19 @@ export type TrackDiaryEntryUI = {
   created_at: string;
 };
 
+export type TrackDiarySort = 'date_listened' | 'personal_rating';
+
 export async function getUserTrackDiary(
   userId: string,
   offset = 0,
-  limit = 50
+  limit = 50,
+  sort: TrackDiarySort = 'date_listened',
+  ratingFilter?: number | null
 ): Promise<TrackDiaryEntryUI[]> {
   const supabase = await createSupabaseServer();
+  const currentUser = await getAuthUser();
 
-  const { data: entries, error } = await (supabase as any)
+  let query = supabase
     .from('track_diary_entries')
     .select(`
       id,
@@ -310,8 +315,23 @@ export async function getUserTrackDiary(
         )
       )
     `)
-    .eq('user_id', userId)
-    .order('listened_at', { ascending: false })
+    .eq('user_id', userId);
+
+  if (currentUser?.id !== userId) {
+    query = query.eq('is_public', true);
+  }
+
+  if (ratingFilter != null) {
+    query = query.eq('rating', ratingFilter);
+  }
+
+  if (sort === 'personal_rating') {
+    query = query.order('rating', { ascending: false, nullsFirst: false });
+  } else {
+    query = query.order('listened_at', { ascending: false });
+  }
+
+  const { data: entries, error } = await query
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -378,7 +398,7 @@ export async function getTrackReviewsPreview(
 ): Promise<TrackReview[]> {
   const supabase = await createSupabaseServer();
 
-  const { data: rows, error } = await (supabase as any)
+  const { data: rows, error } = await supabase
     .from('track_diary_entries')
     .select('id, user_id, rating, review_body, created_at')
     .eq('track_id', trackId)
@@ -442,7 +462,7 @@ export async function getTrackReviewsPage(input: {
     return { items: [], hasMore: false, userId: currentUser?.id || null, hasFollowing };
   }
 
-  let query = (supabase as any)
+  let query = supabase
     .from('track_diary_entries')
     .select('id, user_id, rating, review_body, created_at')
     .eq('track_id', trackId)
@@ -503,7 +523,7 @@ export type TrackStat = {
 export async function getTrackStats(trackId: string): Promise<TrackStat | null> {
   const supabase = await createSupabaseServer();
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('track_stats')
     .select('avg_rating, ratings_count, listeners_count')
     .eq('track_id', trackId)
@@ -559,7 +579,7 @@ export async function getTrackDiaryEntry(
   const supabase = await createSupabaseServer();
   const currentUser = await getAuthUser();
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('track_diary_entries')
     .select('id, rating, review_title, review_body, listened_at, created_at, is_public, user_id, track_id, album_id, artist_id')
     .eq('id', entryId)
@@ -574,13 +594,13 @@ export async function getTrackDiaryEntry(
     supabase.from('profiles').select('id, username, display_name, avatar_url').eq('id', data.user_id).maybeSingle(),
     supabase.from('artists').select('id, name').eq('id', data.artist_id).maybeSingle(),
     // Likes + comments count
-    (supabase as any).from('track_diary_entry_stats').select('likes_count, comments_count').eq('entry_id', entryId).maybeSingle(),
+    supabase.from('track_diary_entry_stats').select('likes_count, comments_count').eq('entry_id', entryId).maybeSingle(),
     // Has current user liked?
     currentUser
-      ? (supabase as any).from('track_diary_likes').select('user_id').eq('entry_id', entryId).eq('user_id', currentUser.id).maybeSingle()
+      ? supabase.from('track_diary_likes').select('user_id').eq('entry_id', entryId).eq('user_id', currentUser.id).maybeSingle()
       : Promise.resolve({ data: null }),
     // Comments
-    (supabase as any).from('track_diary_comments').select('id, body, created_at, user_id, parent_comment_id').eq('entry_id', entryId).order('created_at', { ascending: true }),
+    supabase.from('track_diary_comments').select('id, body, created_at, user_id, parent_comment_id').eq('entry_id', entryId).order('created_at', { ascending: true }),
   ]);
 
   if (!trackRes.data || !albumRes.data || !authorRes.data || !artistRes.data) {
@@ -656,7 +676,7 @@ export async function getAlbumTracksStats(albumId: string): Promise<Map<string, 
 
   const ids = trackIds.map((t) => t.id);
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('track_stats')
     .select('track_id, avg_rating, ratings_count, listeners_count')
     .in('track_id', ids);
@@ -694,7 +714,7 @@ export type TrackWithStats = {
 
 export async function getTrendingTracks(limit = 10): Promise<TrackWithStats[]> {
   const supabase = await createSupabaseServer();
-  const { data: rpcRows, error: rpcError } = await (supabase as any).rpc('get_trending_tracks', {
+  const { data: rpcRows, error: rpcError } = await supabase.rpc('get_trending_tracks', {
     result_limit: limit,
   });
 
@@ -728,12 +748,12 @@ export async function getTrendingTracks(limit = 10): Promise<TrackWithStats[]> {
   const eightDaysAgo = new Date(now - 8 * 24 * 60 * 60 * 1000).toISOString();
 
   const [{ data, error }, { data: prevData }] = await Promise.all([
-    (supabase as any)
+    supabase
       .from('track_diary_entries')
       .select('track_id, rating')
       .gte('created_at', since)
       .eq('is_public', true),
-    (supabase as any)
+    supabase
       .from('track_diary_entries')
       .select('track_id')
       .gte('created_at', eightDaysAgo)
@@ -823,7 +843,7 @@ export async function getFriendsHighRatedTracks(limit = 10): Promise<TrackWithSt
   if (followingIds.length === 0) return [];
 
   // Get tracks already rated by the current user (to exclude)
-  const { data: ownEntries } = await (supabase as any)
+  const { data: ownEntries } = await supabase
     .from('track_diary_entries')
     .select('track_id')
     .eq('user_id', user.id);
@@ -831,7 +851,7 @@ export async function getFriendsHighRatedTracks(limit = 10): Promise<TrackWithSt
   const ownTrackIds = new Set((ownEntries as Array<{ track_id: string }> ?? []).map((e) => e.track_id));
 
   // Get high-rated tracks from followed users
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('track_diary_entries')
     .select('track_id, rating')
     .in('user_id', followingIds)
@@ -907,7 +927,7 @@ export async function toggleTrackDiaryLike(entryId: string): Promise<void> {
 
   const supabase = await createSupabaseServer();
 
-  const { data: entryCheck } = await (supabase as any)
+  const { data: entryCheck } = await supabase
     .from('track_diary_entries')
     .select('user_id, is_public')
     .eq('id', entryId)
@@ -916,7 +936,7 @@ export async function toggleTrackDiaryLike(entryId: string): Promise<void> {
   if (!entryCheck) throw new Error('Entrée introuvable');
   if (!entryCheck.is_public && entryCheck.user_id !== user.id) throw new Error('Entrée introuvable');
 
-  const { data: existing } = await (supabase as any)
+  const { data: existing } = await supabase
     .from('track_diary_likes')
     .select('user_id')
     .eq('entry_id', entryId)
@@ -924,7 +944,7 @@ export async function toggleTrackDiaryLike(entryId: string): Promise<void> {
     .maybeSingle();
 
   if (existing) {
-    await (supabase as any).from('track_diary_likes').delete().eq('entry_id', entryId).eq('user_id', user.id);
+    await supabase.from('track_diary_likes').delete().eq('entry_id', entryId).eq('user_id', user.id);
     // Remove like event from feeds
     void Promise.resolve(
       createSupabaseAdmin()
@@ -935,11 +955,11 @@ export async function toggleTrackDiaryLike(entryId: string): Promise<void> {
         .eq('payload->>trackEntryId', entryId)
     ).catch(() => {});
   } else {
-    const { error: likeError } = await (supabase as any).from('track_diary_likes').insert({ entry_id: entryId, user_id: user.id });
+    const { error: likeError } = await supabase.from('track_diary_likes').insert({ entry_id: entryId, user_id: user.id });
     if (likeError) throw new Error('Une erreur est survenue');
     // Fanout like event
     try {
-      const { data: rawEntryData } = await (supabase as any)
+      const { data: rawEntryData } = await supabase
         .from('track_diary_entries')
         .select('user_id, track_id, album_id, tracks(title, albums(id, title, cover_url))')
         .eq('id', entryId)
@@ -981,7 +1001,7 @@ export async function addTrackComment(entryId: string, body: string, parentComme
 
   const supabase = await createSupabaseServer();
 
-  const { data: entry } = await (supabase as any)
+  const { data: entry } = await supabase
     .from('track_diary_entries')
     .select('id, user_id, is_public')
     .eq('id', entryId)
@@ -992,7 +1012,7 @@ export async function addTrackComment(entryId: string, body: string, parentComme
 
   let parentCommentAuthorId: string | null = null;
   if (parentCommentId) {
-    const { data: parentComment } = await (supabase as any)
+    const { data: parentComment } = await supabase
       .from('track_diary_comments')
       .select('id, entry_id, parent_comment_id, user_id')
       .eq('id', parentCommentId)
@@ -1003,7 +1023,7 @@ export async function addTrackComment(entryId: string, body: string, parentComme
     parentCommentAuthorId = parentComment.user_id;
   }
 
-  const { data: insertedComment, error } = await (supabase as any)
+  const { data: insertedComment, error } = await supabase
     .from('track_diary_comments')
     .insert({
       entry_id: entryId,
@@ -1018,7 +1038,7 @@ export async function addTrackComment(entryId: string, body: string, parentComme
 
   // Fanout comment event (non-fatal)
   try {
-    const { data: rawEntryData } = await (supabase as any)
+    const { data: rawEntryData } = await supabase
       .from('track_diary_entries')
       .select('user_id, track_id, album_id, tracks(title, albums(id, title, cover_url))')
       .eq('id', entryId)
@@ -1031,7 +1051,7 @@ export async function addTrackComment(entryId: string, body: string, parentComme
       if (parentCommentId && parentCommentAuthorId) {
         targetSet.add(parentCommentAuthorId);
       } else {
-        const { data: rawPrevCommenters } = await (supabase as any)
+        const { data: rawPrevCommenters } = await supabase
           .from('track_diary_comments')
           .select('user_id')
           .eq('entry_id', entryId)
@@ -1067,7 +1087,7 @@ export async function deleteTrackComment(commentId: string): Promise<void> {
 
   const supabase = await createSupabaseServer();
 
-  const { data: comment } = await (supabase as any)
+  const { data: comment } = await supabase
     .from('track_diary_comments')
     .select('user_id')
     .eq('id', commentId)
@@ -1076,7 +1096,7 @@ export async function deleteTrackComment(commentId: string): Promise<void> {
   if (!comment) throw new Error('Commentaire introuvable');
   if (comment.user_id !== user.id) throw new Error('Non autorisé');
 
-  const { error: deleteError } = await (supabase as any).from('track_diary_comments').delete().eq('id', commentId);
+  const { error: deleteError } = await supabase.from('track_diary_comments').delete().eq('id', commentId);
   if (deleteError) throw new Error('Une erreur est survenue');
 }
 
@@ -1084,7 +1104,7 @@ export async function getTrackEntryComments(entryId: string): Promise<TrackDiary
   const currentUser = await getAuthUser();
   const supabase = await createSupabaseServer();
 
-  const { data: commentsData } = await (supabase as any)
+  const { data: commentsData } = await supabase
     .from('track_diary_comments')
     .select('id, body, created_at, user_id, parent_comment_id')
     .eq('entry_id', entryId)

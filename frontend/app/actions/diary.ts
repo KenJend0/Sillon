@@ -305,7 +305,7 @@ export async function addComment(entryId: string, body: string, parentCommentId?
 
   // Prevent interaction with content from a blocked user
   if (entryCheck.user_id !== user.id) {
-    const { data: block } = await (supabase as any)
+    const { data: block } = await supabase
       .from('user_blocks')
       .select('blocker_id')
       .eq('blocker_id', user.id)
@@ -477,7 +477,7 @@ export async function toggleDiaryLike(entryId: string): Promise<void> {
 
   // Prevent interaction with content from a blocked user
   if (entry.user_id !== user.id) {
-    const { data: block } = await (supabase as any)
+    const { data: block } = await supabase
       .from('user_blocks')
       .select('blocker_id')
       .eq('blocker_id', user.id)
@@ -690,15 +690,19 @@ export type DiaryEntryUI = {
 /**
  * Get user diary entries with album info
  */
+export type DiarySort = 'date_listened' | 'release_date' | 'personal_rating';
+
 export async function getUserDiary(
   userId: string,
   offset = 0,
-  limit = 50
+  limit = 50,
+  sort: DiarySort = 'date_listened',
+  ratingFilter?: number | null
 ): Promise<DiaryEntryUI[]> {
   const supabase = await createSupabaseServer();
   const currentUser = await getAuthUser();
 
-  const { data: entries, error } = await supabase
+  let query = supabase
     .from('diary_entries')
     .select(`
       id,
@@ -719,8 +723,25 @@ export async function getUserDiary(
         )
       )
     `)
-    .eq('user_id', userId)
-    .order('listened_at', { ascending: false })
+    .eq('user_id', userId);
+
+  if (currentUser?.id !== userId) {
+    query = query.eq('is_public', true);
+  }
+
+  if (ratingFilter != null) {
+    query = query.eq('rating', ratingFilter);
+  }
+
+  if (sort === 'personal_rating') {
+    query = query.order('rating', { ascending: false, nullsFirst: false });
+  } else if (sort === 'release_date') {
+    query = query.order('release_date', { ascending: false, nullsFirst: false, foreignTable: 'albums' });
+  } else {
+    query = query.order('listened_at', { ascending: false });
+  }
+
+  const { data: entries, error } = await query
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -875,8 +896,7 @@ export type UnifiedReview = {
   is_liked: boolean;
 };
 
-// Forme des lignes track_diary_entries lues ci-dessous. La requête reste
-// `as any`-castée (table absente des types générés) mais la forme est stable.
+// Forme UI des lignes track_diary_entries lues ci-dessous.
 interface TrackReviewRow {
   id: string;
   rating: number | null;
@@ -908,25 +928,31 @@ export async function getUserReviewsUnified(userId: string): Promise<UnifiedRevi
   const supabase = await createSupabaseServer();
   const currentUser = await getAuthUser();
 
+  const isOwner = currentUser?.id === userId;
+
   const [albumReviews, trackReviews] = await Promise.all([
     // Album reviews
-    supabase
-      .from('diary_entries')
-      .select(`id, rating, review_body, listened_at, created_at, album_id, albums(id, title, cover_url, artist_id, artists(id, name))`)
-      .eq('user_id', userId)
-      .not('review_body', 'is', null)
-      .neq('review_body', '')
-      .order('created_at', { ascending: false })
-      .limit(100),
+    (() => {
+      let q = supabase
+        .from('diary_entries')
+        .select(`id, rating, review_body, listened_at, created_at, album_id, albums(id, title, cover_url, artist_id, artists(id, name))`)
+        .eq('user_id', userId)
+        .not('review_body', 'is', null)
+        .neq('review_body', '');
+      if (!isOwner) q = q.eq('is_public', true);
+      return q.order('created_at', { ascending: false }).limit(100);
+    })(),
     // Track reviews
-    (supabase as any)
-      .from('track_diary_entries')
-      .select(`id, rating, review_body, listened_at, created_at, track_id, album_id, tracks(id, title, albums(id, title, cover_url, artist_id, artists(id, name)))`)
-      .eq('user_id', userId)
-      .not('review_body', 'is', null)
-      .neq('review_body', '')
-      .order('created_at', { ascending: false })
-      .limit(100),
+    (() => {
+      let q = supabase
+        .from('track_diary_entries')
+        .select(`id, rating, review_body, listened_at, created_at, track_id, album_id, tracks(id, title, albums(id, title, cover_url, artist_id, artists(id, name)))`)
+        .eq('user_id', userId)
+        .not('review_body', 'is', null)
+        .neq('review_body', '');
+      if (!isOwner) q = q.eq('is_public', true);
+      return q.order('created_at', { ascending: false }).limit(100);
+    })(),
   ]);
 
   const allIds = (albumReviews.data ?? []).map((e) => e.id);
@@ -972,7 +998,7 @@ export async function getUserReviewsUnified(userId: string): Promise<UnifiedRevi
   const trackIds = trackReviewRows.map((e) => e.id);
   let trackLikedIds = new Set<string>();
   if (currentUser && trackIds.length > 0) {
-    const { data: trackLikes } = await (supabase as any)
+    const { data: trackLikes } = await supabase
       .from('track_diary_likes')
       .select('entry_id')
       .eq('user_id', currentUser.id)
@@ -980,7 +1006,7 @@ export async function getUserReviewsUnified(userId: string): Promise<UnifiedRevi
     trackLikedIds = new Set(((trackLikes ?? []) as Array<{ entry_id: string }>).map((l) => l.entry_id));
   }
   const { data: trackStatsData } = trackIds.length > 0
-    ? await (supabase as any).from('track_diary_entry_stats').select('entry_id, likes_count, comments_count').in('entry_id', trackIds)
+    ? await supabase.from('track_diary_entry_stats').select('entry_id, likes_count, comments_count').in('entry_id', trackIds)
     : { data: [] };
   const trackStatsMap = new Map(((trackStatsData ?? []) as EntryStatsRow[]).map((s) => [s.entry_id, s]));
 

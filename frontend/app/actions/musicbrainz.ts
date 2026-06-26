@@ -511,7 +511,7 @@ async function getCachedResults<T>(key: string): Promise<T | null> {
 
   // L2: Supabase (~15ms prod, ~250ms dev)
   try {
-    const db = createSupabaseAdmin() as any;
+    const db = createSupabaseAdmin();
     const { data } = await db
       .from('search_cache')
       .select('data')
@@ -535,12 +535,12 @@ async function setCachedResults<T>(key: string, results: T): Promise<void> {
 
   // L2: persist to Supabase (async, survives server restarts)
   try {
-    const db = createSupabaseAdmin() as any;
+    const db = createSupabaseAdmin();
     const expiresAt = new Date(Date.now() + CACHE_TTL_SECONDS * 1000).toISOString();
     await db.from('search_cache').delete().lt('expires_at', new Date().toISOString());
     await db
       .from('search_cache')
-      .upsert({ key, data: results, expires_at: expiresAt }, { onConflict: 'key' });
+      .upsert({ key, data: results as any, expires_at: expiresAt }, { onConflict: 'key' });
   } catch {
     // Supabase write failure is non-fatal — L1 is already populated
   }
@@ -1250,7 +1250,7 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
 
     // Create album
     const newAlbumId = crypto.randomUUID();
-    const { error: albumError } = await (supabase as any)
+    const { error: albumError } = await supabase
       .from('albums')
       .insert({
         id: newAlbumId,

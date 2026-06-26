@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Album not found' }, { status: 404 });
     }
 
-    const result = await enrichAlbumMetadata(album.id, album.mbid, album.title, artistName, true);
+    const result = await enrichAlbumMetadata(album.id, album.mbid, album.title, artistName);
 
     return NextResponse.json({
       ok: true,

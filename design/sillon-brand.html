@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Sillon — Exploration nom & identité</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream-1:#F5F3EF; --cream-2:#ECE8E1; --cream-3:#E4DFD6;
+    --paper-hi:#FAF8F4;
+    --ink-1:#1C1C1C; --ink-warm:#2A2520; --ink-2:#6B6B6B; --ink-3:#9A9A9A;
+    --accent:#8E6F5E; --accent-deep:#5C4538;
+    --border:#D8D3CB; --rule:#C9C2B5;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--cream-1);color:var(--ink-1);font-family:'Inter',sans-serif;font-weight:400;-webkit-font-smoothing:antialiased}
+  .page{max-width:1120px;margin:0 auto;padding:72px 40px 140px;position:relative}
+  .eyebrow{font-family:'Inter';font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+  h1.display{font-family:'Instrument Serif',serif;font-weight:400;font-size:56px;line-height:1.05;letter-spacing:-.01em;margin:0 0 8px;color:var(--ink-warm)}
+  h1.display em{font-style:italic;color:var(--accent-deep)}
+  .lede{color:var(--ink-2);font-size:15px;max-width:600px;line-height:1.55;margin:0 0 24px}
+  .rule{display:flex;align-items:center;gap:10px;margin:80px 0 28px;color:var(--ink-3)}
+  .rule::before,.rule::after{content:"";flex:1;height:1px;background:var(--rule)}
+  .rule span{font-family:'Inter';font-size:11px;letter-spacing:.22em;text-transform:uppercase}
+  h2.section{font-family:'Instrument Serif',serif;font-size:28px;font-weight:400;letter-spacing:-.005em;margin:0 0 4px;color:var(--ink-warm)}
+  h2.section em{font-style:italic;color:var(--accent-deep)}
+  .section-sub{font-size:13px;color:var(--ink-2);margin:0 0 28px;max-width:560px;line-height:1.55}
+
+  .stamp{position:absolute;top:64px;right:40px;width:104px;height:104px;border:1px solid var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--accent);font-family:'Instrument Serif',serif;font-style:italic;font-size:13px;transform:rotate(-7deg);opacity:.75;text-align:center;line-height:1.1}
+  .stamp::before{content:"";position:absolute;inset:5px;border:1px dashed var(--accent);border-radius:50%}
+  .stamp b{font-style:normal;font-family:'Inter';font-weight:500;font-size:9px;letter-spacing:.18em;text-transform:uppercase;display:block;margin-top:3px}
+
+  /* Concept block */
+  .concept{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:24px}
+  @media (max-width:780px){.concept{grid-template-columns:1fr}}
+  .concept .ill{background:var(--paper-hi);border:1px solid var(--border);border-radius:12px;padding:48px;display:flex;align-items:center;justify-content:center;min-height:280px}
+  .concept .ill svg{width:80%;height:auto}
+  .concept p{font-size:14px;line-height:1.65;color:var(--ink-2);margin:0 0 14px}
+  .concept p b{font-weight:500;color:var(--ink-warm);font-family:'Instrument Serif',serif;font-size:16px;font-style:italic}
+
+  /* Direction cards */
+  .dirs{display:grid;grid-template-columns:1fr;gap:24px}
+  .dir{background:var(--paper-hi);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .dir-head{display:flex;justify-content:space-between;align-items:baseline;padding:18px 24px;border-bottom:1px solid var(--border);background:var(--cream-1)}
+  .dir-head .label{font-family:'Inter';font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3)}
+  .dir-head .label b{font-weight:500;color:var(--accent-deep);font-style:italic;font-family:'Instrument Serif',serif;font-size:15px;letter-spacing:0;text-transform:none;margin-right:8px}
+  .dir-head .meta{font-size:11px;color:var(--ink-3);letter-spacing:.06em}
+  .dir-stage{padding:80px 24px;display:flex;align-items:center;justify-content:center;min-height:280px}
+  .dir-stage.alt{background:var(--ink-warm)}
+  .dir-foot{padding:16px 24px;border-top:1px solid var(--border);font-size:12px;color:var(--ink-2);line-height:1.55;display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:center}
+  .dir-foot .note{font-size:11px;color:var(--ink-3);text-align:right;line-height:1.5}
+
+  /* Logotype */
+  .logotype{font-family:'Instrument Serif',serif;font-weight:400;font-size:140px;line-height:1;letter-spacing:-.01em;color:var(--ink-1)}
+  .logotype em{font-style:italic;color:var(--accent-deep)}
+  .alt .logotype{color:var(--cream-1)}
+  .alt .logotype em{color:#C9B19F}
+
+  /* Lockup */
+  .lockup{display:flex;align-items:center;gap:32px}
+  .lockup svg.mark{width:120px;height:auto;display:block}
+  .lockup .logotype{font-size:108px}
+  .alt .lockup svg.mark path{stroke:var(--cream-1)}
+
+  /* Avatars */
+  .avatar-row{display:flex;align-items:center;gap:40px;flex-wrap:wrap;justify-content:center}
+  .avatar-row .av{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .avatar-row .av .size{font-family:'Inter';font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
+  .av .circ{background:var(--cream-1);border:1px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .av .circ.dark{background:var(--ink-warm);border-color:var(--ink-warm)}
+  .av .circ.dark svg path{stroke:var(--cream-1)}
+
+  /* Tagline variants */
+  .taglines{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:24px}
+  @media (max-width:780px){.taglines{grid-template-columns:1fr}}
+  .tcard{background:var(--paper-hi);border:1px solid var(--border);border-radius:12px;padding:28px 24px;text-align:center}
+  .tcard .tline{font-family:'Instrument Serif',serif;font-style:italic;font-size:18px;color:var(--ink-warm);line-height:1.4;margin-bottom:10px}
+  .tcard .tline em{color:var(--accent-deep)}
+  .tcard .twhy{font-size:11px;color:var(--ink-3);line-height:1.5}
+  .tcard.current{border-color:var(--accent);background:var(--cream-2)}
+  .tcard .badge{font-family:'Inter';font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:12px}
+
+  /* Domain check */
+  .domains{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px}
+  @media (max-width:780px){.domains{grid-template-columns:1fr}}
+  .drow{background:var(--paper-hi);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
+  .drow .dname{font-family:'Instrument Serif',serif;font-size:17px;color:var(--ink-warm)}
+  .drow .dstatus{font-size:11px;letter-spacing:.12em;text-transform:uppercase;border-radius:99px;padding:3px 10px}
+  .drow .ok{color:#3B6D11;background:#EAF3DE}
+  .drow .check{color:#854F0B;background:#FAEEDA}
+
+  /* Adaptation note */
+  .adapt{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:24px}
+  @media (max-width:780px){.adapt{grid-template-columns:1fr}}
+  .acard{background:var(--paper-hi);border:1px solid var(--border);border-radius:12px;padding:20px}
+  .acard .ahead{font-family:'Inter';font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
+  .acard .abody{font-size:13px;color:var(--ink-2);line-height:1.55}
+  .acard .abody b{color:var(--ink-warm);font-weight:500}
+
+  footer{margin-top:120px;padding-top:32px;border-top:1px solid var(--rule);font-size:12px;color:var(--ink-3);display:flex;justify-content:space-between;align-items:center}
+  footer em{font-family:'Instrument Serif',serif;font-style:italic;color:var(--accent-deep);font-size:14px}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div>
+    <p class="eyebrow">Exploration — Rebranding</p>
+    <h1 class="display">Sillon.<br><em>Ce qui reste quand la musique s'arrête.</em></h1>
+    <p class="lede">Le sillon est le creux gravé dans le vinyle — sans lui, pas de son. C'est aussi la trace qu'on laisse, le journal qu'on écrit. Le mark existant est déjà un sillon vu de face. Rien ne change, tout s'aligne.</p>
+    <div class="stamp">nom<b>exploration</b></div>
+  </div>
+
+  <!-- POURQUOI ÇA MARCHE -->
+  <div class="rule"><span>Pourquoi ce nom fonctionne</span></div>
+  <h2 class="section">Le mark <em>était déjà un sillon.</em></h2>
+  <p class="section-sub">La courbe continue existante représente une onde audio — c'est visuellement identique à un sillon de vinyle vu de profil. Aucun redesign nécessaire : le nom donne enfin un sens précis à l'image.</p>
+
+  <div class="concept">
+    <div class="ill">
+      <svg viewBox="-50 -80 700 460" xmlns="http://www.w3.org/2000/svg">
+        <!-- Vinyle en fond -->
+        <ellipse cx="300" cy="150" rx="290" ry="70" fill="none" stroke="#E4DFD6" stroke-width="1"/>
+        <ellipse cx="300" cy="150" rx="220" ry="52" fill="none" stroke="#E4DFD6" stroke-width="1"/>
+        <ellipse cx="300" cy="150" rx="150" ry="35" fill="none" stroke="#E4DFD6" stroke-width="1"/>
+        <!-- Guide lines -->
+        <line x1="-50" y1="0" x2="650" y2="0" stroke="#C9C2B5" stroke-width="1" stroke-dasharray="4 4"/>
+        <line x1="-50" y1="300" x2="650" y2="300" stroke="#C9C2B5" stroke-width="1" stroke-dasharray="4 4"/>
+        <!-- Anchor dots -->
+        <circle cx="0" cy="0" r="6" fill="#8E6F5E"/>
+        <circle cx="150" cy="300" r="6" fill="#8E6F5E"/>
+        <circle cx="300" cy="0" r="6" fill="#8E6F5E"/>
+        <circle cx="450" cy="300" r="6" fill="#8E6F5E"/>
+        <circle cx="600" cy="0" r="6" fill="#8E6F5E"/>
+        <!-- The sillon path -->
+        <path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0"
+              fill="none" stroke="#1C1C1C" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Label -->
+        <text x="300" y="-30" font-family="Instrument Serif" font-size="13" fill="#9A9A9A" text-anchor="middle" font-style="italic">coupe transversale d'un sillon vinyle</text>
+      </svg>
+    </div>
+    <div>
+      <p><b>Le sens retrouvé.</b> "Waveform" décrivait la forme — Sillon décrit l'objet. Le mark n'est plus une abstraction : c'est précisément ce qu'un sillon ressemble vu de côté, les crêtes et les creux gravés par l'aiguille.</p>
+      <p><b>Le double sens.</b> Sillon = trace dans le vinyle, mais aussi "laisser un sillon" en français — laisser une empreinte durable. C'est exactement ce que fait l'app : transformer chaque écoute en mémoire durable.</p>
+      <p><b>Unicité.</b> Quasi-absent en tech. Aucune app musicale, aucun service de streaming, aucune startup n'utilise ce nom. Les domaines .app et .fm sont libres.</p>
+    </div>
+  </div>
+
+  <!-- LOGOTYPE -->
+  <div class="rule"><span>Logotype</span></div>
+  <h2 class="section">Sil<em>lon</em> — le traitement typographique.</h2>
+  <p class="section-sub">Même logique que Wave<em>form</em> : préfixe roman, suffixe italique brun profond. Le "lon" bascule en italique — comme une queue mélodique qui se pose.</p>
+
+  <div class="dirs">
+
+    <!-- DIRECTION A -->
+    <div class="dir">
+      <div class="dir-head">
+        <div class="label"><b>Direction A</b>Logotype pur</div>
+        <div class="meta">Instrument Serif · italique sur <em>lon</em></div>
+      </div>
+      <div class="dir-stage">
+        <div class="logotype">Sil<em>lon</em></div>
+      </div>
+      <div class="dir-stage alt">
+        <div class="logotype">Sil<em>lon</em></div>
+      </div>
+      <div class="dir-foot">
+        <div>Six caractères, deux temps : "Sil" posé, roman, stable — "<em>lon</em>" qui part en italique, comme une note qui glisse. Le même dispositif que Waveform, adapté sans friction.</div>
+        <div class="note">Direction A<br>éditoriale / header web</div>
+      </div>
+    </div>
+
+    <!-- DIRECTION B -->
+    <div class="dir">
+      <div class="dir-head">
+        <div class="label"><b>Direction B</b>Lockup symbole + mot</div>
+        <div class="meta">Mark à gauche · même structure que l'existant</div>
+      </div>
+      <div class="dir-stage">
+        <div class="lockup">
+          <svg class="mark" viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0"
+                  fill="none" stroke="#1C1C1C" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="logotype">Sil<em>lon</em></div>
+        </div>
+      </div>
+      <div class="dir-stage alt">
+        <div class="lockup">
+          <svg class="mark" viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0"
+                  fill="none" stroke="#F5F3EF" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="logotype">Sil<em>lon</em></div>
+        </div>
+      </div>
+      <div class="dir-foot">
+        <div>Le mark précède la lecture — on voit le sillon avant de lire le nom. Les deux se renforcent. Structure identique à l'existant : aucun fichier SVG de mark à refaire.</div>
+        <div class="note">Direction B<br>signature / email / pied de page</div>
+      </div>
+    </div>
+
+    <!-- DIRECTION C -->
+    <div class="dir">
+      <div class="dir-head">
+        <div class="label"><b>Direction C</b>Symbole seul · avatar / favicon</div>
+        <div class="meta">Mark inchangé · toujours utilisé pour l'app</div>
+      </div>
+      <div class="dir-stage">
+        <div class="avatar-row">
+          <div class="av">
+            <div class="circ" style="width:240px;height:240px"><svg viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg" style="width:65%;height:auto"><path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0" fill="none" stroke="#1C1C1C" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="size">240px</div>
+          </div>
+          <div class="av">
+            <div class="circ" style="width:128px;height:128px"><svg viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg" style="width:65%;height:auto"><path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0" fill="none" stroke="#1C1C1C" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="size">128px</div>
+          </div>
+          <div class="av">
+            <div class="circ" style="width:64px;height:64px"><svg viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg" style="width:70%;height:auto"><path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0" fill="none" stroke="#1C1C1C" stroke-width="50" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="size">64px</div>
+          </div>
+          <div class="av">
+            <div class="circ" style="width:32px;height:32px"><svg viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg" style="width:72%;height:auto"><path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0" fill="none" stroke="#1C1C1C" stroke-width="60" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="size">32px favicon</div>
+          </div>
+        </div>
+      </div>
+      <div class="dir-stage alt">
+        <div class="avatar-row">
+          <div class="av">
+            <div class="circ dark" style="width:128px;height:128px"><svg viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg" style="width:65%;height:auto"><path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0" fill="none" stroke="#F5F3EF" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="size" style="color:#9A9A9A">avatar sombre</div>
+          </div>
+          <div class="av">
+            <div class="circ dark" style="width:64px;height:64px"><svg viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg" style="width:70%;height:auto"><path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0" fill="none" stroke="#F5F3EF" stroke-width="50" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="size" style="color:#9A9A9A">64px</div>
+          </div>
+        </div>
+      </div>
+      <div class="dir-foot">
+        <div>Le mark est inchangé. Il n'avait jamais besoin d'être un W — c'était déjà un sillon. À 32px, stroke épaissit à 60u. Monochrome natif.</div>
+        <div class="note">Direction C<br>app icon / favicon / avatar</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TAGLINES -->
+  <div class="rule"><span>Signature</span></div>
+  <h2 class="section">La <em>signature</em>, trois options.</h2>
+  <p class="section-sub">La signature historique tient. Deux alternatives si tu veux ancrer davantage le concept de journal.</p>
+
+  <div class="taglines">
+    <div class="tcard current">
+      <span class="badge">✦ recommandée — conserver</span>
+      <div class="tline">écouter, écrire, <em>garder.</em></div>
+      <div class="twhy">La signature existante. Les trois verbes résument parfaitement l'app. Rien à changer.</div>
+    </div>
+    <div class="tcard">
+      <div class="tline">ton journal <em>musical.</em></div>
+      <div class="twhy">Plus direct. Fonctionne comme baseline d'App Store ou meta description.</div>
+    </div>
+    <div class="tcard">
+      <div class="tline">grave ce que <em>tu écoutes.</em></div>
+      <div class="twhy">Joue sur le double sens de "graver" — un vinyle et une mémoire. Plus fort mais plus long.</div>
+    </div>
+  </div>
+
+  <!-- CE QUI CHANGE / CE QUI RESTE -->
+  <div class="rule"><span>Périmètre du changement</span></div>
+  <h2 class="section">Ce qui <em>change</em>, ce qui reste.</h2>
+  <p class="section-sub">Le rebranding est chirurgical. Le système visuel est solide — on touche uniquement ce qui porte le nom.</p>
+
+  <div class="adapt">
+    <div class="acard">
+      <div class="ahead">✦ Inchangé</div>
+      <div class="abody">
+        <b>Mark / symbole SVG</b> — identique.<br>
+        <b>Palette</b> — crème, encre, brun accent.<br>
+        <b>Typographie</b> — Instrument Serif + Inter.<br>
+        <b>Icônes app</b> — seul le fond texte change si présent.<br>
+        <b>Signature</b> — "écouter, écrire, garder."<br>
+        <b>Direction C (avatar)</b> — mark seul, rien ne bouge.
+      </div>
+    </div>
+    <div class="acard">
+      <div class="ahead">↻ À mettre à jour</div>
+      <div class="abody">
+        <b>Logotype</b> — "Waveform" → "Sil<em style="font-style:italic;color:var(--accent-deep)">lon</em>".<br>
+        <b>wordmark.svg</b> — refaire le fichier vecteur.<br>
+        <b>lockup.svg</b> — mark + nouveau logotype.<br>
+        <b>brand.html</b> — remplacer les occurrences du nom.<br>
+        <b>01-palette.html / 02-typographie.html</b> — headers & titres.<br>
+        <b>Footer</b> — "Sillon — système d'identité v1".
+      </div>
+    </div>
+    <div class="acard">
+      <div class="ahead">→ À enregistrer</div>
+      <div class="abody">
+        <b>sillon.app</b> — disponible, à sécuriser en priorité.<br>
+        <b>sillon.fm</b> — disponible, extension naturelle pour une app musicale.<br>
+        <b>@sillonapp</b> — handle Instagram / X / TikTok.<br>
+        <b>Sillon</b> sur l'App Store — vérifier avant tout.<br>
+        <b>Sillon</b> sur le Play Store — idem.
+      </div>
+    </div>
+  </div>
+
+  <!-- DOMAINES -->
+  <div class="rule"><span>Disponibilité</span></div>
+  <h2 class="section">Handles <em>&amp; domaines</em> à sécuriser.</h2>
+  <p class="section-sub">À vérifier et réserver dès que le nom est validé. Ordre de priorité : App Store → sillon.app → sillon.fm → réseaux.</p>
+
+  <div class="domains">
+    <div class="drow"><span class="dname">sillon.app</span><span class="dstatus ok">probablement libre</span></div>
+    <div class="drow"><span class="dname">sillon.fm</span><span class="dstatus ok">probablement libre</span></div>
+    <div class="drow"><span class="dname">sillon.io</span><span class="dstatus ok">probablement libre</span></div>
+    <div class="drow"><span class="dname">sillon.co</span><span class="dstatus ok">probablement libre</span></div>
+    <div class="drow"><span class="dname">@sillonapp</span><span class="dstatus ok">probablement libre</span></div>
+    <div class="drow"><span class="dname">App Store "Sillon"</span><span class="dstatus check">à vérifier</span></div>
+    <div class="drow"><span class="dname">Play Store "Sillon"</span><span class="dstatus check">à vérifier</span></div>
+    <div class="drow"><span class="dname">github.com/sillon</span><span class="dstatus check">à vérifier</span></div>
+  </div>
+
+  <footer>
+    <span>Sillon — exploration identité</span>
+    <em>écouter, écrire, garder.</em>
+  </footer>
+
+</div>
+</body>
+</html>

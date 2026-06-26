@@ -144,7 +144,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
     supabase.from('diary_comments').select('*', { count: 'exact', head: true }),
     supabase.from('diary_entries').select('*', { count: 'exact', head: true }).not('review_body', 'is', null),
     supabase.from('tracks').select('*', { count: 'exact', head: true }),
-    (supabase as any).from('track_metadata').select('*', { count: 'exact', head: true }),
+    supabase.from('track_metadata').select('*', { count: 'exact', head: true }),
     fetchAllPages<any>((from, to) =>
       supabase.from('albums').select('id, title, mbid, cover_url, release_date, artists(name)').order('title').range(from, to)
     ),
@@ -152,10 +152,10 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
       supabase.from('album_genres').select('album_id').range(from, to)
     ),
     fetchAllPages<AlbumMeta>((from, to) =>
-      (supabase as any).from('album_metadata').select('album_id, description, fetched_at, spotify_url, apple_music_url, deezer_url, streaming_attempts').order('fetched_at', { ascending: false }).range(from, to)
+      supabase.from('album_metadata').select('album_id, description, fetched_at, spotify_url, apple_music_url, deezer_url, streaming_attempts').order('fetched_at', { ascending: false }).range(from, to)
     ),
-    (supabase as any).from('content_reports').select('id, content_type, content_id, reason, created_at, reporter_id').order('created_at', { ascending: false }).limit(50),
-    (supabase as any).from('cron_health').select('job_name, status, last_run_at'),
+    supabase.from('content_reports').select('id, content_type, content_id, reason, created_at, reporter_id').order('created_at', { ascending: false }).limit(50),
+    supabase.from('cron_health').select('job_name, status, last_run_at'),
     getProductSignals(supabase, range.days),
   ]);
 
@@ -230,8 +230,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
     .slice(0, 8);
 
   // Résout l'importateur pour chaque enrichissement récent via product_events
-  const importEvents = await fetchAllPages<{ user_id: string; properties: Record<string, string> }>((from, to) =>
-    (supabase as any)
+  const importEvents = await fetchAllPages<{ user_id: string | null; properties: unknown }>((from, to) =>
+    supabase
       .from('product_events')
       .select('user_id, properties')
       .eq('event_name', 'album_import_started')
@@ -240,8 +240,11 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
   );
   const importerByMbid = new Map<string, string>();
   for (const evt of importEvents) {
-    const mbid = evt.properties?.mbid;
-    if (mbid && !importerByMbid.has(mbid)) importerByMbid.set(mbid, evt.user_id);
+    const properties = evt.properties && typeof evt.properties === 'object' && !Array.isArray(evt.properties)
+      ? evt.properties as Record<string, unknown>
+      : null;
+    const mbid = typeof properties?.mbid === 'string' ? properties.mbid : null;
+    if (mbid && evt.user_id && !importerByMbid.has(mbid)) importerByMbid.set(mbid, evt.user_id);
   }
 
   const importerUserIds = [...new Set([...importerByMbid.values()].filter(Boolean))];
@@ -622,7 +625,7 @@ async function getProductSignals(supabase: any, rangeDays: number): Promise<Prod
   try {
     const cutoff = new Date(Date.now() - (rangeDays * 2) * DAY_MS).toISOString();
     const rows = await fetchAllPages<ProductEventRow>((from, to) =>
-      (supabase as any)
+      supabase
         .from('product_events')
         .select('created_at, event_name, surface, user_id')
         .gte('created_at', cutoff)

@@ -55,7 +55,7 @@ export async function toggleFollow(idOrUsername: string, source?: string) {
     }
 
     // Prevent following a blocked user (or a user who blocked you)
-    const { data: blockCheck } = await (supabase as any)
+    const { data: blockCheck } = await supabase
       .from('user_blocks')
       .select('blocker_id')
       .or(`and(blocker_id.eq.${user.id},blocked_id.eq.${targetId}),and(blocker_id.eq.${targetId},blocked_id.eq.${user.id})`)
@@ -163,7 +163,7 @@ export async function getSuggestedUsers(limit = 5): Promise<SuggestedUser[]> {
   // Fetch already-followed and blocked user IDs to exclude them
   const [{ data: followed }, { data: blocked }] = await Promise.all([
     supabase.from('follows').select('followee_id').eq('follower_id', user.id),
-    (supabase as any).from('user_blocks').select('blocked_id').eq('blocker_id', user.id),
+    supabase.from('user_blocks').select('blocked_id').eq('blocker_id', user.id),
   ]);
 
   const followedIds = new Set<string>((followed || []).map((f) => f.followee_id));
@@ -233,7 +233,7 @@ export async function toggleBlock(userId: string): Promise<{ success: boolean; b
 
     const supabase = await createSupabaseServer();
 
-    const { data: existing } = await (supabase as any)
+    const { data: existing } = await supabase
       .from('user_blocks')
       .select('blocked_id')
       .eq('blocker_id', user.id)
@@ -242,7 +242,7 @@ export async function toggleBlock(userId: string): Promise<{ success: boolean; b
 
     if (existing) {
       // Unblock
-      await (supabase as any)
+      await supabase
         .from('user_blocks')
         .delete()
         .eq('blocker_id', user.id)
@@ -251,7 +251,7 @@ export async function toggleBlock(userId: string): Promise<{ success: boolean; b
       return { success: true, blocking: false };
     } else {
       // Block
-      const { error: blockError } = await (supabase as any)
+      const { error: blockError } = await supabase
         .from('user_blocks')
         .insert({ blocker_id: user.id, blocked_id: userId });
 

@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
   // `replace_favorite_albums` isn't in the generated Supabase types yet
   // (same situation as get_trending_albums/get_trending_tracks) — cast until
   // database.ts is regenerated.
-  const { error } = await (supabase as any).rpc("replace_favorite_albums", {
+  const { error } = await supabase.rpc("replace_favorite_albums", {
     p_albums: albums,
   });
 

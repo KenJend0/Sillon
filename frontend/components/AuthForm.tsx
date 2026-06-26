@@ -146,7 +146,8 @@ export default function AuthForm() {
         });
 
         if (resetError) {
-          throw new Error(resetError.message);
+          console.error("[AuthForm] reset password error:", resetError);
+          throw new Error("Impossible d'envoyer l'email de réinitialisation pour l'instant.");
         }
 
         showToast(

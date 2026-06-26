@@ -273,9 +273,15 @@ async function searchSpotify(artist, title) {
 }
 
 async function upsertGenresAndAlbumGenres(supabase, albumId, tagMap) {
-  const validTags = [...tagMap.entries()]
+  const rawTags = [...tagMap.entries()]
     .map(([name, { count, source }]) => ({ name, slug: toSlug(name), count, source }))
     .filter((t) => t.slug);
+  const slugMap = new Map();
+  for (const tag of rawTags) {
+    const existing = slugMap.get(tag.slug);
+    if (!existing || tag.count > existing.count) slugMap.set(tag.slug, tag);
+  }
+  const validTags = [...slugMap.values()];
   if (!validTags.length) return 0;
 
   await supabase

@@ -89,7 +89,7 @@ export async function getMyFeed({
     const supabase = await createSupabaseServer();
 
     // Fetch blocked user IDs to exclude their events from the feed
-    const { data: blockedRows } = await (supabase as any)
+    const { data: blockedRows } = await supabase
       .from('user_blocks')
       .select('blocked_id');
     const blockedIds = ((blockedRows ?? []) as Array<{ blocked_id: string }>).map((r) => r.blocked_id);
@@ -105,7 +105,7 @@ export async function getMyFeed({
 
     for (let batch = 0; batch < maxBatches; batch++) {
       // Fetch feed_events for current user, with joins
-      let query = (supabase as any)
+      let query = supabase
       .from('feed_events')
       .select(
         `
@@ -265,16 +265,16 @@ export async function getMyFeed({
 
     const [{ data: trackStatsData }, { data: trackLikedData }, { data: trackCommentedData }, { data: trackEntryReviewData }] = await Promise.all([
       trackEntryIds.length > 0
-        ? (supabase as any).from('track_diary_entry_stats').select('entry_id, likes_count, comments_count').in('entry_id', trackEntryIds)
+        ? supabase.from('track_diary_entry_stats').select('entry_id, likes_count, comments_count').in('entry_id', trackEntryIds)
         : Promise.resolve({ data: [] }),
       trackEntryIds.length > 0
-        ? (supabase as any).from('track_diary_likes').select('entry_id').in('entry_id', trackEntryIds).eq('user_id', user.id)
+        ? supabase.from('track_diary_likes').select('entry_id').in('entry_id', trackEntryIds).eq('user_id', user.id)
         : Promise.resolve({ data: [] }),
       trackCommentEventEntryIds.length > 0
-        ? (supabase as any).from('track_diary_comments').select('entry_id').in('entry_id', trackCommentEventEntryIds).eq('user_id', user.id)
+        ? supabase.from('track_diary_comments').select('entry_id').in('entry_id', trackCommentEventEntryIds).eq('user_id', user.id)
         : Promise.resolve({ data: [] }),
       allTrackInteractionEntryIds.length > 0
-        ? (supabase as any).from('track_diary_entries').select('id, rating, review_body').in('id', allTrackInteractionEntryIds)
+        ? supabase.from('track_diary_entries').select('id, rating, review_body').in('id', allTrackInteractionEntryIds)
         : Promise.resolve({ data: [] }),
     ]);
 
@@ -829,7 +829,7 @@ export async function getTrackCommentActors(entryId: string): Promise<FeedActor[
   try {
     const supabase = await createSupabaseServer();
 
-    const { data: comments, error } = await (supabase as any)
+    const { data: comments, error } = await supabase
       .from('track_diary_comments')
       .select('user_id')
       .eq('entry_id', entryId)
@@ -854,7 +854,7 @@ export async function getTrackEntryLikes(entryId: string): Promise<FeedActor[]> 
   try {
     const supabase = await createSupabaseServer();
 
-    const { data: likes, error } = await (supabase as any)
+    const { data: likes, error } = await supabase
       .from('track_diary_likes')
       .select('user_id')
       .eq('entry_id', entryId)
@@ -1116,7 +1116,7 @@ export async function markActivitySeen() {
     if (!user) return { ok: false as const };
 
     const supabase = await createSupabaseServer();
-    await (supabase as any)
+    await supabase
       .from('profiles')
       .update({ last_seen_activity_at: new Date().toISOString() })
       .eq('id', user.id);
@@ -1139,8 +1139,7 @@ export async function hasUnseenActivity(): Promise<boolean> {
 
     const supabase = await createSupabaseServer();
 
-    // last_seen_activity_at n'est pas dans les types générés (migration récente) — cast en any.
-    const { data: profile } = await (supabase as any)
+    const { data: profile } = await supabase
       .from('profiles')
       .select('last_seen_activity_at')
       .eq('id', user.id)

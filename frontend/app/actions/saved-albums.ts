@@ -27,8 +27,7 @@ export async function getUserSavedAlbums(
   const supabase = await createSupabaseServer();
   const safeLimit = typeof limit === 'number' ? Math.min(Math.max(limit, 1), 100) : undefined;
 
-  // albums.type n'est pas dans les types générés (colonne ajoutée hors migration suivie) — cast en any.
-  let query = (supabase as any)
+  let query = supabase
     .from('saved_albums')
     .select(`
       id,

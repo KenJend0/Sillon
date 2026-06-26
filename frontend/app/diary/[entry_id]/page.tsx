@@ -68,7 +68,7 @@ export default async function DiaryEntryPage({ params }: DiaryEntryPageProps) {
 
   if (currentUser && currentUser.id !== result.data.author.id) {
     const supabase = await createSupabaseServer();
-    const { data: block } = await (supabase as any)
+    const { data: block } = await supabase
       .from('user_blocks')
       .select('blocker_id')
       .eq('blocker_id', currentUser.id)

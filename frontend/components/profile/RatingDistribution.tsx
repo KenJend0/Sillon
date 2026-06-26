@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRatingFilter } from "./RatingFilterContext";
 
 type Props = {
   ratings: (number | null)[];
@@ -8,7 +8,8 @@ type Props = {
 };
 
 export default function RatingDistribution({ ratings, label = "Mes" }: Props) {
-  const [selected, setSelected] = useState<number | null>(null);
+  const { selectedRating, selectRating } = useRatingFilter();
+  const selected = selectedRating;
 
   const counts = Array(10).fill(0) as number[];
   let total = 0;
@@ -27,7 +28,7 @@ export default function RatingDistribution({ ratings, label = "Mes" }: Props) {
 
   const handleBarClick = (i: number) => {
     if (counts[i] === 0) return;
-    setSelected((prev) => (prev === i ? null : i));
+    selectRating(selected === i ? null : i, counts[i]);
   };
 
   return (

@@ -6,6 +6,7 @@ import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileTabs from "@/components/profile/ProfileTabs";
 import Top3Albums from "@/components/profile/Top3Albums";
 import RatingDistribution from "@/components/profile/RatingDistribution";
+import { RatingFilterProvider } from "@/components/profile/RatingFilterContext";
 import { getUserDiary, getUserReviewsUnified } from "@/app/actions/diary";
 import { getUserLists, getUserSavedLists, getOrCreateDefaultList } from "@/app/actions/lists";
 import { getUserTrackDiary } from "@/app/actions/track-diary";
@@ -88,7 +89,7 @@ export default async function MyProfilePage() {
         getUserTrackDiary(user.id),
         getUserReviewsUnified(user.id),
         supabase.from("diary_entries").select("rating").eq("user_id", user.id),
-        (supabase as any)
+        supabase
             .from("track_diary_entries")
             .select("id", { count: "exact", head: true })
             .eq("user_id", user.id)
@@ -134,17 +135,14 @@ export default async function MyProfilePage() {
         : undefined;
 
     return (
+        <RatingFilterProvider>
         <div className="lg:flex lg:items-start lg:gap-12 lg:px-8">
             {/* Sidebar gauche (desktop) / Layout empilé (mobile) */}
             <aside className="lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-[72px]">
                 <ProfileHeader user={userData} stats={stats} streak={streak} />
                 <div className="max-w-page mx-auto px-4 sm:px-6 lg:max-w-none lg:px-0 lg:mt-4">
-                    {/* Histogramme mobile : juste sous le hero */}
-                    <div className="lg:hidden mt-4 mb-2">
-                        <RatingDistribution ratings={allRatings} />
-                    </div>
                     <Top3Albums userId={user.id} isMe={true} initialAlbums={favoriteAlbums} />
-                    <div className="hidden lg:block mt-8">
+                    <div className="mt-4 lg:mt-8">
                         <RatingDistribution ratings={allRatings} />
                     </div>
                 </div>
@@ -165,5 +163,6 @@ export default async function MyProfilePage() {
                 </Suspense>
             </div>
         </div>
+        </RatingFilterProvider>
     );
 }

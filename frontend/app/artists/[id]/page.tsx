@@ -117,7 +117,7 @@ export default async function ArtistPage({ params }: PageProps) {
             ? supabase.from("diary_entries").select("user_id, review_body").in("album_id", albumIds)
             : Promise.resolve({ data: [] }),
         // Track listeners & reviews for this artist
-        (supabase as any)
+        supabase
             .from("track_diary_entries")
             .select("user_id, review_body")
             .eq("artist_id", id),

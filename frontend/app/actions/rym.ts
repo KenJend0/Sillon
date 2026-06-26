@@ -36,8 +36,7 @@ export async function startRymImport(fileContent: string, fileName: string, requ
     return { success: false as const, error: 'Fichier CSV trop lourd — taille max 3MB.' };
   }
 
-  // `external_imports` n'est pas encore dans les types générés (migration récente) — cast en any.
-  const admin = createSupabaseAdmin() as any;
+  const admin = createSupabaseAdmin();
 
   const cutoff = new Date(Date.now() - COOLDOWN_HOURS * 60 * 60 * 1000).toISOString();
   const { count } = await admin

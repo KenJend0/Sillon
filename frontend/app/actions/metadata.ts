@@ -788,7 +788,7 @@ export async function enrichAlbumMetadata(
     const descSrc = description
       ? (lfmResult.description ? 'lastfm' : mbData.wikipediaUrl ? 'wikipedia' : 'musicbrainz')
       : null;
-    const metaRow: Record<string, unknown> = {
+    const metaRow = {
       album_id: albumId,
       description: description ?? null,
       description_src: descSrc,
@@ -802,11 +802,9 @@ export async function enrichAlbumMetadata(
       tags_checked_at: new Date().toISOString(),
     };
 
-    // tags_checked_at/tag_attempts ne sont pas encore dans les types générés
-    // (migration récente, cf. supabase_migration_tag_retry.sql) — cast en any.
     await supabase
       .from('album_metadata')
-      .upsert(metaRow as any, { onConflict: 'album_id' });
+      .upsert(metaRow, { onConflict: 'album_id' });
 
     return { genres: validTags.length, hasDescription, mbTagsRaw: mbTagsResult.length, lfmTagsRaw: lfmResult.tags.length, errors };
   } catch (err) {
@@ -834,8 +832,7 @@ const SIMILAR_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 async function getCachedSimilarAlbums(albumId: string): Promise<SimilarAlbum[] | null> {
   try {
     const supabase = await createSupabaseServer();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase as any)
+    const { data } = await supabase
       .from('similar_albums_cache')
       .select('similar_albums, computed_at')
       .eq('album_id', albumId)
@@ -851,8 +848,7 @@ async function getCachedSimilarAlbums(albumId: string): Promise<SimilarAlbum[] |
 async function setCachedSimilarAlbums(albumId: string, albums: SimilarAlbum[]): Promise<void> {
   try {
     const supabase = createSupabaseAdmin();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('similar_albums_cache').upsert({
+    await supabase.from('similar_albums_cache').upsert({
       album_id: albumId,
       similar_albums: albums,
       computed_at: new Date().toISOString(),

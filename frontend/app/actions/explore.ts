@@ -81,7 +81,7 @@ export type ForYouTrack = {
  */
 export async function getTrendingThisWeek(limit = 10): Promise<TrendingAlbum[]> {
     const supabase = createSupabaseAnon();
-    const { data: rpcRows, error: rpcError } = await (supabase as any).rpc('get_trending_albums', {
+    const { data: rpcRows, error: rpcError } = await supabase.rpc('get_trending_albums', {
         result_limit: limit,
     });
 
@@ -174,7 +174,7 @@ export async function getForYouSuggestions(limit = 6): Promise<ForYouAlbum[]> {
     const supabase = await createSupabaseServer();
 
     const [{ data: feedback }, { data: ratedAlbums }] = await Promise.all([
-        (supabase as any)
+        supabase
             .from('recommendation_feedback')
             .select('album_id')
             .eq('user_id', user.id),
@@ -304,7 +304,7 @@ export async function dismissRecommendation(albumId: string): Promise<{ success:
     if (!user) return { success: false };
 
     const supabase = await createSupabaseServer();
-    const { error } = await (supabase as any)
+    const { error } = await supabase
         .from('recommendation_feedback')
         .upsert({ user_id: user.id, album_id: albumId }, { onConflict: 'user_id,album_id' });
 
@@ -320,7 +320,7 @@ export async function dismissTrackRecommendation(trackId: string): Promise<{ suc
     if (!user) return { success: false };
 
     const supabase = await createSupabaseServer();
-    const { error } = await (supabase as any)
+    const { error } = await supabase
         .from('recommendation_feedback')
         .upsert({ user_id: user.id, track_id: trackId }, { onConflict: 'user_id,track_id' });
 
@@ -349,7 +349,7 @@ export async function getDiscoveryAlbums(limit = 6): Promise<DiscoveryResult> {
             const [{ data: myAlbums }, { data: following }, { data: feedback }] = await Promise.all([
                 authedSupabase.from('diary_entries').select('albums(artist_id)').eq('user_id', user.id),
                 authedSupabase.from('follows').select('followee_id').eq('follower_id', user.id),
-                (authedSupabase as any)
+                authedSupabase
                     .from('recommendation_feedback')
                     .select('album_id')
                     .eq('user_id', user.id)
@@ -540,7 +540,7 @@ export async function getForYouTracks(limit = 6): Promise<ForYouTrack[]> {
     const supabase = await createSupabaseServer();
 
     const [{ data: feedback }, { data: ratedTracks }] = await Promise.all([
-        (supabase as any)
+        supabase
             .from('recommendation_feedback')
             .select('track_id')
             .eq('user_id', user.id)
@@ -550,7 +550,7 @@ export async function getForYouTracks(limit = 6): Promise<ForYouTrack[]> {
     const dismissedTrackIds = new Set(((feedback ?? []) as Array<{ track_id: string | null }>).map((f) => f.track_id).filter((id): id is string => id != null));
     const ratedTrackIds = new Set((ratedTracks || []).map((r) => r.track_id).filter(Boolean));
 
-    const { data: rawData } = await (supabase as any)
+    const { data: rawData } = await supabase
         .from('user_track_recommendations')
         .select('track_id, rank, tracks(id, title, album_id, artist_id, albums(id, title, cover_url, artists(name)))')
         .eq('user_id', user.id)

@@ -64,8 +64,7 @@ export async function startLastfmImport(username: string) {
   const trimmed = username.trim();
   if (!trimmed) return { success: false as const, error: 'Pseudo Last.fm requis' };
 
-  // `external_imports` n'est pas encore dans les types générés (migration récente) — cast en any.
-  const admin = createSupabaseAdmin() as any;
+  const admin = createSupabaseAdmin();
 
   const cutoff = new Date(Date.now() - COOLDOWN_HOURS * 60 * 60 * 1000).toISOString();
   const { count } = await admin

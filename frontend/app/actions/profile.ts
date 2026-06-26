@@ -369,7 +369,7 @@ export async function getCurrentStreak(userId: string): Promise<{ ok: boolean; s
         .select('listened_at')
         .eq('user_id', userId)
         .gte('listened_at', since.toISOString()),
-      (supabase as any)
+      supabase
         .from('track_diary_entries')
         .select('listened_at')
         .eq('user_id', userId)

@@ -41,7 +41,7 @@ export default async function TrackPage({ params, searchParams }: PageProps) {
             .order('weight', { ascending: false })
             .limit(3),
         // Streaming links du titre (priorité)
-        (supabase as any)
+        supabase
             .from('track_metadata')
             .select('spotify_url, apple_music_url, deezer_url')
             .eq('track_id', id)

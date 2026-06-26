@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Waveform — Brand assets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream-1:#F5F3EF; --cream-2:#ECE8E1; --cream-3:#E4DFD6;
+    --paper-hi:#FAF8F4;
+    --ink-1:#1C1C1C; --ink-warm:#2A2520; --ink-2:#6B6B6B; --ink-3:#9A9A9A;
+    --accent:#8E6F5E; --accent-deep:#5C4538;
+    --border:#D8D3CB; --rule:#C9C2B5;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--cream-1);color:var(--ink-1);font-family:'Inter',sans-serif;font-weight:400;-webkit-font-smoothing:antialiased}
+  .page{max-width:1120px;margin:0 auto;padding:72px 40px 140px;position:relative}
+  .eyebrow{font-family:'Inter';font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+  h1.display{font-family:'Instrument Serif',serif;font-weight:400;font-size:56px;line-height:1;letter-spacing:-.01em;margin:0 0 8px;color:var(--ink-warm)}
+  h1.display em{font-style:italic;color:var(--accent-deep)}
+  .lede{color:var(--ink-2);font-size:15px;max-width:600px;line-height:1.55;margin:0 0 24px}
+  .rule{display:flex;align-items:center;gap:10px;margin:80px 0 28px;color:var(--ink-3)}
+  .rule::before,.rule::after{content:"";flex:1;height:1px;background:var(--rule)}
+  .rule span{font-family:'Inter';font-size:11px;letter-spacing:.22em;text-transform:uppercase}
+  h2.section{font-family:'Instrument Serif',serif;font-size:28px;font-weight:400;letter-spacing:-.005em;margin:0 0 4px;color:var(--ink-warm)}
+  h2.section em{font-style:italic;color:var(--accent-deep)}
+  .section-sub{font-size:13px;color:var(--ink-2);margin:0 0 28px;max-width:560px;line-height:1.55}
+
+  .stamp{position:absolute;top:64px;right:40px;width:104px;height:104px;border:1px solid var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--accent);font-family:'Instrument Serif',serif;font-style:italic;font-size:13px;transform:rotate(-7deg);opacity:.75;text-align:center;line-height:1.1}
+  .stamp::before{content:"";position:absolute;inset:5px;border:1px dashed var(--accent);border-radius:50%}
+  .stamp b{font-style:normal;font-family:'Inter';font-weight:500;font-size:9px;letter-spacing:.18em;text-transform:uppercase;display:block;margin-top:3px}
+
+  /* Direction cards */
+  .dirs{display:grid;grid-template-columns:1fr;gap:24px}
+  .dir{background:var(--paper-hi);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .dir-head{display:flex;justify-content:space-between;align-items:baseline;padding:18px 24px;border-bottom:1px solid var(--border);background:var(--cream-1)}
+  .dir-head .label{font-family:'Inter';font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3)}
+  .dir-head .label b{font-weight:500;color:var(--accent-deep);font-style:italic;font-family:'Instrument Serif',serif;font-size:15px;letter-spacing:0;text-transform:none;margin-right:8px}
+  .dir-head .meta{font-size:11px;color:var(--ink-3);letter-spacing:.06em}
+  .dir-stage{padding:80px 24px;display:flex;align-items:center;justify-content:center;min-height:280px}
+  .dir-stage.alt{background:var(--ink-warm)}
+  .dir-foot{padding:16px 24px;border-top:1px solid var(--border);font-size:12px;color:var(--ink-2);line-height:1.55;display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:center}
+  .dir-foot .files{text-align:right;font-family:'Inter';font-size:11px;color:var(--ink-3);letter-spacing:.04em}
+  .dir-foot .files a{color:var(--accent-deep);text-decoration:none;border-bottom:1px solid var(--rule);padding-bottom:1px}
+  .dir-foot .files a:hover{color:var(--ink-1)}
+
+  /* Logotype rendering */
+  .logotype{font-family:'Instrument Serif',serif;font-weight:400;font-size:140px;line-height:1;letter-spacing:-.01em;color:var(--ink-1)}
+  .logotype em{font-style:italic;color:var(--accent-deep)}
+  .alt .logotype{color:var(--cream-1)}
+  .alt .logotype em{color:#C9B19F}
+
+  .lockup{display:flex;align-items:center;gap:32px}
+  .lockup svg.mark{width:120px;height:auto;display:block}
+  .lockup .logotype{font-size:108px}
+  .alt .lockup svg.mark path{stroke:var(--cream-1)}
+
+  .avatar-row{display:flex;align-items:center;gap:40px;flex-wrap:wrap;justify-content:center}
+  .avatar-row .av{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .avatar-row .av .size{font-family:'Inter';font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
+  .av .circ{background:var(--cream-1);border:1px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .av .circ.dark{background:var(--ink-warm);border-color:var(--ink-warm)}
+  .av .circ.dark svg path{stroke:var(--cream-1)}
+
+  /* Icon presentation */
+  .icons-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  @media (max-width:900px){.icons-grid{grid-template-columns:repeat(2,1fr)}}
+  .icon-card{background:var(--paper-hi);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .icon-card .preview{background:var(--cream-2);padding:24px;display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;position:relative}
+  .icon-card .preview img{width:100%;height:auto;display:block;border-radius:22%;box-shadow:0 4px 12px rgba(28,28,28,.08);border:1px solid var(--border)}
+  .icon-card .preview.square img{border-radius:0}
+  .icon-card .preview.maskable img{border-radius:50%}
+  .icon-card .meta{padding:14px 16px;border-top:1px solid var(--border)}
+  .icon-card .meta .name{font-family:'Instrument Serif',serif;font-size:18px;color:var(--ink-warm);line-height:1.1}
+  .icon-card .meta .why{font-size:11px;color:var(--ink-2);line-height:1.45;margin-top:6px;min-height:32px}
+  .icon-card .meta .ft{font-family:'Inter';font-size:10px;color:var(--ink-3);letter-spacing:.06em;margin-top:8px;display:flex;justify-content:space-between}
+
+  /* Maskable demo */
+  .maskable-demo{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:20px}
+  @media (max-width:780px){.maskable-demo{grid-template-columns:1fr}}
+  .mask-card{background:var(--paper-hi);border:1px solid var(--border);border-radius:12px;padding:24px;text-align:center}
+  .mask-card .holder{position:relative;width:200px;height:200px;margin:0 auto 14px;overflow:hidden}
+  .mask-card .holder img{width:100%;height:100%;display:block}
+  .mask-card.r1 .holder{border-radius:22%}
+  .mask-card.r2 .holder{border-radius:50%}
+  .mask-card.r3 .holder{border-radius:32%}
+  .mask-card .lbl{font-family:'Inter';font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3)}
+  .mask-card .sub{font-family:'Instrument Serif',serif;font-size:17px;color:var(--ink-warm);margin-top:4px}
+
+  /* Splash mock */
+  .splash-wrap{display:grid;grid-template-columns:1.2fr 1fr;gap:32px;align-items:center}
+  @media (max-width:780px){.splash-wrap{grid-template-columns:1fr}}
+  .splash-mock{background:var(--paper-hi);border:1px solid var(--border);border-radius:14px;padding:28px;display:flex;justify-content:center;align-items:center}
+  .splash-mock .phone{width:260px;aspect-ratio:9/19.5;border-radius:36px;background:var(--cream-1);border:1px solid var(--ink-warm);position:relative;overflow:hidden;box-shadow:0 14px 40px rgba(28,28,28,.12)}
+  .splash-mock .phone .notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:88px;height:24px;background:var(--ink-warm);border-radius:14px}
+  .splash-mock .phone .mark-holder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  .splash-mock .phone .mark-holder svg{width:34%;height:auto}
+
+  .stack-files{font-family:'Inter';font-size:12px;color:var(--ink-2);line-height:1.75}
+  .stack-files .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--rule)}
+  .stack-files .row:last-child{border-bottom:none}
+  .stack-files .row span:first-child{font-family:'Instrument Serif',serif;font-size:14px;color:var(--ink-warm)}
+  .stack-files .row span:last-child{font-family:'Inter';font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3)}
+
+  /* Recommended pill */
+  .rec{display:inline-flex;align-items:center;gap:6px;font-family:'Inter';font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-deep);border:1px solid var(--accent);border-radius:99px;padding:3px 10px;margin-left:10px}
+  .rec::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent)}
+
+  /* Concept block */
+  .concept{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:24px}
+  @media (max-width:780px){.concept{grid-template-columns:1fr}}
+  .concept .ill{background:var(--paper-hi);border:1px solid var(--border);border-radius:12px;padding:48px;display:flex;align-items:center;justify-content:center;min-height:280px}
+  .concept .ill svg{width:80%;height:auto}
+  .concept p{font-size:14px;line-height:1.65;color:var(--ink-2);margin:0 0 14px}
+  .concept p b{font-weight:500;color:var(--ink-warm);font-family:'Instrument Serif',serif;font-size:16px;font-style:italic}
+
+  footer{margin-top:120px;padding-top:32px;border-top:1px solid var(--rule);font-size:12px;color:var(--ink-3);display:flex;justify-content:space-between;align-items:center}
+  footer em{font-family:'Instrument Serif',serif;font-style:italic;color:var(--accent-deep);font-size:14px}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div>
+    <p class="eyebrow">06 — Identité &amp; assets</p>
+    <h1 class="display">L'onde, le mot,<br><em>et tout ce qui en découle.</em></h1>
+    <p class="lede">Trois directions pour le logo Waveform, et l'ensemble des icônes &amp; splash livrés pour l'app mobile. Le geste : une seule courbe continue qui se lit à la fois comme un W et comme une onde sonore.</p>
+    <div class="stamp">N°6<b>identité</b></div>
+  </div>
+
+  <!-- THE MARK / CONCEPT -->
+  <div class="rule"><span>Le geste fondateur</span></div>
+  <h2 class="section">Une seule <em>ligne continue.</em></h2>
+  <p class="section-sub">Pas un W. Pas une forme d'onde. Les deux en même temps — un seul trait dessine quatre courbes en S régulières entre deux horizontales. Lecture immédiate, gravable sur tampon, lisible à 16px.</p>
+
+  <div class="concept">
+    <div class="ill">
+      <svg viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg">
+        <!-- Guide lines -->
+        <line x1="-50" y1="0" x2="650" y2="0" stroke="#C9C2B5" stroke-width="1" stroke-dasharray="4 4"/>
+        <line x1="-50" y1="300" x2="650" y2="300" stroke="#C9C2B5" stroke-width="1" stroke-dasharray="4 4"/>
+        <!-- Anchor dots -->
+        <circle cx="0" cy="0" r="6" fill="#8E6F5E"/>
+        <circle cx="150" cy="300" r="6" fill="#8E6F5E"/>
+        <circle cx="300" cy="0" r="6" fill="#8E6F5E"/>
+        <circle cx="450" cy="300" r="6" fill="#8E6F5E"/>
+        <circle cx="600" cy="0" r="6" fill="#8E6F5E"/>
+        <!-- The path -->
+        <path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0"
+              fill="none" stroke="#1C1C1C" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Labels -->
+        <text x="-30" y="-12" font-family="Inter" font-size="11" fill="#9A9A9A" letter-spacing="2">CRÊTE</text>
+        <text x="-30" y="324" font-family="Inter" font-size="11" fill="#9A9A9A" letter-spacing="2">CREUX</text>
+      </svg>
+    </div>
+    <div>
+      <p><b>Construction.</b> Cinq points d'ancrage espacés également entre deux lignes — crête, creux, crête, creux, crête. Quatre cubic-bézier avec contrôles horizontaux : chaque segment est une S-courbe parfaite.</p>
+      <p><b>Pourquoi ça marche.</b> Le pattern haut-bas-haut-bas-haut est exactement la silhouette d'un W majuscule, mais adouci en sinusoïde. L'œil reconnaît la lettre ET le signal sonore — sans avoir à choisir.</p>
+      <p><b>Trait.</b> Largeur ≈ 6,7 % de la largeur du mark, cap rond. Suffisamment fin pour la finesse journal, suffisamment épais pour tenir à 32px.</p>
+    </div>
+  </div>
+
+  <!-- LOGO DIRECTIONS -->
+  <div class="rule"><span>Directions logo</span></div>
+  <h2 class="section">Trois <em>directions</em>, un seul système.</h2>
+  <p class="section-sub">Les trois cohabitent : <b>A</b> pour les pages éditoriales et l'en-tête web, <b>B</b> en signature, <b>C</b> pour l'app, l'avatar, la favicon.</p>
+
+  <div class="dirs">
+
+    <!-- DIRECTION A -->
+    <div class="dir">
+      <div class="dir-head">
+        <div class="label"><b>Direction A</b>Logotype pur</div>
+        <div class="meta">Instrument Serif · ligature italique sur <em>form</em></div>
+      </div>
+      <div class="dir-stage">
+        <div class="logotype">Wave<em>form</em></div>
+      </div>
+      <div class="dir-stage alt">
+        <div class="logotype">Wave<em>form</em></div>
+      </div>
+      <div class="dir-foot">
+        <div>Mot entier en Instrument Serif, le suffixe <em>form</em> bascule en italique brun profond — clin d'œil au <em>journal manuscrit</em> et signature reconnaissable sans recourir au symbole.</div>
+        <div class="files"><a href="logo/wordmark.svg" target="_blank">wordmark.svg</a></div>
+      </div>
+    </div>
+
+    <!-- DIRECTION B -->
+    <div class="dir">
+      <div class="dir-head">
+        <div class="label"><b>Direction B</b>Lockup symbole + mot</div>
+        <div class="meta">Mark à gauche · alignement optique sur la hauteur d'x</div>
+      </div>
+      <div class="dir-stage">
+        <div class="lockup">
+          <svg class="mark" viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0"
+                  fill="none" stroke="#1C1C1C" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="logotype">Wave<em>form</em></div>
+        </div>
+      </div>
+      <div class="dir-stage alt">
+        <div class="lockup">
+          <svg class="mark" viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0"
+                  fill="none" stroke="#F5F3EF" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="logotype">Wave<em>form</em></div>
+        </div>
+      </div>
+      <div class="dir-foot">
+        <div>Le mark introduit l'identité avant la lecture. Idéal pour les bandeaux d'email, les pieds de page, les cartes de signature. Espace fixe entre symbole et mot : 0,35 × hauteur de capitale.</div>
+        <div class="files"><a href="logo/lockup.svg" target="_blank">lockup.svg</a></div>
+      </div>
+    </div>
+
+    <!-- DIRECTION C -->
+    <div class="dir">
+      <div class="dir-head">
+        <div class="label"><b>Direction C</b>Symbole seul · avatar / favicon<span class="rec">utilisé pour l'app</span></div>
+        <div class="meta">Reconnaissable à 32px · monochrome natif</div>
+      </div>
+      <div class="dir-stage">
+        <div class="avatar-row">
+          <div class="av">
+            <div class="circ" style="width:240px;height:240px"><svg viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg" style="width:65%;height:auto"><path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0" fill="none" stroke="#1C1C1C" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="size">240px</div>
+          </div>
+          <div class="av">
+            <div class="circ" style="width:128px;height:128px"><svg viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg" style="width:65%;height:auto"><path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0" fill="none" stroke="#1C1C1C" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="size">128px</div>
+          </div>
+          <div class="av">
+            <div class="circ" style="width:64px;height:64px"><svg viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg" style="width:70%;height:auto"><path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0" fill="none" stroke="#1C1C1C" stroke-width="50" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="size">64px</div>
+          </div>
+          <div class="av">
+            <div class="circ" style="width:32px;height:32px"><svg viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg" style="width:72%;height:auto"><path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0" fill="none" stroke="#1C1C1C" stroke-width="60" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="size">32px favicon</div>
+          </div>
+        </div>
+      </div>
+      <div class="dir-stage alt">
+        <div class="avatar-row">
+          <div class="av">
+            <div class="circ dark" style="width:128px;height:128px"><svg viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg" style="width:65%;height:auto"><path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0" fill="none" stroke="#F5F3EF" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="size" style="color:#9A9A9A">avatar sombre</div>
+          </div>
+          <div class="av">
+            <div class="circ dark" style="width:64px;height:64px"><svg viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg" style="width:70%;height:auto"><path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0" fill="none" stroke="#F5F3EF" stroke-width="50" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="size" style="color:#9A9A9A">64px</div>
+          </div>
+        </div>
+      </div>
+      <div class="dir-foot">
+        <div>Le symbole se suffit. À 32px, le trait s'épaissit légèrement (60 unités au lieu de 40) pour rester lisible. Monochrome natif — tient en gravure, en émail, en stamp.</div>
+        <div class="files"><a href="logo/avatar.svg" target="_blank">avatar.svg</a> · <a href="logo/mark.svg" target="_blank">mark.svg</a></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- APP ICONS -->
+  <div class="rule"><span>Icônes app mobile</span></div>
+  <h2 class="section">Icônes <em>iOS &amp; Android</em>.</h2>
+  <p class="section-sub">Tous les fichiers PNG, fond crème plein (#F5F3EF), aucune transparence. Apple applique automatiquement le masque arrondi — on livre les coins carrés.</p>
+
+  <div class="icons-grid">
+    <div class="icon-card">
+      <div class="preview square"><img src="icons/icon-1024.png" alt="icon-1024.png"></div>
+      <div class="meta">
+        <div class="name">App Store</div>
+        <div class="why">Soumission App Store Apple, fond plein, coins carrés.</div>
+        <div class="ft"><span>icon-1024.png</span><span>1024 × 1024</span></div>
+      </div>
+    </div>
+    <div class="icon-card">
+      <div class="preview"><img src="icons/icon-512.png" alt="icon-512.png"></div>
+      <div class="meta">
+        <div class="name">Play Store</div>
+        <div class="why">Google Play, PWA install icon standard.</div>
+        <div class="ft"><span>icon-512.png</span><span>512 × 512</span></div>
+      </div>
+    </div>
+    <div class="icon-card">
+      <div class="preview"><img src="icons/icon-192.png" alt="icon-192.png"></div>
+      <div class="meta">
+        <div class="name">PWA standard</div>
+        <div class="why">manifest.json icône principale, écran d'accueil Android.</div>
+        <div class="ft"><span>icon-192.png</span><span>192 × 192</span></div>
+      </div>
+    </div>
+    <div class="icon-card">
+      <div class="preview maskable"><img src="icons/icon-maskable.png" alt="icon-maskable.png"></div>
+      <div class="meta">
+        <div class="name">Maskable (Android)</div>
+        <div class="why">Adaptive icon — le mark tient dans la zone safe centrale de 80%.</div>
+        <div class="ft"><span>icon-maskable.png</span><span>512 × 512</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MASKABLE TEST -->
+  <p class="section-sub" style="margin-top:48px">Test du <em>maskable</em> sous les trois découpes Android les plus fréquentes — le mark reste centré et entier dans chaque cas.</p>
+
+  <div class="maskable-demo">
+    <div class="mask-card r1">
+      <div class="holder"><img src="icons/icon-maskable.png" alt=""></div>
+      <div class="lbl">Squircle</div>
+      <div class="sub">iOS-like</div>
+    </div>
+    <div class="mask-card r2">
+      <div class="holder"><img src="icons/icon-maskable.png" alt=""></div>
+      <div class="lbl">Cercle</div>
+      <div class="sub">Pixel</div>
+    </div>
+    <div class="mask-card r3">
+      <div class="holder"><img src="icons/icon-maskable.png" alt=""></div>
+      <div class="lbl">Arrondi doux</div>
+      <div class="sub">Samsung One UI</div>
+    </div>
+  </div>
+
+  <!-- SPLASH -->
+  <div class="rule"><span>Splash screen</span></div>
+  <h2 class="section">Splash <em>Capacitor</em>.</h2>
+  <p class="section-sub">2732 × 2732 px, fond crème uni, mark centré à 22% de la largeur. <b>Très aéré</b> — le silence avant la première note.</p>
+
+  <div class="splash-wrap">
+    <div class="splash-mock">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="mark-holder">
+          <svg viewBox="-50 -50 700 400" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 0 0 C 75 0, 75 300, 150 300 S 225 0, 300 0 S 375 300, 450 300 S 525 0, 600 0"
+                  fill="none" stroke="#1C1C1C" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="stack-files">
+        <div class="row"><span>splash.png</span><span>2732 × 2732</span></div>
+        <div class="row"><span>Mark width</span><span>≈ 600 px / 22%</span></div>
+        <div class="row"><span>Background</span><span>#F5F3EF plein</span></div>
+        <div class="row"><span>Stroke</span><span>#1C1C1C · ronde</span></div>
+        <div class="row"><span>Format</span><span>PNG · sans alpha</span></div>
+      </div>
+      <p class="section-sub" style="margin-top:24px;font-size:13px">À ouvrir aussi vite que possible — l'utilisateur ne devrait jamais le voir plus de 600 ms. Si Capacitor demande des variantes orientées (portrait/landscape), repartir du carré 2732 et centrer dans les viewports cibles.</p>
+    </div>
+  </div>
+
+  <!-- FILE INDEX -->
+  <div class="rule"><span>Livrables</span></div>
+  <h2 class="section">Index <em>des fichiers</em>.</h2>
+
+  <div class="stack-files" style="margin-top:24px;background:var(--paper-hi);border:1px solid var(--border);border-radius:12px;padding:8px 24px">
+    <div class="row"><span>logo/mark.svg</span><span>SVG · vecteur</span></div>
+    <div class="row"><span>logo/mark-cream.svg</span><span>SVG · inverse</span></div>
+    <div class="row"><span>logo/wordmark.svg</span><span>SVG · direction A</span></div>
+    <div class="row"><span>logo/lockup.svg</span><span>SVG · direction B</span></div>
+    <div class="row"><span>logo/avatar.svg</span><span>SVG · direction C</span></div>
+    <div class="row"><span>icons/icon-1024.png</span><span>PNG · 1024</span></div>
+    <div class="row"><span>icons/icon-512.png</span><span>PNG · 512</span></div>
+    <div class="row"><span>icons/icon-192.png</span><span>PNG · 192</span></div>
+    <div class="row"><span>icons/icon-maskable.png</span><span>PNG · 512 maskable</span></div>
+    <div class="row"><span>icons/splash.png</span><span>PNG · 2732</span></div>
+  </div>
+
+  <footer>
+    <span>Waveform — système d'identité v1</span>
+    <em>écouter, écrire, garder.</em>
+  </footer>
+
+</div>
+</body>
+</html>

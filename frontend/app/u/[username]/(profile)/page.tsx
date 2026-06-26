@@ -32,6 +32,7 @@ import { UserAvatar } from "@/components/avatars/DefaultAvatar";
 import PublicProfileTabs from "@/components/profile/PublicProfileTabs";
 import Top3Albums from "@/components/profile/Top3Albums";
 import RatingDistribution from "@/components/profile/RatingDistribution";
+import { RatingFilterProvider } from "@/components/profile/RatingFilterContext";
 import { getUserDiary, getUserReviewsUnified } from "@/app/actions/diary";
 import { getPublicUserLists } from "@/app/actions/lists";
 import { getUserTrackDiary } from "@/app/actions/track-diary";
@@ -80,7 +81,7 @@ export default async function PublicProfilePage({
   ] = await Promise.all([
     supabase.from("follows").select("*", { count: "exact", head: true }).eq("followee_id", profile.id),
     supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", profile.id),
-    getUserDiary(profile.id),
+    getUserDiary(profile.id, 0, 51),
     getPublicUserLists(profile.id),
     supabase
       .from("user_favorite_albums")
@@ -88,7 +89,7 @@ export default async function PublicProfilePage({
       .eq("user_id", profile.id)
       .order("position", { ascending: true })
       .limit(3),
-    getUserTrackDiary(profile.id),
+    getUserTrackDiary(profile.id, 0, 51),
     getUserReviewsUnified(profile.id),
     supabase.from("diary_entries").select("rating").eq("user_id", profile.id),
   ]);
@@ -115,7 +116,7 @@ export default async function PublicProfilePage({
     ] = await Promise.all([
       supabase.from("follows").select("follower_id").eq("follower_id", authUser.id).eq("followee_id", profile.id).maybeSingle(),
       supabase.from("follows").select("follower_id").eq("follower_id", profile.id).eq("followee_id", authUser.id).maybeSingle(),
-      (supabase as any).from("user_blocks").select("blocked_id").eq("blocker_id", authUser.id).eq("blocked_id", profile.id).maybeSingle(),
+      supabase.from("user_blocks").select("blocked_id").eq("blocker_id", authUser.id).eq("blocked_id", profile.id).maybeSingle(),
       supabase.from("diary_entries").select("album_id, rating").eq("user_id", authUser.id).limit(2000),
     ]);
 
@@ -131,7 +132,6 @@ export default async function PublicProfilePage({
   const bio = (profile as any).bio || "";
   const reviewsCount = profileUnifiedReviews.length;
   const allRatings = (allRatingsResult.data ?? []).map((e: any) => e.rating as number | null);
-  const publicDiary = profileDiary.filter((e) => (e as any).is_public !== false);
 
   if (isBlocking) {
     return (
@@ -156,7 +156,7 @@ export default async function PublicProfilePage({
   }
 
   return (
-    <>
+    <RatingFilterProvider>
       <div className="lg:flex lg:items-start lg:gap-12 lg:px-8 pb-28 lg:pb-12">
         {/* ── Sidebar ─────────────────────────────────────────────────────── */}
         <aside className="lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-[72px]">
@@ -225,11 +225,8 @@ export default async function PublicProfilePage({
           {/* Albums favoris + distribution */}
           <div className="max-w-page mx-auto px-4 sm:px-6 lg:max-w-none lg:px-0 lg:mt-4">
             {/* Distribution mobile — juste sous le hero */}
-            <div className="lg:hidden mt-4 mb-2">
-              <RatingDistribution ratings={allRatings} label="Ses" />
-            </div>
             <Top3Albums userId={profile.id} initialAlbums={favoriteAlbums} />
-            <div className="hidden lg:block mt-8">
+            <div className="mt-4 lg:mt-8">
               <RatingDistribution ratings={allRatings} label="Ses" />
             </div>
           </div>
@@ -241,7 +238,7 @@ export default async function PublicProfilePage({
             <PublicProfileTabs
               profileUserId={profile.id}
               username={username}
-              diaryEntries={publicDiary}
+              diaryEntries={profileDiary}
               publicLists={profilePublicLists}
               myListenedAlbums={myListenedAlbums}
               isLoggedIn={!!authUser}
@@ -251,6 +248,6 @@ export default async function PublicProfilePage({
           </Suspense>
         </div>
       </div>
-    </>
+    </RatingFilterProvider>
   );
 }

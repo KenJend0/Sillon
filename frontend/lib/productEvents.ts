@@ -63,7 +63,7 @@ export async function logProductEvent({
 
   try {
     const supabaseAdmin = createSupabaseAdmin();
-    const { error } = await (supabaseAdmin as any)
+    const { error } = await supabaseAdmin
       .from('product_events')
       .insert({
         user_id: userId,

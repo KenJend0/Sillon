@@ -58,7 +58,7 @@ Bugs et frictions identifiés, à régler avant de croître.
 - [x] **Bottom sheet pour reviews et commentaires** — remplacer les modals centrées par un panneau qui monte du bas et occupe la moitié inférieure de l'écran (style iOS / Letterboxd)
 - [x] **Redesign du like** — remplacer "❤️ X" par "J'aime · X" ; au clic sur le compteur, ouvrir la liste des gens qui ont liké (bottom sheet)
 - [x] **Supprimer les pages inutiles** — `/diary/page.tsx` et `/import/page.tsx` supprimées (remplacées par `/add` et auto-import), les liens dans le middleware mis à jour
-- [ ] **Réintroduire like/répondre sur les cartes critique du feed** — boutons retirés (commentés, pas supprimés) dans `FeedCardReviewCreated`/`FeedCardTrackReviewCreated` pour la refonte ligne uniforme ; trouver une UI discrète (icône au survol/coin de carte) sans recharger la ligne
+- [x] **Réintroduire like/répondre sur les cartes critique du feed** — boutons retirés (commentés, pas supprimés) dans `FeedCardReviewCreated`/`FeedCardTrackReviewCreated` pour la refonte ligne uniforme ; trouver une UI discrète (icône au survol/coin de carte) sans recharger la ligne
 - [x] **Navigation retour** — `BottomNav` réintroduite sur toutes les pages mobile (plus seulement les 4 hubs), en mode compact hors hubs ; bouton retour unifié sur le composant `BackButton` partagé (`LegalPageShell` utilisait sa propre implémentation)
 - [x] **Revoir le parcours `/` → `/auth`** — `/` redirige systématiquement vers `/explore` (plus de landing intermédiaire) ; gates non-connecté harmonisés sur tout le parcours (recherche, journal, listes, /add, /feed, /me)
 
@@ -122,7 +122,7 @@ Ce qui rend l'app vraiment utilisable au quotidien.
 ### Import & données
 - [x] **Import historique Last.fm** — pseudo public → top albums ajoutés à une liste privée "Import Last.fm", notables depuis `/add` ou la liste ; mentionné (texte, sans lien) à l'écran de lancement de l'onboarding, dispo dans `/settings`
 - [x] **Import historique RateYourMusic** — upload du CSV exporté par l'utilisateur depuis son profil RYM ; notes (échelle 0-10, identique à Waveform) et critiques mappées directement en `diary_entries` (pas de liste de triage, contrairement à Last.fm)
-- [ ] **Export RGPD** — dump JSON du diary sur demande (automatisé, pas manuel)
+- [x] **Export RGPD** — dump JSON du diary sur demande (automatisé, pas manuel)
 
 ### Listes (wishlist)
 - [ ] **Ajout rapide à la liste**

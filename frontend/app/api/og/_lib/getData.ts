@@ -114,7 +114,7 @@ export async function getOgEntryData(entryId: string): Promise<OgEntryData | nul
   }
 
   // ── Fallback : track_diary_entries ────────────────────────────────────────
-  const { data: trackEntry } = await (supabase as any)
+  const { data: trackEntry } = await supabase
     .from('track_diary_entries')
     .select('rating, review_title, review_body, listened_at, is_public, user_id, track_id, album_id')
     .eq('id', entryId)

@@ -10,6 +10,7 @@ import { toggleTrackDiaryLike } from "@/app/actions/track-diary";
 import { showToast } from "@/components/Toast";
 import LikesBottomSheet from "@/components/LikesBottomSheet";
 import { useAuth } from "@/lib/AuthContext";
+import { useRatingFilter } from "./RatingFilterContext";
 
 type SortOption = "date_listened" | "personal_rating";
 
@@ -24,6 +25,8 @@ const SORT_LABELS: Record<SortOption, string> = {
 
 export default function ReviewsList({ reviews }: Props) {
   const { user } = useAuth();
+  const { selectedRating } = useRatingFilter();
+  const ratingFilter = selectedRating !== null ? selectedRating + 1 : null;
   const [sortBy, setSortBy] = useState<SortOption>("date_listened");
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [openLikesEntry, setOpenLikesEntry] = useState<{ id: string; type: 'album' | 'track' } | null>(null);
@@ -60,7 +63,9 @@ export default function ReviewsList({ reviews }: Props) {
   if (reviews.length === 0)
     return <div className="text-center text-text-tertiary py-12">Aucune revue pour l'instant</div>;
 
-  const sorted = [...reviews].sort((a, b) => {
+  const filtered = ratingFilter !== null ? reviews.filter((r) => r.rating === ratingFilter) : reviews;
+
+  const sorted = [...filtered].sort((a, b) => {
     if (sortBy === "personal_rating") return (b.rating || 0) - (a.rating || 0);
     const diff = new Date(b.listened_at).getTime() - new Date(a.listened_at).getTime();
     return diff !== 0 ? diff : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -93,6 +98,9 @@ export default function ReviewsList({ reviews }: Props) {
         )}
       </div>
 
+      {sorted.length === 0 ? (
+        <div className="text-center text-text-tertiary py-12">Aucune revue avec cette note</div>
+      ) : (
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
         {sorted.map((review) => (
           <article
@@ -187,6 +195,7 @@ export default function ReviewsList({ reviews }: Props) {
           </article>
         ))}
       </div>
+      )}
 
       {openLikesEntry && (
         <LikesBottomSheet

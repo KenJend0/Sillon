@@ -29,8 +29,7 @@ export type TrackDetail = {
 export async function getTrack(id: string): Promise<TrackDetail | null> {
   const supabase = await createSupabaseServer();
 
-  // albums.type n'est pas dans les types générés (colonne ajoutée hors migration suivie) — cast en any.
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('tracks')
     .select(`
       id,

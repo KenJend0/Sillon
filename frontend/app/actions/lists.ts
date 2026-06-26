@@ -211,7 +211,7 @@ interface SavedListUserListRef {
 export async function getUserSavedLists(userId: string): Promise<UserList[]> {
     const supabase = await createSupabaseServer();
 
-    const { data: saved } = await (supabase as any)
+    const { data: saved } = await supabase
         .from('saved_lists')
         .select('saved_at, user_lists(id, user_id, title, description, is_public, is_default, created_at, profiles(username, avatar_url))')
         .eq('user_id', userId)
@@ -283,7 +283,7 @@ export async function getPublicLists(limit = 6): Promise<UserList[]> {
     let savedIds = new Set<string>();
     if (user) {
         const authedSupabase = await createSupabaseServer();
-        const { data: saved } = await (authedSupabase as any)
+        const { data: saved } = await authedSupabase
             .from('saved_lists')
             .select('list_id')
             .eq('user_id', user.id)
@@ -353,7 +353,7 @@ export async function toggleSaveList(listId: string): Promise<{ saved: boolean }
 
     const supabase = await createSupabaseServer();
 
-    const { data: existing } = await (supabase as any)
+    const { data: existing } = await supabase
         .from('saved_lists')
         .select('id')
         .eq('user_id', user.id)
@@ -361,7 +361,7 @@ export async function toggleSaveList(listId: string): Promise<{ saved: boolean }
         .maybeSingle();
 
     if (existing) {
-        await (supabase as any).from('saved_lists').delete().eq('id', existing.id);
+        await supabase.from('saved_lists').delete().eq('id', existing.id);
         return { saved: false };
     }
 
@@ -373,7 +373,7 @@ export async function toggleSaveList(listId: string): Promise<{ saved: boolean }
         .maybeSingle();
     if (!list) throw new Error('List not found');
 
-    const { error: insertError } = await (supabase as any).from('saved_lists').insert({ user_id: user.id, list_id: listId });
+    const { error: insertError } = await supabase.from('saved_lists').insert({ user_id: user.id, list_id: listId });
     if (insertError) throw new Error('An error occurred');
     return { saved: true };
 }
