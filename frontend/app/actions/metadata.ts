@@ -592,6 +592,7 @@ export async function enrichAlbumMetadata(
       apple_music_url: mbData.streamingLinks.appleMusic ?? null,
       deezer_url: mbData.streamingLinks.deezer ?? null,
       fetched_at: new Date().toISOString(), // toujours positionné — signal de fin pour EnrichmentPoller
+      tags_checked_at: new Date().toISOString(),
     };
 
     await supabase

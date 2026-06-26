@@ -6,6 +6,11 @@
  *            + Last.fm album.getinfo (tags, description, playcount)
  *            + iTunes / Deezer / Spotify search as streaming fallback.
  *
+ * Phase 1b — Tag/genre retry: albums tried but with zero album_genres rows,
+ *   tags_checked_at > 3 days ago, tag_attempts < 5. A failed tag lookup is often
+ *   transient (rate-limit, timeout, missing API key on that run), not a real
+ *   absence of data — unlike Phase 1, which never revisits an album once tried.
+ *
  * Phase 2 — Streaming retry: albums enriched > 7 days ago with all 3 links still null.
  *   Sources: iTunes Search API (free) + Deezer API (free) + Spotify (if creds set).
  *
@@ -38,6 +43,8 @@ const CAA_URL = 'https://coverartarchive.org/release-group';
 const DELAY_MS = 1250; // safely above MB's 1 req/s limit
 const STREAMING_RETRY_DAYS = 7;
 const MAX_STREAMING_ATTEMPTS = 5; // au-delà, on arrête de retenter (probable absence réelle sur ces plateformes)
+const TAG_RETRY_DAYS = 3; // plus court que le streaming : un échec de tags est souvent transitoire (rate-limit/timeout), pas une vraie absence de données
+const MAX_TAG_ATTEMPTS = 5;
 const PHASE4_DAILY_CAP = 400; // lot quotidien pour Phase 4 — volontairement conservateur tant que le vrai rate limit Apple Music/Deezer n'est pas connu avec certitude
 
 const DRY_RUN      = process.argv.includes('--dry-run');
@@ -588,6 +595,7 @@ async function runPhase1() {
           apple_music_url:  streaming.appleMusic ?? null,
           deezer_url:       streaming.deezer ?? null,
           fetched_at:       new Date().toISOString(),
+          tags_checked_at:  new Date().toISOString(),
         }, { onConflict: 'album_id' });
       }
 
@@ -606,6 +614,100 @@ async function runPhase1() {
   }
 
   console.log(`\n  Phase 1 terminée — ${done} enrichi(s), ${skipped} ignoré(s).\n`);
+}
+
+// ── Phase 1b: Tag/genre retry ──────────────────────────────────────────────────
+// Phase 1 ne traite que les albums jamais tentés. Une fois tentée, une recherche
+// de tags qui échoue (rate-limit MB, timeout Last.fm, clé API absente sur ce run)
+// reste figée à "0 tag" pour toujours — rien ne la retentait avant cette phase.
+// Observé en prod : un nouvel essai manuel retrouve des tags pour ~31% des albums
+// déjà "tentés", signe d'échecs transitoires plutôt qu'une vraie absence de données.
+
+async function runPhase1b() {
+  console.log('── Phase 1b : retry tags/genres ──────────────────────────────────');
+
+  const cutoff = new Date(Date.now() - TAG_RETRY_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  let candidates, genreRows;
+  try {
+    [candidates, genreRows] = await Promise.all([
+      fetchAllPages((from, to) =>
+        supabase.from('album_metadata')
+          .select('album_id, tag_attempts, tags_checked_at, albums(id, mbid, title, artists(name))')
+          .not('tags_checked_at', 'is', null)
+          .lt('tags_checked_at', cutoff)
+          .lt('tag_attempts', MAX_TAG_ATTEMPTS)
+          .range(from, to)
+      ),
+      fetchAllPages((from, to) =>
+        supabase.from('album_genres').select('album_id').range(from, to)
+      ),
+    ]);
+  } catch (error) {
+    console.error('  ❌ Query error:', error.message);
+    return;
+  }
+
+  const taggedIds = new Set(genreRows.map((g) => g.album_id));
+  const toRetry = candidates
+    .filter((c) => !taggedIds.has(c.album_id) && c.albums?.mbid)
+    .slice(0, LIMIT === Infinity ? 10_000 : LIMIT);
+
+  if (!toRetry.length) {
+    console.log('  ✅ Aucun album à retenter pour les tags.\n');
+    return;
+  }
+  console.log(`  ${toRetry.length} album(s) à retenter pour les tags.\n`);
+
+  let found = 0, empty = 0;
+
+  for (const row of toRetry) {
+    const album = row.albums;
+    const artistName = album.artists?.name ?? '';
+    console.log(`  ${album.title} — ${artistName}`);
+
+    try {
+      await delay(DELAY_MS);
+      const [mbData, lfmData] = await Promise.all([
+        fetchMBReleaseGroup(album.mbid),
+        fetchLastFm(artistName, album.title, album.mbid),
+      ]);
+
+      const tagMap = new Map();
+      for (const tag of lfmData.tags) {
+        if (isValidTag(tag.name)) tagMap.set(tag.name, { count: tag.count, source: 'lastfm' });
+      }
+      for (const tag of mbData.tags) {
+        if (isValidTag(tag.name) && !tagMap.has(tag.name)) {
+          tagMap.set(tag.name, { count: tag.count, source: 'musicbrainz' });
+        }
+      }
+
+      const genreCount = DRY_RUN ? tagMap.size : await upsertGenresAndAlbumGenres(album.id, tagMap);
+      const nextAttempts = (row.tag_attempts ?? 0) + 1;
+
+      if (!DRY_RUN) {
+        await supabase.from('album_metadata').update({
+          tags_checked_at: new Date().toISOString(),
+          tag_attempts: nextAttempts,
+        }).eq('album_id', row.album_id);
+      }
+
+      if (genreCount > 0) {
+        console.log(`    ✅ ${genreCount} genre(s) trouvé(s)${DRY_RUN ? ' [dry-run]' : ''}`);
+        found++;
+      } else {
+        const attemptsLeft = MAX_TAG_ATTEMPTS - nextAttempts;
+        console.log(`    — toujours aucun tag (tentative ${nextAttempts}/${MAX_TAG_ATTEMPTS})${DRY_RUN ? ' [dry-run]' : ''}`);
+        if (attemptsLeft <= 0) console.log(`    ⏹ Abandon — plafond de tentatives atteint.`);
+        empty++;
+      }
+    } catch (err) {
+      console.error(`    ❌ Erreur: ${err.message}`);
+    }
+  }
+
+  console.log(`\n  Phase 1b terminée — ${found} avec tag(s), ${empty} toujours vide(s).\n`);
 }
 
 // ── Phase 2: Streaming link retry ─────────────────────────────────────────────
@@ -970,6 +1072,7 @@ async function main() {
     await runPhase4();
   } else {
     await runPhase1();
+    await runPhase1b();
     await runPhase2();
     await runPhase3();
     // Le gros du backlog historique se rattrape via workflow_dispatch sur

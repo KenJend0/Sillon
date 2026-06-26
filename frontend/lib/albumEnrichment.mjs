@@ -349,6 +349,7 @@ export async function enrichOneAlbum(supabase, { id, mbid, title, artistName }) 
       apple_music_url:  streaming.appleMusic ?? null,
       deezer_url:       streaming.deezer ?? null,
       fetched_at:       new Date().toISOString(),
+      tags_checked_at:  new Date().toISOString(),
     }, { onConflict: 'album_id' });
 
     return { ok: true, genreCount, streaming };
