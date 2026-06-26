@@ -71,6 +71,9 @@ export default withSentryConfig(nextConfig, {
 
   // Suppress noisy CLI output except in CI
   silent: !process.env.CI,
+  errorHandler: (err: Error) => {
+    console.warn('[Sentry] Release/source map upload failed:', err.message);
+  },
 
   webpack: {
     // Don't auto-instrument Vercel Cron Monitors (not used)

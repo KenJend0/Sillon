@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { supabase } from './supabase/client';
 import { AuthApiError, type User as SupabaseUser } from '@supabase/supabase-js';
@@ -43,13 +43,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function refreshUnseenActivity() {
+  const refreshUnseenActivity = useCallback(async () => {
     try {
       setUnseenActivity(await hasUnseenActivity());
     } catch {
       setUnseenActivity(false);
     }
-  }
+  }, []);
 
   /**
    * Ensure profile exists for authenticated user
@@ -158,8 +158,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user || pathname === '/feed') return;
     refreshUnseenActivity().catch(() => setUnseenActivity(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, user]);
+  }, [pathname, refreshUnseenActivity, user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const handleActivitySeen = () => {
+      refreshUnseenActivity().catch(() => setUnseenActivity(false));
+    };
+
+    window.addEventListener('waveform:activity-seen', handleActivitySeen);
+    return () => window.removeEventListener('waveform:activity-seen', handleActivitySeen);
+  }, [refreshUnseenActivity, user]);
 
   const signOut = async () => {
     await supabase.auth.signOut();

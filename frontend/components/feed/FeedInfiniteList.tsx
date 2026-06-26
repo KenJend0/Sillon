@@ -6,7 +6,6 @@ import { ChevronDown, ChevronUp, Disc3, Heart } from 'lucide-react';
 import { FeedEvent, FeedScope, getMyFeed, markActivitySeen } from '@/app/actions/feed';
 import { UserAvatar } from '@/components/avatars/DefaultAvatar';
 import { CoverImage } from '@/components/CoverImage';
-import { useAuth } from '@/lib/AuthContext';
 import { getTimeAgo } from '@/lib/utils/formatDate';
 import FeedCardReviewCreated from './cards/FeedCardReviewCreated';
 import FeedCardUserFollowed from './cards/FeedCardUserFollowed';
@@ -689,6 +688,10 @@ function getSavedFeedState(storageKey: string): SavedFeedState | null {
   }
 }
 
+function notifyActivitySeen() {
+  window.dispatchEvent(new CustomEvent('waveform:activity-seen'));
+}
+
 export default function FeedInfiniteList({
   initialNotifications,
   initialNotificationsCursor,
@@ -697,7 +700,6 @@ export default function FeedInfiniteList({
   currentUserId,
   lastSeenActivityAt,
 }: FeedInfiniteListProps) {
-  const { refreshUnseenActivity } = useAuth();
   const storageKey = getFeedScrollKey(currentUserId);
 
   // Lazy init: restore from sessionStorage on back-navigation, else use server props
@@ -759,7 +761,7 @@ export default function FeedInfiniteList({
       if (allUnreadTabsSeen && !markSeenInFlightRef.current) {
         markSeenInFlightRef.current = true;
         markActivitySeen()
-          .then(() => refreshUnseenActivity())
+          .then(() => notifyActivitySeen())
           .catch(() => {
             markSeenInFlightRef.current = false;
           });
@@ -767,7 +769,7 @@ export default function FeedInfiniteList({
     }, 800);
 
     return () => window.clearTimeout(timer);
-  }, [activeTab, refreshUnseenActivity, seenUnreadTabs, unreadNotificationsCount, unreadNetworkCount]);
+  }, [activeTab, seenUnreadTabs, unreadNotificationsCount, unreadNetworkCount]);
 
   // Restore scroll position after back-navigation and clear saved state
   useEffect(() => {
