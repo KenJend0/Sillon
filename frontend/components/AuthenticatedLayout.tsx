@@ -9,17 +9,21 @@ import { BottomSheetProvider, useBottomSheet } from '@/lib/BottomSheetContext';
 import { useIsStandalone } from '@/hooks/useIsStandalone';
 
 const NO_NAV_PATHS = ['/onboarding', '/auth/reset'];
+// Pas de "rien à rafraîchir" sur ces pages (formulaires, contenu statique) — le geste
+// gênerait plus qu'il n'aiderait (ex: interrompre une saisie sur /auth).
+const NO_PULL_TO_REFRESH_PATHS = ['/auth', '/onboarding', '/legal'];
 
 type Props = {
   children: React.ReactNode;
 };
 
-function MainContent({ children }: Props) {
+function MainContent({ children, pathname }: Props & { pathname: string }) {
   const isStandalone = useIsStandalone();
   const { openCount } = useBottomSheet();
+  const disablePullToRefresh = NO_PULL_TO_REFRESH_PATHS.some(path => pathname.startsWith(path));
 
   return (
-    <PullToRefresh enabled={isStandalone && openCount === 0}>
+    <PullToRefresh enabled={isStandalone && openCount === 0 && !disablePullToRefresh}>
       <main>{children}</main>
     </PullToRefresh>
   );
@@ -41,7 +45,7 @@ export default function AuthenticatedLayout({ children }: Props) {
   return (
     <BottomSheetProvider>
       {!loading && !hideNav && <Header />}
-      <MainContent>{children}</MainContent>
+      <MainContent pathname={pathname}>{children}</MainContent>
       {showBottomNav && <BottomNav />}
     </BottomSheetProvider>
   );
