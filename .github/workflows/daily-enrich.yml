@@ -49,6 +49,31 @@ jobs:
           if [ -n "${{ inputs.limit }}" ]; then ARGS="$ARGS --limit ${{ inputs.limit }}"; fi
           node scripts/enrich-missing.mjs $ARGS
 
+      # Filet de rattrapage pour les albums créés sans canonical_key par des
+      # chemins d'écriture hors importAlbumFromMusicBrainz (notamment le worker
+      # process-external-imports.mjs, qui tourne en continu sur des titres bruts
+      # Last.fm/RYM). Sans ce step, les doublons réintroduits entre deux audits
+      # manuels restent invisibles indéfiniment — voir MUSICBRAINZ_PIPELINE_HANDOFF.md.
+      - name: Backfill canonical keys
+        if: ${{ inputs.dry_run != true }}
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/backfill-canonical-keys.mjs
+
+      # Dry-run uniquement, jamais --apply : le script lui-même cascade-supprime
+      # curator_picks/list_items sans bloquer même quand il les détecte (juste un
+      # warning dans les logs) — une revue humaine avant --apply est documentée
+      # comme requise. Ce step sert d'alerte (visible dans les logs du run) pour
+      # savoir qu'un nettoyage manuel est à faire, pas pour l'automatiser à l'aveugle.
+      - name: Report duplicate album groups (dry-run, no write)
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/reconcile-duplicate-albums.mjs
+
       # Étape séparée (curl, pas de dépendance npm) : survit même si "Install
       # dependencies" plante avant que le script Node ne démarre — c'est ce qui
       # s'est produit silencieusement 5 nuits de suite en juin 2026 (lockfile
