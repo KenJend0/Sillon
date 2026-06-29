@@ -6,6 +6,7 @@ import { getAuthUser, createSupabaseServer, createSupabaseAdmin } from '@/lib/su
 import { uploadCoverToSupabase } from '@/lib/storage';
 import { enrichAlbumMetadata } from './metadata';
 import { canonicalAlbumKey } from '@/lib/albumCanonical.mjs';
+import { canonicalTrackTitle } from '@/lib/trackCanonical.mjs';
 import { isAcceptableReleaseGroup, pickBestRelease, releaseSelectionMode } from '@/lib/musicbrainzReleasePolicy.mjs';
 import type { SearchResultUI } from './search';
 import {
@@ -1336,6 +1337,7 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
       disc_no: track.discNo ?? null,
       duration_ms: track.duration,
       mbid: track.mbid,
+      canonical_title: canonicalTrackTitle(track.title),
     }));
 
     const trackExternalRows = trackRows.map((track) => ({
@@ -1367,7 +1369,13 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
     };
 
     if (trackRows.length > 0) {
-      const { error: tracksError } = await supabase.from('tracks').insert(trackRows);
+      let { error: tracksError } = await supabase.from('tracks').insert(trackRows);
+      // canonical_title column not migrated yet — retry without it rather than failing the import.
+      if (tracksError?.message?.includes('canonical_title')) {
+        ({ error: tracksError } = await supabase
+          .from('tracks')
+          .insert(trackRows.map(({ canonical_title, ...rest }) => rest)));
+      }
       if (tracksError) {
         await rollbackImport();
         await logAuthedProductEvent('album_import_failed', {
@@ -1887,13 +1895,15 @@ export type RecordingSearchResult = {
  */
 export async function searchMusicBrainzRecordings(
   query: string,
-  limit = 20
+  limit = 20,
+  artist?: string
 ): Promise<{ success: boolean; results?: RecordingSearchResult[]; error?: string }> {
   if (!query || query.trim().length < 2) {
     return { success: true, results: [] };
   }
 
-  const cacheKey = hashCacheKey(query, `recordings_${limit}`);
+  const trimmedArtist = artist?.trim() || '';
+  const cacheKey = hashCacheKey(query, `recordings_${limit}_${trimmedArtist.toLowerCase()}`);
   const cached = await getCachedResults<RecordingSearchResult[]>(cacheKey);
   if (cached) return { success: true, results: cached };
 
@@ -1904,7 +1914,21 @@ export async function searchMusicBrainzRecordings(
     const terms = trimmed.split(/\s+/).filter(Boolean);
     const phraseClause = `"${trimmed}"~2`;
     const termClause = terms.map((t) => `recording:${t}`).join(' AND ');
-    const lucene = terms.length > 1 ? `(${phraseClause}) OR (${termClause})` : phraseClause;
+    const titleClause = terms.length > 1 ? `(${phraseClause}) OR (${termClause})` : phraseClause;
+    // Artist scoped via its own field — disambiguates homonyms (many unrelated
+    // recordings share generic titles) instead of relying on MB's relevance
+    // score, which has no popularity signal for recordings. Each artist term
+    // gets a fuzzy ~1 (edit-distance) match rather than an exact phrase, so a
+    // typo in the (optional) artist field doesn't zero out an otherwise-good match.
+    const artistTerms = trimmedArtist
+      .replace(/[+\-&|!(){}\[\]^"~*?:\\\/]/g, ' ')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    const artistClause = artistTerms.map((t) => `artist:${t}~1`).join(' AND ');
+    const lucene = trimmedArtist
+      ? `recording:${phraseClause} AND (${artistClause})`
+      : titleClause;
     const encoded = encodeURIComponent(lucene);
     const url = `${MUSICBRAINZ_API}/recording?query=${encoded}&limit=${limit}&fmt=json&inc=releases`;
     const response = await fetchWithRetry(
@@ -1922,23 +1946,39 @@ export async function searchMusicBrainzRecordings(
     const data = parseMbRecordingSearch(raw);
     const recordings = data.recordings || [];
 
-    const results: RecordingSearchResult[] = recordings
+    const results = recordings
       .filter((r) => r.releases && r.releases.length > 0)
       .map((r) => {
         const artistName = r['artist-credit']?.[0]?.artist?.name || 'Unknown';
-        // Prefer the first non-single, non-compilation release (Albums/EPs first, then
-        // anything) — a popular recording appears on dozens of "Various Artists"
-        // compilations on MusicBrainz, and those are primary-type "Album" too, so a
-        // primary-type-only check (the old behaviour here) would happily pick one of
-        // those over the artist's actual album/single (e.g. "Hits Été 2025" instead
-        // of the real release) — isAcceptableReleaseGroup also excludes Compilation/Live/etc.
+        // Prefer an Album/EP appearance, then a Single, over a compilation/live/remix —
+        // a popular recording appears on dozens of "Various Artists" compilations on
+        // MusicBrainz, and those are primary-type "Album" too, so a primary-type-only
+        // check (the old behaviour here) would happily pick one of those over the
+        // artist's actual album/single (e.g. "Hits Été 2025" instead of the real
+        // release). isAcceptableReleaseGroup's default (Album/EP only, no Single) used
+        // to be applied directly here — but plenty of songs were released ONLY as a
+        // single (e.g. "You Know You Like It" by AlunaGeorge), so excluding Single
+        // outright made this fall through to releases[0] (an arbitrary, often-wrong
+        // compilation) instead of the legitimate single. Try Album/EP first, then
+        // Single, before giving up to the arbitrary first release.
         const release = r.releases!.find((rel) =>
           rel['release-group'] && isAcceptableReleaseGroup(rel['release-group'])
+        ) || r.releases!.find((rel) =>
+          rel['release-group'] && isAcceptableReleaseGroup(rel['release-group'], { allowedPrimaryTypes: new Set(['Single']) })
         ) || r.releases![0];
         const rgMbid = release?.['release-group']?.id || '';
         const coverUrl = rgMbid
           ? `https://coverartarchive.org/release-group/${rgMbid}/front`
           : null;
+        // Release-group quality of the chosen release — used below to pick the best
+        // among same-titled duplicates (a live/alternate take can share the exact
+        // title of the studio version with no distinguishing marker, so title
+        // comparison alone can't tell them apart).
+        const releaseGroupQuality = release?.['release-group'] && isAcceptableReleaseGroup(release['release-group'])
+          ? 2
+          : release?.['release-group'] && isAcceptableReleaseGroup(release['release-group'], { allowedPrimaryTypes: new Set(['Single']) })
+            ? 1
+            : 0;
         return {
           mbid: r.id,
           title: r.title,
@@ -1949,18 +1989,26 @@ export async function searchMusicBrainzRecordings(
           duration: r.length ?? null,
           coverUrl,
           score: r.score ?? 0,
+          _releaseGroupQuality: releaseGroupQuality,
         };
       });
 
-    // Deduplicate by (title, artistName) — a single can have multiple versions
-    // of the same track (main, instrumental, feat.). Keep the best-scored one.
-    const seen = new Set<string>();
-    const deduped = results.filter((r) => {
+    // Deduplicate by (title, artistName) — a single can have multiple distinct
+    // recordings sharing the exact same title (e.g. a live/alternate take with no
+    // distinguishing marker). Keep the one with the best release-group quality
+    // (Album/EP > Single > compilation/live/remix), then the highest MB score —
+    // not just whichever MB happened to list first.
+    const bestByKey = new Map<string, typeof results[number]>();
+    for (const r of results) {
       const key = `${r.title.toLowerCase().trim()}|||${r.artistName.toLowerCase().trim()}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+      const existing = bestByKey.get(key);
+      if (!existing
+        || r._releaseGroupQuality > existing._releaseGroupQuality
+        || (r._releaseGroupQuality === existing._releaseGroupQuality && r.score > existing.score)) {
+        bestByKey.set(key, r);
+      }
+    }
+    const deduped = [...bestByKey.values()].map(({ _releaseGroupQuality, ...rest }) => rest);
 
     await setCachedResults(cacheKey, deduped);
     return { success: true, results: deduped };
@@ -2017,6 +2065,51 @@ export async function importTrackFromMusicBrainz(
         artistId: existingTrack.artist_id,
         title: existingTrack.title,
       };
+    }
+
+    // 1.5. Cross-container duplicate check — MusicBrainz models the same song as
+    // separate release-groups (Album/EP/Single can all carry the exact same
+    // recording, e.g. "Riptide" by Vance Joy: the studio album, an EP, AND a
+    // Single all contain it). Each container stores its own track-position mbid,
+    // so the exact-mbid check above can't see across them. Without this, clicking
+    // a search result that happens to resolve to a different container than the
+    // one already imported creates a second, disconnected copy of the same song.
+    // Resolve the parent's artist/title via a preview (read-only, no import yet)
+    // before deciding whether to import anything at all.
+    if (trackTitle) {
+      const previewForDedup = await previewAlbumFromMusicBrainz(releaseId);
+      if (previewForDedup.success && previewForDedup.preview?.artistMbid) {
+        const { data: existingArtist } = await supabase
+          .from('artists')
+          .select('id')
+          .eq('mbid', previewForDedup.preview.artistMbid)
+          .maybeSingle();
+
+        if (existingArtist) {
+          const canonicalTitle = canonicalTrackTitle(trackTitle);
+          const { data: crossAlbumMatches } = await supabase
+            .from('tracks')
+            .select('id, title, album_id, artist_id, albums(type)')
+            .eq('artist_id', existingArtist.id)
+            .eq('canonical_title', canonicalTitle);
+
+          if (crossAlbumMatches && crossAlbumMatches.length > 0) {
+            // Prefer the track that lives on a full Album over an EP/Single — same
+            // preference as the search-time dedup (Album/EP beats Single).
+            const typeRank = (t?: string | null) => (t === 'Album' ? 3 : t === 'EP' ? 2 : t === 'Single' ? 1 : 0);
+            const best = [...crossAlbumMatches].sort(
+              (a, b) => typeRank((b as any).albums?.type) - typeRank((a as any).albums?.type)
+            )[0];
+            return {
+              success: true,
+              trackId: best.id,
+              albumId: best.album_id,
+              artistId: best.artist_id,
+              title: best.title,
+            };
+          }
+        }
+      }
     }
 
     // 2. Import the parent album (idempotent — returns existing albumId if already imported)

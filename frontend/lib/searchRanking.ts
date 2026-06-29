@@ -27,9 +27,16 @@ export function computeRank(item: SearchResultUI, query: string): number {
   else { rank += (item.score ?? 0) * 0.8; }
   rank += textScore;
 
-  if (item.source === "internal") rank += 120;
+  // Tracks: title homonyms are common (many unrelated artists share a song
+  // title), which is exactly why the artist field exists for this kind — once
+  // a result is in the pool, it has already matched the typed artist (or the
+  // user didn't filter at all and accepts the ambiguity). Either way, an
+  // unconditional "internal source" bonus has no business overriding a
+  // correct, equally-precise MB match here, so it's skipped for tracks.
+  if (item.source === "internal" && item.kind !== "track") rank += 120;
 
-  const effectiveReleaseCount = item.releaseCount ?? (item.source === "internal" ? 50 : 0);
+  const effectiveReleaseCount =
+    item.releaseCount ?? (item.source === "internal" && item.kind !== "track" ? 50 : 0);
   if (effectiveReleaseCount > 0) rank += Math.min(Math.log2(effectiveReleaseCount + 1) * 12, 80);
 
   return rank;

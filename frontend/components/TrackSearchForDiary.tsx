@@ -28,6 +28,7 @@ type Props = {
 
 export default function TrackSearchForDiary({ onSelectTrack }: Props) {
     const [q, setQ] = useState("");
+    const [artist, setArtist] = useState("");
     const [internalResults, setInternalResults] = useState<SearchResultUI[]>([]);
     const [mbResults, setMbResults] = useState<SearchResultUI[]>([]);
     const [displayLimit, setDisplayLimit] = useState(LIMIT);
@@ -67,13 +68,13 @@ export default function TrackSearchForDiary({ onSelectTrack }: Props) {
             setMbResults([]);
 
             // Phase 2 — MB en parallèle
-            const mbPromise = searchMusicBrainzRecordings(q, 20).catch(() => null);
+            const mbPromise = searchMusicBrainzRecordings(q, 20, artist).catch(() => null);
             setLoadingExtended(true);
 
             // Phase 1 — interne
             let internal: SearchResultUI[] = [];
             try {
-                internal = await searchInternal(q, "tracks");
+                internal = await searchInternal(q, "tracks", artist);
             } catch {}
             if (aborted) return;
 
@@ -111,7 +112,7 @@ export default function TrackSearchForDiary({ onSelectTrack }: Props) {
 
         run();
         return () => { aborted = true; };
-    }, [q]);
+    }, [q, artist]);
 
     const handleSelect = async (item: SearchResultUI) => {
         if (importingId) return;
@@ -136,6 +137,7 @@ export default function TrackSearchForDiary({ onSelectTrack }: Props) {
                         coverUrl: item.coverUrl || null,
                     });
                     setQ("");
+                    setArtist("");
                 } else {
                     showToast("Erreur lors de l'import du titre", "error");
                 }
@@ -163,15 +165,25 @@ export default function TrackSearchForDiary({ onSelectTrack }: Props) {
 
     return (
         <div className="relative w-full">
-            <div className="relative">
-                <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-accent pointer-events-none flex-shrink-0" />
+            <div className="flex items-stretch bg-[#FAF8F4] border border-[#D8D3CB] rounded-[14px] focus-within:border-[#8E6F5E] transition-colors duration-150">
+                <div className="relative flex-1 min-w-0">
+                    <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-accent pointer-events-none flex-shrink-0" />
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={q}
+                        onChange={(e) => setQ(e.target.value)}
+                        placeholder="Rechercher un titre"
+                        className="w-full pl-11 pr-3 py-3 bg-transparent text-text-primary placeholder-text-tertiary focus:outline-none"
+                    />
+                </div>
+                <div className="w-px my-2.5 bg-[#D8D3CB] flex-shrink-0" />
                 <input
-                    ref={inputRef}
                     type="text"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    placeholder="Rechercher un titre…"
-                    className="w-full pl-11 pr-4 py-3 bg-[#FAF8F4] border border-[#D8D3CB] rounded-[14px] text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[#8E6F5E] focus:ring-0 transition-colors duration-150"
+                    value={artist}
+                    onChange={(e) => setArtist(e.target.value)}
+                    placeholder="par artiste"
+                    className="w-[34%] sm:w-[150px] flex-shrink-0 px-3 py-3 bg-transparent text-[13px] text-text-primary placeholder-accent placeholder:font-medium focus:outline-none"
                 />
             </div>
 

@@ -236,6 +236,7 @@ function SearchPageContent() {
   const searchParams = useSearchParams();
   const q = searchParams.get("q") || "";
   const filter = (searchParams.get("filter") as FilterType) || "albums";
+  const artistParam = filter === "tracks" ? (searchParams.get("artist") || "") : "";
 
   const [albums, setAlbums] = useState<AlbumSearchResult[]>([]);
   const [artists, setArtists] = useState<ArtistSearchResult[]>([]);
@@ -318,8 +319,8 @@ function SearchPageContent() {
           }
         } else if (filter === "tracks") {
           const [internalRes, mbRes] = await Promise.all([
-            searchInternal(q, "tracks"),
-            searchMusicBrainzRecordings(q, 20),
+            searchInternal(q, "tracks", artistParam),
+            searchMusicBrainzRecordings(q, 20, artistParam),
           ]);
           if (!isMounted) return;
 
@@ -400,7 +401,7 @@ function SearchPageContent() {
       isMounted = false;
       clearTimeout(timeoutId);
     };
-  }, [q, filter]);
+  }, [q, filter, artistParam]);
 
   const handleAlbumImport = async (mbid: string) => {
     if (importingId) return;
@@ -475,7 +476,9 @@ function SearchPageContent() {
         <BackButton className="mb-4" />
         {q ? (
           <>
-            <h1 className="text-h2 text-text-primary">« {q} »</h1>
+            <h1 className="text-h2 text-text-primary">
+              « {q} »{artistParam && <> de « {artistParam} »</>}
+            </h1>
             <p className="text-sm text-text-tertiary mt-1 mb-6">{filterLabel[filter]}</p>
           </>
         ) : (
@@ -508,7 +511,9 @@ function SearchPageContent() {
         {!loading && !searchError && q && !hasResults && (
           <div className="text-center py-16 text-meta text-text-tertiary">
             Aucun résultat pour{" "}
-            <span className="font-medium text-text-primary">« {q} »</span>
+            <span className="font-medium text-text-primary">
+              « {q} »{artistParam && <> de « {artistParam} »</>}
+            </span>
           </div>
         )}
 

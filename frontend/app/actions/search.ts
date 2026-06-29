@@ -91,9 +91,13 @@ interface FuzzyTrackRow {
 
 export async function searchInternal(
   q: string,
-  kind: "all" | "albums" | "artists" | "users" | "tracks" = "all"
+  kind: "all" | "albums" | "artists" | "users" | "tracks" = "all",
+  artist?: string
 ): Promise<SearchResultUI[]> {
   if (!q.trim()) return [];
+
+  const trimmedArtist = artist?.trim();
+  const escapedArtist = trimmedArtist ? escapeILike(trimmedArtist) : "";
 
   const supabase = await createSupabaseServer();
   const trimmed = q.trim();
@@ -146,14 +150,40 @@ export async function searchInternal(
       .limit(5);
   };
 
-  // Tracks: ILIKE on title, joined with album cover and artist name
+  // Tracks: ILIKE on title, joined with album cover and artist name.
+  // When an artist filter is given, resolve matching artist ids first and
+  // filter on tracks.artist_id directly — tracks carry their own artist_id
+  // (distinct from albums.artist_id) precisely for Various Artists albums,
+  // where the track's real performer differs from the album's credited artist.
   const tracksQuery = async () => {
     if (kind !== "tracks") return { data: null };
-    return supabase
+    let artistIds: string[] | null = null;
+    if (escapedArtist) {
+      const { data: matchingArtists } = await supabase
+        .from("artists")
+        .select("id")
+        .ilike("name", `%${escapedArtist}%`);
+      artistIds = (matchingArtists || []).map((a) => a.id);
+      // No exact substring match — fall back to pg_trgm fuzzy matching so a
+      // typo in the (optional) artist field doesn't silently zero out results
+      // that the title search would otherwise have found.
+      if (artistIds.length === 0) {
+        const { data: fuzzyArtists } = await supabase.rpc("fuzzy_search_artists", {
+          query_text: trimmedArtist as string,
+          result_limit: 5,
+        });
+        artistIds = ((fuzzyArtists as { id: string }[] | null) || []).map((a) => a.id);
+      }
+      if (artistIds.length === 0) return { data: [] };
+    }
+    let qb = supabase
       .from("tracks")
       .select("id, title, mbid, albums(id, title, cover_url, artists(id, name))")
-      .ilike("title", `%${escapedQuery}%`)
-      .limit(10) as any;
+      .ilike("title", `%${escapedQuery}%`);
+    if (artistIds) {
+      qb = qb.in("artist_id", artistIds);
+    }
+    return qb.limit(10) as any;
   };
 
   // Run all needed queries in parallel

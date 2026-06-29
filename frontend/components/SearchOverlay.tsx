@@ -114,6 +114,7 @@ export default function SearchOverlay() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [artist, setArtist] = useState("");
   const [activeTab, setActiveTab] = useState<SearchTab>("albums");
   const [results, setResults] = useState<SearchResultUI[]>([]);
   const [loading, setLoading] = useState(false);
@@ -179,7 +180,7 @@ export default function SearchOverlay() {
               ? searchMusicBrainzArtists(q, 5)
               : Promise.resolve(null),
             activeTab === "tracks"
-              ? searchMusicBrainzRecordings(q, 20)
+              ? searchMusicBrainzRecordings(q, 20, artist)
               : Promise.resolve(null),
           ])
         : null;
@@ -193,7 +194,7 @@ export default function SearchOverlay() {
       // ────────────────────────────────────────────────────────────────────────
       let internal: SearchResultUI[] = [];
       try {
-        internal = await searchInternal(q, activeTab);
+        internal = await searchInternal(q, activeTab, activeTab === "tracks" ? artist : undefined);
       } catch {
         // Internal failed — MB-only fallback handled in phase 2
       }
@@ -294,7 +295,7 @@ export default function SearchOverlay() {
     return () => {
       aborted = true;
     };
-  }, [q, activeTab]);
+  }, [q, activeTab, artist]);
 
   const handleSelect = useCallback(
     async (item: SearchResultUI) => {
@@ -317,6 +318,7 @@ export default function SearchOverlay() {
             setIsOpen(false);
             setResults([]);
             setQ("");
+            setArtist("");
             const redirectUrl = (result as any).redirectUrl as string ?? `/albums/${result.albumId}`;
             // Fire-and-forget enrichment (genres, bio, streaming links)
             if ('mbid' in result && result.mbid && 'title' in result && 'artist' in result) {
@@ -350,6 +352,7 @@ export default function SearchOverlay() {
             setIsOpen(false);
             setResults([]);
             setQ("");
+            setArtist("");
             router.push(`/tracks/${result.trackId}`);
           } else {
             showToast("Erreur lors de l'import du titre", "error");
@@ -365,6 +368,7 @@ export default function SearchOverlay() {
       setIsOpen(false);
       setResults([]);
       setQ("");
+      setArtist("");
 
       if (item.kind === "album") {
         router.push(`/albums/${item.id}`);
@@ -386,7 +390,9 @@ export default function SearchOverlay() {
   const handleSeeAll = () => {
     setIsOpen(false);
     setQ("");
-    router.push(`/search?q=${encodeURIComponent(q)}&filter=${activeTab}`);
+    setArtist("");
+    const artistParam = activeTab === "tracks" && artist.trim() ? `&artist=${encodeURIComponent(artist.trim())}` : "";
+    router.push(`/search?q=${encodeURIComponent(q)}&filter=${activeTab}${artistParam}`);
   };
 
   const tabLabels: Record<SearchTab, string> = {
@@ -394,6 +400,13 @@ export default function SearchOverlay() {
     artists: "Artistes",
     tracks: "Titres",
     users: "Profils",
+  };
+
+  const tabPlaceholders: Record<SearchTab, string> = {
+    albums: "Rechercher un album…",
+    artists: "Rechercher un artiste…",
+    tracks: "Rechercher un titre",
+    users: "Rechercher un profil…",
   };
 
   const hasResults = results.length > 0;
@@ -435,15 +448,27 @@ export default function SearchOverlay() {
                 <input
                   ref={inputRef}
                   type="text"
-                  placeholder="Album, titre, artiste, profil…"
+                  placeholder={tabPlaceholders[activeTab]}
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   autoFocus
-                  className="flex-1 bg-transparent text-[15px] text-text-primary placeholder-text-tertiary focus:outline-none"
+                  className="flex-1 min-w-0 bg-transparent text-[15px] text-text-primary placeholder-text-tertiary focus:outline-none"
                 />
+                {activeTab === "tracks" && (
+                  <>
+                    <div className="w-px h-5 bg-[#D8D3CB] flex-shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="par artiste"
+                      value={artist}
+                      onChange={(e) => setArtist(e.target.value)}
+                      className="w-[28%] sm:w-[140px] flex-shrink-0 bg-transparent text-[15px] text-text-primary placeholder-accent placeholder:font-medium focus:outline-none"
+                    />
+                  </>
+                )}
                 {q && (
                   <button
-                    onClick={() => setQ("")}
+                    onClick={() => { setQ(""); setArtist(""); }}
                     className="p-1 -mr-1 text-text-tertiary hover:text-text-primary transition-colors flex-shrink-0"
                     aria-label="Effacer la recherche"
                   >
@@ -466,7 +491,7 @@ export default function SearchOverlay() {
                 {(["albums", "tracks", "artists", "users"] as SearchTab[]).map((tab) => (
                   <button
                     key={tab}
-                    onClick={() => { setActiveTab(tab); inputRef.current?.focus(); }}
+                    onClick={() => { setActiveTab(tab); if (tab !== "tracks") setArtist(""); inputRef.current?.focus(); }}
                     className={`text-sm pb-3 border-b-2 transition-colors duration-150 ${
                       activeTab === tab
                         ? "font-medium text-[#2A2520] border-[#8E6F5E]"
@@ -562,6 +587,12 @@ export default function SearchOverlay() {
                       <span>
                         {hasMoreResults ? "Plus de résultats — voir tout pour " : "Voir tous les résultats pour "}
                         <em className="font-display italic not-italic text-text-secondary" style={{ fontStyle: 'italic' }}>« {q} »</em>
+                        {activeTab === "tracks" && artist.trim() && (
+                          <>
+                            {" de "}
+                            <em className="font-display italic not-italic text-text-secondary" style={{ fontStyle: 'italic' }}>« {artist.trim()} »</em>
+                          </>
+                        )}
                       </span>
                     </button>
                   )}

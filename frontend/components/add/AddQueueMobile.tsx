@@ -73,6 +73,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
 
     const [searchEntityType, setSearchEntityType] = useState<"album" | "track">("album");
     const [searchQuery, setSearchQuery] = useState("");
+    const [searchArtist, setSearchArtist] = useState("");
     const [searchResults, setSearchResults] = useState<SearchResultUI[]>([]);
     const [searchLoading, setSearchLoading] = useState(false);
     const [searchImportingId, setSearchImportingId] = useState<string | null>(null);
@@ -107,6 +108,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
     const closePanel = () => {
         setPanelMode("none");
         setSearchQuery("");
+        setSearchArtist("");
         setSearchResults([]);
         setSearchExpanded(false);
     };
@@ -190,6 +192,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
             setSearchEntityType(tab);
             setPanelMode("search");
             setSearchQuery("");
+            setSearchArtist("");
             setSearchResults([]);
             setSearchExpanded(false);
         }
@@ -216,11 +219,11 @@ export default function AddQueueMobile({ initialQueue }: Props) {
             setSearchLoading(true);
             const isAlbum = searchEntityType === "album";
             const mbAlbumPromise = isAlbum ? searchMusicBrainzAlbums(searchQuery, 20).catch(() => null) : null;
-            const mbTrackPromise = !isAlbum ? searchMusicBrainzRecordings(searchQuery, 20).catch(() => null) : null;
+            const mbTrackPromise = !isAlbum ? searchMusicBrainzRecordings(searchQuery, 20, searchArtist).catch(() => null) : null;
 
             let internal: SearchResultUI[] = [];
             try {
-                internal = await searchInternal(searchQuery, isAlbum ? "albums" : "tracks");
+                internal = await searchInternal(searchQuery, isAlbum ? "albums" : "tracks", isAlbum ? undefined : searchArtist);
             } catch {}
             if (aborted) return;
 
@@ -274,7 +277,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
 
         run();
         return () => { aborted = true; };
-    }, [searchQuery, searchEntityType, panelMode]);
+    }, [searchQuery, searchArtist, searchEntityType, panelMode]);
 
     const handleSearchSelect = async (item: SearchResultUI) => {
         if (searchImportingId) return;
@@ -432,9 +435,23 @@ export default function AddQueueMobile({ initialQueue }: Props) {
                                         setSearchQuery(e.target.value);
                                         setSearchExpanded(false);
                                     }}
-                                    placeholder={searchEntityType === "album" ? "Rechercher un album…" : "Rechercher un titre…"}
-                                    className="flex-1 bg-transparent text-sm text-text-primary placeholder-text-tertiary focus:outline-none"
+                                    placeholder={searchEntityType === "album" ? "Rechercher un album…" : "Rechercher un titre"}
+                                    className="flex-1 min-w-0 bg-transparent text-sm text-text-primary placeholder-text-tertiary focus:outline-none"
                                 />
+                                {searchEntityType === "track" && (
+                                    <>
+                                        <div className="w-px h-4 bg-border flex-shrink-0" />
+                                        <input
+                                            value={searchArtist}
+                                            onChange={(e) => {
+                                                setSearchArtist(e.target.value);
+                                                setSearchExpanded(false);
+                                            }}
+                                            placeholder="par artiste"
+                                            className="w-[30%] flex-shrink-0 bg-transparent text-sm text-text-primary placeholder-accent placeholder:font-medium focus:outline-none"
+                                        />
+                                    </>
+                                )}
                             </div>
                         </motion.div>
                     )}
