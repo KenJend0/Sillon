@@ -4,7 +4,7 @@ import { after } from 'next/server';
 import { logAuthedProductEvent } from '@/lib/productEvents';
 import { getAuthUser, createSupabaseServer, createSupabaseAdmin } from '@/lib/supabase/server';
 import { uploadCoverToSupabase } from '@/lib/storage';
-import { enrichAlbumMetadata } from './metadata';
+import { fetchAlbumStreamingLinks } from './metadata';
 import { canonicalAlbumKey } from '@/lib/albumCanonical.mjs';
 import { canonicalTrackTitle } from '@/lib/trackCanonical.mjs';
 import { isAcceptableReleaseGroup, pickBestRelease, releaseSelectionMode } from '@/lib/musicbrainzReleasePolicy.mjs';
@@ -1421,14 +1421,23 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
       return { success: false, error: externalError.message };
     }
 
-    // Enrichit en tâche de fond (tags/bio/streaming) sans bloquer la réponse —
-    // after() garantit l'exécution même une fois la réponse renvoyée (Vercel tue
-    // sinon les promesses non-attendues dès la fin de la requête). L'EnrichmentPoller
-    // sur la page album guettait déjà ce signal, mais rien ne le déclenchait jamais
-    // avant — l'album restait "en cours d'enrichissement" jusqu'au cron nocturne.
-    after(() => enrichAlbumMetadata(newAlbumId, canonicalMbid, preview.title, preview.artist).catch((err) => {
-      console.error('[importAlbumFromMusicBrainz] enrichissement à la volée échoué:', err);
-    }));
+    // Liens streaming seulement en tâche de fond à l'import (pas l'enrichissement complet) —
+    // après() garantit l'exécution même une fois la réponse renvoyée (Vercel tue sinon les
+    // promesses non-attendues dès la fin de la requête). Avant le 29/06/2026, ce hook appelait
+    // enrichAlbumMetadata() en entier (MB + Last.fm + Wikipedia), ce qui faisait tourner tout
+    // le pipeline d'enrichissement dans la fonction Vercel à chaque import — gros contributeur
+    // au quota Fluid Active CPU (cf. MUSICBRAINZ_PIPELINE_HANDOFF.md). Les genres/description/
+    // stats Last.fm restent gérés par le cron nocturne GitHub Actions (Phase 1), qui ne coûte
+    // rien sur Vercel. fetchAlbumStreamingLinks() pose fetched_at (NOT NULL en DB, jamais reseté)
+    // sur la ligne album_metadata créée ici, mais PAS tags_checked_at — c'est ce dernier champ que
+    // Phase 1 (enrich-missing.mjs) utilise pour savoir si les tags ont déjà été tentés, donc cette
+    // ligne partielle ne fait pas sauter l'album dans le cron nocturne. Si tu veux revenir à
+    // l'enrichissement complet synchrone, remets enrichAlbumMetadata() ici.
+    after(() =>
+      fetchAlbumStreamingLinks(newAlbumId, canonicalMbid, preview.artist, preview.title).catch((err) => {
+        console.error('[importAlbumFromMusicBrainz] récupération liens streaming échouée:', err);
+      })
+    );
 
     const firstTrackId = isSingle ? (trackRows[0]?.id ?? null) : null;
     return {

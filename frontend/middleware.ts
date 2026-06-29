@@ -7,7 +7,14 @@ import { createServerClient } from "@supabase/ssr";
  * Without this, the JWT expires after 1h and server-side auth fails.
  * Auth gating is handled per-page (soft gates), not here.
  */
+// Pas de cookie de session → rien à rafraîchir. Évite l'appel réseau
+// getUser() (coûteux en CPU Vercel) pour tout le trafic anonyme.
+const AUTH_COOKIE_RE = /^sb-.*-auth-token/;
+
 export async function middleware(req: NextRequest) {
+  const hasAuthCookie = req.cookies.getAll().some((c) => AUTH_COOKIE_RE.test(c.name));
+  if (!hasAuthCookie) return NextResponse.next();
+
   const res = NextResponse.next();
 
   const supabase = createServerClient(

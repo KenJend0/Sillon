@@ -513,7 +513,15 @@ async function upsertGenresAndAlbumGenres(albumId, tagMap) {
 async function runPhase1() {
   console.log('── Phase 1 : enrichissement complet (tags + streaming) ──────────');
 
-  // Albums without any album_metadata row.
+  // Albums n'ayant jamais eu de tentative de tags/genres.
+  // Filtre sur tags_checked_at (pas fetched_at) : depuis le 29/06/2026,
+  // importAlbumFromMusicBrainz() crée une ligne album_metadata partielle
+  // (streaming uniquement, via after()) qui pose fetched_at mais PAS
+  // tags_checked_at — fetched_at est NOT NULL en DB donc toute ligne en a
+  // un, ce qui rendrait ce filtre toujours vrai et ferait sauter Phase 1
+  // pour de bon sur ces albums (jamais de genres). tags_checked_at reste
+  // le seul signal fiable de "tags déjà tentés" (même pattern que Phase 1b).
+  //
   // fetchAllPages est indispensable ici : sans .range(), PostgREST plafonne le
   // résultat à 1000 lignes quel que soit le .limit() demandé (cf. commentaire de
   // fetchAllPages plus haut). Avec un catalogue > 1000 albums, comparer deux
@@ -527,7 +535,7 @@ async function runPhase1() {
         supabase.from('albums').select('id, mbid, title, artists(name)').not('mbid', 'is', null).range(from, to)
       ),
       fetchAllPages((from, to) =>
-        supabase.from('album_metadata').select('album_id, fetched_at').not('fetched_at', 'is', null).range(from, to)
+        supabase.from('album_metadata').select('album_id, tags_checked_at').not('tags_checked_at', 'is', null).range(from, to)
       ),
     ]);
   } catch (error) {

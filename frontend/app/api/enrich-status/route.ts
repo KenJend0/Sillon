@@ -18,9 +18,14 @@ export async function GET(req: NextRequest) {
   const supabase = createSupabaseAdmin();
   const { data } = await supabase
     .from('album_metadata')
-    .select('fetched_at')
+    .select('fetched_at, spotify_url, apple_music_url, deezer_url')
     .eq('album_id', albumId)
     .maybeSingle();
 
-  return NextResponse.json({ ready: !!data?.fetched_at });
+  // fetched_at = enrichissement complet (cron nocturne, genres/description inclus).
+  // Les liens streaming arrivent plus tôt via after() à l'import (voir
+  // importAlbumFromMusicBrainz) et ne posent pas fetched_at — sinon le cron
+  // croirait l'album déjà pleinement enrichi et ne le retraiterait jamais.
+  const hasStreamingLink = !!(data?.spotify_url || data?.apple_music_url || data?.deezer_url);
+  return NextResponse.json({ ready: !!data?.fetched_at || hasStreamingLink });
 }

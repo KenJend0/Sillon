@@ -145,6 +145,7 @@ export type Database = {
       albums: {
         Row: {
           artist_id: string
+          canonical_key: string | null
           cover_url: string | null
           created_at: string
           id: string
@@ -157,6 +158,7 @@ export type Database = {
         }
         Insert: {
           artist_id: string
+          canonical_key?: string | null
           cover_url?: string | null
           created_at?: string
           id?: string
@@ -169,6 +171,7 @@ export type Database = {
         }
         Update: {
           artist_id?: string
+          canonical_key?: string | null
           cover_url?: string | null
           created_at?: string
           id?: string
@@ -1249,6 +1252,7 @@ export type Database = {
         Row: {
           album_id: string
           artist_id: string
+          canonical_title: string | null
           created_at: string
           disc_no: number | null
           duration_ms: number | null
@@ -1261,6 +1265,7 @@ export type Database = {
         Insert: {
           album_id: string
           artist_id: string
+          canonical_title?: string | null
           created_at?: string
           disc_no?: number | null
           duration_ms?: number | null
@@ -1273,6 +1278,7 @@ export type Database = {
         Update: {
           album_id?: string
           artist_id?: string
+          canonical_title?: string | null
           created_at?: string
           disc_no?: number | null
           duration_ms?: number | null
