@@ -373,16 +373,42 @@ async function searchReleaseGroup(title, artist) {
   return groups[0];
 }
 
-/** Get the first release ID from a release group */
-async function getFirstReleaseId(rgMbid) {
-  const url = `${MUSICBRAINZ_API}/release-group/${encodeURIComponent(rgMbid)}?inc=releases&fmt=json`;
+/** Pick the best release ID from a release group to import tracks from.
+ *
+ * BUG THIS REPLACES: the previous version picked the earliest-dated release
+ * with no regard for whether it actually has any tracks listed in MB — early
+ * releases are very often promos/regional pressings with an empty `media`
+ * array. That produced ~190 albums imported with ZERO tracks (verified by
+ * cross-referencing albums with no tracks against this script's ALBUMS list).
+ *
+ * Fix: fetch track counts via inc=releases+media, prefer "Official" status,
+ * and within that prefer the MOST complete tracklist (unlike the single/EP
+ * heuristic in app/actions/musicbrainz.ts which prefers the FEWEST tracks to
+ * avoid bonus-track noise — for full albums, an empty tracklist is the active
+ * failure mode, so completeness wins here). */
+async function getBestReleaseId(rgMbid) {
+  const url = `${MUSICBRAINZ_API}/release-group/${encodeURIComponent(rgMbid)}?inc=releases+media&fmt=json`;
   const res = await mbFetch(url);
   if (!res.ok) return null;
   const data = await res.json();
-  // Sort releases by date to get the earliest
-  const releases = data.releases || [];
-  releases.sort((a, b) => (a.date || '9999') < (b.date || '9999') ? -1 : 1);
-  return releases[0]?.id || null;
+  const releases = (data.releases || []).map((r) => ({
+    id: r.id,
+    status: r.status,
+    date: r.date,
+    trackCount: (r.media || []).reduce((sum, m) => sum + (m['track-count'] || 0), 0),
+  }));
+  if (releases.length === 0) return null;
+
+  const official = releases.filter((r) => r.status === 'Official');
+  const candidates = official.length > 0 ? official : releases;
+  const withTracks = candidates.filter((r) => r.trackCount > 0);
+  const pool = withTracks.length > 0 ? withTracks : candidates;
+
+  pool.sort((a, b) => {
+    if (b.trackCount !== a.trackCount) return b.trackCount - a.trackCount;
+    return (a.date || '9999') < (b.date || '9999') ? -1 : 1;
+  });
+  return pool[0]?.id || null;
 }
 
 /** Fetch full release details including tracks */
@@ -442,9 +468,9 @@ async function importAlbum(title, artist) {
     return { status: 'skipped', reason: 'Already imported', albumId: existing.id };
   }
 
-  // 3. Get first release ID for track details
+  // 3. Get the best release ID for track details
   await delay(DELAY_MS);
-  const releaseId = await getFirstReleaseId(rgMbid);
+  const releaseId = await getBestReleaseId(rgMbid);
   if (!releaseId) {
     return { status: 'error', reason: 'No release in release group' };
   }
@@ -511,13 +537,18 @@ async function importAlbum(title, artist) {
     }))
   );
 
-  if (tracks.length > 0) {
-    const { error: tracksErr } = await supabase.from('tracks').insert(tracks);
-    if (tracksErr) {
-      // Rollback album
-      await supabase.from('albums').delete().eq('id', albumId);
-      return { status: 'error', reason: `Tracks insert failed: ${tracksErr.message}` };
-    }
+  if (tracks.length === 0) {
+    // Don't leave a zero-track album behind — better to fail loudly and let
+    // --skip / a re-run retry than to silently create an unusable album.
+    await supabase.from('albums').delete().eq('id', albumId);
+    return { status: 'error', reason: 'Chosen release has no tracks listed in MusicBrainz' };
+  }
+
+  const { error: tracksErr } = await supabase.from('tracks').insert(tracks);
+  if (tracksErr) {
+    // Rollback album
+    await supabase.from('albums').delete().eq('id', albumId);
+    return { status: 'error', reason: `Tracks insert failed: ${tracksErr.message}` };
   }
 
   // 9. Insert external_ids (album + tracks)

@@ -61,4 +61,7 @@ nul
 .eslintcache
 /coverage/
 
+# ── Script audit reports (generated, not source) ──────────────
+frontend/scripts/*-report.json
+
 .claude
