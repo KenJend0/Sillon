@@ -36,6 +36,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { normalize as normalizeTitle } from '../lib/textNormalize.mjs';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -43,19 +44,6 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
-
-// Keep in sync with frontend/lib/textNormalize.ts — only used here to match
-// track titles across the duplicate pair, not to compute canonical_key.
-function normalizeTitle(str) {
-  return str
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^\w\s]/g, ' ')
-    .replace(/\b0+(\d)/g, '$1')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 async function findDuplicateGroups() {
   // PostgREST caps unpaginated selects at 1000 rows by default — with 1415+

@@ -5,7 +5,8 @@ import { logAuthedProductEvent } from '@/lib/productEvents';
 import { getAuthUser, createSupabaseServer, createSupabaseAdmin } from '@/lib/supabase/server';
 import { uploadCoverToSupabase } from '@/lib/storage';
 import { enrichAlbumMetadata } from './metadata';
-import { canonicalAlbumKey } from '@/lib/albumCanonical';
+import { canonicalAlbumKey } from '@/lib/albumCanonical.mjs';
+import { isAcceptableReleaseGroup, pickBestRelease, releaseSelectionMode } from '@/lib/musicbrainzReleasePolicy.mjs';
 import type { SearchResultUI } from './search';
 import {
   arrayValue,
@@ -26,24 +27,6 @@ const MB_SEARCH_TIMEOUT_MS = 800;
 
 // Recording search is slower than album/artist search — give more time.
 const MB_RECORDING_SEARCH_TIMEOUT_MS = 2000;
-
-// Secondary types that indicate non-studio releases (live, compilation, etc.)
-// Used for search/import — Live is excluded there because a "Live" release-group
-// matching a search query is virtually always the wrong homonym, not what the
-// user is searching/importing for.
-const EXCLUDED_SECONDARY_TYPES = new Set([
-  'Live', 'Compilation', 'Remix', 'Demo',
-  'Spokenword', 'Interview',
-  'Audiobook', 'Audio drama', 'Field recording',
-]);
-
-// Same exclusion list minus Live — used for the artist discography (getArtistReleases),
-// where Live IS a legitimate release category an artist's page should show
-// (e.g. "Alive 2007", "The Köln Concert" are canonically live albums, not
-// homonym mismatches of a studio release).
-const ARTIST_RELEASES_EXCLUDED_SECONDARY_TYPES = new Set(
-  [...EXCLUDED_SECONDARY_TYPES].filter((t) => t !== 'Live')
-);
 
 function normalizeReleaseDate(date?: string | null): string | null {
   if (!date) return null;
@@ -881,10 +864,7 @@ export async function searchMusicBrainzAlbums(query: string, _limit = 30): Promi
     console.log(`[searchMusicBrainzAlbums] "${query}" → ${preFilterCount} raw results (threshold=${scoreThreshold})`);
     const studioAlbums = releaseGroups.filter((rg) => {
       if ((rg.score || 0) < scoreThreshold) return false;
-      const primaryType: string = rg['primary-type'] || '';
-      if (!['Album', 'EP'].includes(primaryType)) return false;
-      const secondaryTypes: string[] = rg['secondary-types'] || [];
-      return !secondaryTypes.some((t) => EXCLUDED_SECONDARY_TYPES.has(t));
+      return isAcceptableReleaseGroup(rg);
     });
 
     // Sort by releases.length DESC — more releases = more iconic/widely-distributed album.
@@ -1082,15 +1062,10 @@ export async function previewAlbumFromMusicBrainz(mbid: string) {
         return { success: false, error: 'No releases found for this release group' };
       }
       // Préfère une release "Official" — la première de la liste peut être un promo/bootleg sans tracklist.
-      // Parmi les Official, prend celle avec le moins de pistes : un release-group de single peut
-      // regrouper un CD 2 titres, un maxi 4 titres et un vinyle avec un B-side sans rapport — la
-      // tracklist la plus courte est la plus proche du single "canonique" attendu par l'utilisateur.
-      const officialReleases = releases.filter((r) => r.status === 'Official');
-      const candidates = officialReleases.length > 0 ? officialReleases : releases;
-      const withTracks = candidates.filter((r) => r.trackCount > 0);
-      const officialRelease = withTracks.length > 0
-        ? withTracks.reduce((min, r) => (r.trackCount < min.trackCount ? r : min))
-        : candidates[0];
+      // Le moins de pistes pour un single/EP (évite les bonus tracks d'une édition maxi) ; le plus
+      // de pistes pour un album complet (évite un pressing/promo incomplet) — releaseSelectionMode
+      // décide selon le primary-type du release-group, résolu juste au-dessus.
+      const officialRelease = pickBestRelease(releases, releaseSelectionMode(rgPrimaryType)) ?? releases[0];
       const firstReleaseId: string = officialRelease.id;
       releaseResponse = await fetch(
         `${MUSICBRAINZ_API}/release/${encodeURIComponent(firstReleaseId)}?inc=artist-credits+recordings+release-groups&fmt=json`,
@@ -1644,19 +1619,13 @@ export async function getArtistReleases(mbid: string): Promise<ArtistReleasesRes
     const releaseGroups = parseMbReleaseGroups(raw, 'musicbrainz.artistReleases');
     console.log(`[getArtistReleases] MB returned ${releaseGroups.length} release-groups for mbid="${mbid}"`);
 
-    const ALLOWED_PRIMARY_TYPES = new Set(['Album', 'EP', 'Single']);
+    const ARTIST_RELEASES_ALLOWED_PRIMARY_TYPES = new Set(['Album', 'EP', 'Single']);
     const filtered = releaseGroups.filter(rg => {
-      const primary: string | null = rg['primary-type'] || null;
-      if (primary && !ALLOWED_PRIMARY_TYPES.has(primary)) {
-        console.log(`[getArtistReleases]   skip "${rg.title}" (primary-type: ${primary})`);
-        return false;
+      const acceptable = isAcceptableReleaseGroup(rg, { allowLive: true, allowedPrimaryTypes: ARTIST_RELEASES_ALLOWED_PRIMARY_TYPES });
+      if (!acceptable) {
+        console.log(`[getArtistReleases]   skip "${rg.title}" (primary-type: ${rg['primary-type']}, secondary-types: ${(rg['secondary-types'] || []).join(', ')})`);
       }
-      const secondaries: string[] = rg['secondary-types'] || [];
-      const excluded = secondaries.some(t => ARTIST_RELEASES_EXCLUDED_SECONDARY_TYPES.has(t));
-      if (excluded) {
-        console.log(`[getArtistReleases]   skip "${rg.title}" (secondary-types: ${secondaries.join(', ')})`);
-      }
-      return !excluded;
+      return acceptable;
     });
 
     console.log(`[getArtistReleases] ${filtered.length} release-groups after secondary-type filter`);

@@ -134,7 +134,14 @@ async function fetchReleasePreview(mbid) {
 
   const artistCredit = data['artist-credit']?.[0];
   const artist = artistCredit?.artist || { id: null, name: 'Unknown' };
-  const releaseGroupId = data['release-group']?.id || mbid;
+  // MUST fail explicitly if MB doesn't give us a release-group — falling back to `mbid`
+  // here would silently store a release MBID as if it were a release-group MBID, the
+  // same defect found (and fixed) in app/actions/musicbrainz.ts's previewAlbumFromMusicBrainz.
+  const releaseGroupId = data['release-group']?.id;
+  if (!releaseGroupId) {
+    console.warn(`  ⚠ release ${data.id} has no release-group on MusicBrainz — skipping`);
+    return null;
+  }
   const primaryType = rgPrimaryType || data['release-group']?.['primary-type'] || null;
 
   const tracks = (data.media || []).flatMap((m) =>

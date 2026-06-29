@@ -1,4 +1,4 @@
-export function normalize(str: string): string {
+export function normalize(str) {
   return str
     .toLowerCase()
     // NFKD (not just NFD) also folds compatibility characters like superscript
@@ -16,6 +16,6 @@ export function normalize(str: string): string {
     .trim();
 }
 
-export function stripArticle(s: string): string {
+export function stripArticle(s) {
   return s.replace(/^(the|a|an) /, "");
 }

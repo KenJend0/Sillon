@@ -23,6 +23,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import { isAcceptableReleaseGroup, pickBestRelease } from '../lib/musicbrainzReleasePolicy.mjs';
 
 const MUSICBRAINZ_API = 'https://musicbrainz.org/ws/2';
 const USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
@@ -60,9 +61,6 @@ async function mbFetch(url, attempt = 0) {
   }
 }
 
-const EXCLUDED_SECONDARY_TYPES = new Set([
-  'Live', 'Compilation', 'Remix', 'Demo', 'Spokenword', 'Interview', 'Audiobook', 'Audio drama', 'Field recording',
-]);
 const SUSPICIOUS_TITLE_RE = /\(live\)|\(remix\)|\bremix\b|\(edit\)|home recording|\(instrumental\)/i;
 
 async function findEmptyTrackAlbums() {
@@ -122,12 +120,7 @@ async function searchCorrectReleaseGroup(title, artist) {
   const data = await res.json();
   const groups = data['release-groups'] || [];
   return groups
-    .filter((g) => {
-      const pt = g['primary-type'];
-      if (pt && pt !== 'Album' && pt !== 'EP') return false;
-      const sec = g['secondary-types'] || [];
-      return !sec.some((t) => EXCLUDED_SECONDARY_TYPES.has(t));
-    })
+    .filter((g) => isAcceptableReleaseGroup(g))
     .sort((a, b) => (b.score || 0) - (a.score || 0));
 }
 
@@ -139,16 +132,9 @@ async function getBestRelease(rgMbid) {
   const releases = (data.releases || []).map((r) => ({
     id: r.id,
     status: r.status,
-    date: r.date,
     trackCount: (r.media || []).reduce((sum, m) => sum + (m['track-count'] || 0), 0),
   }));
-  if (releases.length === 0) return null;
-  const official = releases.filter((r) => r.status === 'Official');
-  const candidates = official.length > 0 ? official : releases;
-  const withTracks = candidates.filter((r) => r.trackCount > 0);
-  const pool = withTracks.length > 0 ? withTracks : candidates;
-  pool.sort((a, b) => (b.trackCount !== a.trackCount ? b.trackCount - a.trackCount : (a.date || '9999') < (b.date || '9999') ? -1 : 1));
-  return pool[0]?.id || null;
+  return pickBestRelease(releases, 'most')?.id || null;
 }
 
 async function getReleaseDetails(releaseId) {

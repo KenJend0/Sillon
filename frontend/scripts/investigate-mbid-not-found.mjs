@@ -11,6 +11,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { isAcceptableReleaseGroup } from '../lib/musicbrainzReleasePolicy.mjs';
 
 const MUSICBRAINZ_API = 'https://musicbrainz.org/ws/2';
 const USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
@@ -43,10 +44,6 @@ async function mbFetch(url, attempt = 0) {
     throw err;
   }
 }
-
-const EXCLUDED_SECONDARY_TYPES = new Set([
-  'Live', 'Compilation', 'Remix', 'Demo', 'Spokenword', 'Interview', 'Audiobook', 'Audio drama', 'Field recording',
-]);
 
 // The 3 flagged albums (album id, stored mbid) — from audit-report.json's mbidNotFoundAnywhere.
 const TARGET_ALBUM_IDS = [
@@ -142,8 +139,10 @@ async function main() {
       console.log('  candidates from MB search (title+artist):');
       for (const c of candidates.slice(0, 5)) {
         const flags = [];
-        if (c.primaryType && c.primaryType !== 'Album' && c.primaryType !== 'EP') flags.push(`type=${c.primaryType}`);
-        if (c.secondaryTypes.some((t) => EXCLUDED_SECONDARY_TYPES.has(t))) flags.push(`secondary=${c.secondaryTypes.join(',')}`);
+        if (!isAcceptableReleaseGroup({ 'primary-type': c.primaryType, 'secondary-types': c.secondaryTypes })) {
+          if (c.primaryType && c.primaryType !== 'Album' && c.primaryType !== 'EP') flags.push(`type=${c.primaryType}`);
+          if (c.secondaryTypes.length > 0) flags.push(`secondary=${c.secondaryTypes.join(',')}`);
+        }
         console.log(`    - "${c.title}" by ${c.artistName} (${c.id}) score=${c.score}${flags.length ? ' [' + flags.join(' ') + ']' : ''}`);
       }
     }

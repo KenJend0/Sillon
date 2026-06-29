@@ -17,6 +17,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import { isAcceptableReleaseGroup, pickBestRelease } from '../lib/musicbrainzReleasePolicy.mjs';
+import { isArtistMatch } from '../lib/musicbrainzMatch.mjs';
 
 const MUSICBRAINZ_API = 'https://musicbrainz.org/ws/2';
 const COVER_ART_API = 'https://coverartarchive.org';
@@ -347,6 +349,18 @@ async function mbFetch(url, attempt = 0) {
   }
 }
 
+/** True if a release-group result is an acceptable Album/EP match AND its
+ *  artist-credit actually matches the artist we searched for — without this
+ *  second check, the title-only fallback below (no artist constraint at all)
+ *  can land on a same-titled Album/EP by a completely different artist (e.g.
+ *  "Solitude" by some other project instead of Jinsang) and the type filter
+ *  alone wouldn't catch it since the wrong match is still a real Album/EP. */
+function isUsableMatch(rg, artist) {
+  if (!isAcceptableReleaseGroup(rg)) return false;
+  const rgArtist = rg['artist-credit']?.[0]?.artist?.name;
+  return rgArtist ? isArtistMatch(rgArtist, artist) : false;
+}
+
 /** Search MB release-group endpoint and return the best match MBID */
 async function searchReleaseGroup(title, artist) {
   // Escape Lucene special chars except quotes
@@ -358,16 +372,18 @@ async function searchReleaseGroup(title, artist) {
   if (!res.ok) return null;
   const data = await res.json();
 
-  const groups = data['release-groups'] || [];
+  const groups = (data['release-groups'] || []).filter((rg) => isUsableMatch(rg, artist));
   if (groups.length === 0) {
-    // Fallback: just title query
+    // Fallback: just title query — no artist constraint in the Lucene query itself,
+    // so isUsableMatch's artist check is the only thing standing between this and
+    // matching a same-titled Album/EP by a totally different artist.
     const fallbackQuery = `releasegroup:"${esc(title)}"`;
     const fbUrl = `${MUSICBRAINZ_API}/release-group?query=${encodeURIComponent(fallbackQuery)}&fmt=json&limit=5`;
     await delay(DELAY_MS);
     const fbRes = await mbFetch(fbUrl);
     if (!fbRes.ok) return null;
     const fbData = await fbRes.json();
-    const fbGroups = fbData['release-groups'] || [];
+    const fbGroups = (fbData['release-groups'] || []).filter((rg) => isUsableMatch(rg, artist));
     return fbGroups[0] || null;
   }
   return groups[0];
@@ -382,10 +398,11 @@ async function searchReleaseGroup(title, artist) {
  * cross-referencing albums with no tracks against this script's ALBUMS list).
  *
  * Fix: fetch track counts via inc=releases+media, prefer "Official" status,
- * and within that prefer the MOST complete tracklist (unlike the single/EP
- * heuristic in app/actions/musicbrainz.ts which prefers the FEWEST tracks to
- * avoid bonus-track noise — for full albums, an empty tracklist is the active
- * failure mode, so completeness wins here). */
+ * and within that prefer the MOST complete tracklist via the shared
+ * pickBestRelease('most') — unlike the single/EP heuristic in
+ * app/actions/musicbrainz.ts which prefers the FEWEST tracks to avoid
+ * bonus-track noise, for full albums an empty tracklist is the active
+ * failure mode, so completeness wins here. */
 async function getBestReleaseId(rgMbid) {
   const url = `${MUSICBRAINZ_API}/release-group/${encodeURIComponent(rgMbid)}?inc=releases+media&fmt=json`;
   const res = await mbFetch(url);
@@ -394,21 +411,9 @@ async function getBestReleaseId(rgMbid) {
   const releases = (data.releases || []).map((r) => ({
     id: r.id,
     status: r.status,
-    date: r.date,
     trackCount: (r.media || []).reduce((sum, m) => sum + (m['track-count'] || 0), 0),
   }));
-  if (releases.length === 0) return null;
-
-  const official = releases.filter((r) => r.status === 'Official');
-  const candidates = official.length > 0 ? official : releases;
-  const withTracks = candidates.filter((r) => r.trackCount > 0);
-  const pool = withTracks.length > 0 ? withTracks : candidates;
-
-  pool.sort((a, b) => {
-    if (b.trackCount !== a.trackCount) return b.trackCount - a.trackCount;
-    return (a.date || '9999') < (b.date || '9999') ? -1 : 1;
-  });
-  return pool[0]?.id || null;
+  return pickBestRelease(releases, 'most')?.id || null;
 }
 
 /** Fetch full release details including tracks */
@@ -488,6 +493,7 @@ async function importAlbum(title, artist) {
 
   // 6. Get or create artist in Supabase
   let artistId;
+  let createdArtist = false;
   const { data: existingArtist } = await supabase
     .from('artists')
     .select('id')
@@ -506,7 +512,21 @@ async function importAlbum(title, artist) {
     if (artistErr) {
       return { status: 'error', reason: `Artist insert failed: ${artistErr.message}` };
     }
+    createdArtist = true;
   }
+
+  // If the album/tracks insert fails below, an artist created for THIS attempt
+  // must not survive as an orphan with no album — this produced 14 orphan
+  // artists in the DB (some with the album TITLE wrongly stored as the artist
+  // name, from the now-fixed unfiltered fallback search above).
+  const rollbackOrphanArtist = async () => {
+    if (!createdArtist) return;
+    const { count } = await supabase
+      .from('albums')
+      .select('id', { count: 'exact', head: true })
+      .eq('artist_id', artistId);
+    if (!count) await supabase.from('artists').delete().eq('id', artistId);
+  };
 
   // 7. Insert album
   const albumId = randomUUID();
@@ -520,6 +540,7 @@ async function importAlbum(title, artist) {
   });
 
   if (albumErr) {
+    await rollbackOrphanArtist();
     return { status: 'error', reason: `Album insert failed: ${albumErr.message}` };
   }
 
@@ -541,6 +562,7 @@ async function importAlbum(title, artist) {
     // Don't leave a zero-track album behind — better to fail loudly and let
     // --skip / a re-run retry than to silently create an unusable album.
     await supabase.from('albums').delete().eq('id', albumId);
+    await rollbackOrphanArtist();
     return { status: 'error', reason: 'Chosen release has no tracks listed in MusicBrainz' };
   }
 
@@ -548,6 +570,7 @@ async function importAlbum(title, artist) {
   if (tracksErr) {
     // Rollback album
     await supabase.from('albums').delete().eq('id', albumId);
+    await rollbackOrphanArtist();
     return { status: 'error', reason: `Tracks insert failed: ${tracksErr.message}` };
   }
 

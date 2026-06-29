@@ -6,10 +6,6 @@
  * NEW imports against each other — pre-existing albums (including the
  * reissue/remaster duplicates already in the DB) stay invisible to it.
  *
- * NOTE: stripEditionSuffix/normalize/canonicalAlbumKey below must stay in sync
- * with frontend/lib/albumCanonical.ts + frontend/lib/textNormalize.ts — this
- * script can't import them directly (no ts-node/tsx in this project).
- *
  * Usage (from frontend/ directory):
  *   node --env-file=.env.local scripts/backfill-canonical-keys.mjs
  *   node --env-file=.env.local scripts/backfill-canonical-keys.mjs --dry-run
@@ -17,6 +13,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { canonicalAlbumKey } from '../lib/albumCanonical.mjs';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const RECOMPUTE = process.argv.includes('--recompute');
@@ -26,60 +23,6 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
-
-// ─── Keep in sync with frontend/lib/albumCanonical.ts ──────────────────────
-
-const EDITION_KEYWORDS = [
-  "super deluxe( edition)?",
-  "deluxe( edition)?",
-  "remaster(ed)?( version)?",
-  "\\d{4}\\s*remaster(ed)?",
-  "\\d+(st|nd|rd|th)\\s*anniversary( edition)?",
-  "anniversary( edition)?",
-  "expanded( edition)?",
-  "extended( edition)?",
-  "bonus track(s)?( version)?",
-  "special edition",
-  "collector'?s? edition",
-  "legacy edition",
-  "mono( version)?",
-  "stereo( version)?",
-  "reissue",
-].join("|");
-
-const BRACKETED_SUFFIX_RE = new RegExp(`\\s*[(\\[][^()\\[\\]]*(?:${EDITION_KEYWORDS})[^()\\[\\]]*[)\\]]\\s*$`, "i");
-const DASH_SUFFIX_RE = new RegExp(`\\s*[-–:]\\s*(?:${EDITION_KEYWORDS})\\s*$`, "i");
-
-function stripEditionSuffix(title) {
-  let t = title;
-  let prev;
-  do {
-    prev = t;
-    t = t.replace(BRACKETED_SUFFIX_RE, "").replace(DASH_SUFFIX_RE, "").trim();
-  } while (t !== prev && t.length > 0);
-  return t;
-}
-
-function normalize(str) {
-  return str
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^\w\s]/g, " ")
-    .replace(/\b0+(\d)/g, "$1")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function stripArticle(s) {
-  return s.replace(/^(the|a|an) /, "");
-}
-
-function canonicalAlbumKey(title, artistName) {
-  const t = stripArticle(normalize(stripEditionSuffix(title)));
-  const a = stripArticle(normalize(artistName));
-  return `${t}|||${a}`;
-}
 
 // ─── Backfill ────────────────────────────────────────────────────────────────
 

@@ -20,6 +20,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import { isAcceptableReleaseGroup, pickBestRelease, EXCLUDED_SECONDARY_TYPES } from '../lib/musicbrainzReleasePolicy.mjs';
 
 const MUSICBRAINZ_API = 'https://musicbrainz.org/ws/2';
 const USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
@@ -57,10 +58,6 @@ async function mbFetch(url, attempt = 0) {
   }
 }
 
-const EXCLUDED_SECONDARY_TYPES = new Set([
-  'Live', 'Compilation', 'Remix', 'Demo', 'Spokenword', 'Interview', 'Audiobook', 'Audio drama', 'Field recording',
-]);
-
 const SUSPICIOUS_TITLE_RE = /\(live\)|\(remix\)|\bremix\b|\(edit\)|home recording|\(instrumental\)/i;
 
 /** Same heuristic as bulk-import-albums.mjs's getBestReleaseId, PLUS a check on
@@ -77,34 +74,21 @@ async function getBestReleaseId(rgMbid) {
   if (!res.ok) return { releaseId: null, suspicious: null };
   const data = await res.json();
 
-  const primaryType = data['primary-type'];
-  const secondaryTypes = data['secondary-types'] || [];
-  if (primaryType && primaryType !== 'Album' && primaryType !== 'EP') {
-    return { releaseId: null, suspicious: `release-group primary-type is "${primaryType}", not Album/EP` };
-  }
-  const badSecondary = secondaryTypes.find((t) => EXCLUDED_SECONDARY_TYPES.has(t));
-  if (badSecondary) {
+  if (!isAcceptableReleaseGroup(data)) {
+    const primaryType = data['primary-type'];
+    if (primaryType && primaryType !== 'Album' && primaryType !== 'EP') {
+      return { releaseId: null, suspicious: `release-group primary-type is "${primaryType}", not Album/EP` };
+    }
+    const badSecondary = (data['secondary-types'] || []).find((t) => EXCLUDED_SECONDARY_TYPES.has(t));
     return { releaseId: null, suspicious: `release-group secondary-type is "${badSecondary}" — likely a wrong match, not the studio album` };
   }
 
   const releases = (data.releases || []).map((r) => ({
     id: r.id,
     status: r.status,
-    date: r.date,
     trackCount: (r.media || []).reduce((sum, m) => sum + (m['track-count'] || 0), 0),
   }));
-  if (releases.length === 0) return { releaseId: null, suspicious: null };
-
-  const official = releases.filter((r) => r.status === 'Official');
-  const candidates = official.length > 0 ? official : releases;
-  const withTracks = candidates.filter((r) => r.trackCount > 0);
-  const pool = withTracks.length > 0 ? withTracks : candidates;
-
-  pool.sort((a, b) => {
-    if (b.trackCount !== a.trackCount) return b.trackCount - a.trackCount;
-    return (a.date || '9999') < (b.date || '9999') ? -1 : 1;
-  });
-  return { releaseId: pool[0]?.id || null, suspicious: null };
+  return { releaseId: pickBestRelease(releases, 'most')?.id || null, suspicious: null };
 }
 
 async function getReleaseDetails(releaseId) {

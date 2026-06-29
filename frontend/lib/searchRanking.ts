@@ -1,6 +1,6 @@
 import type { SearchResultUI } from "@/app/actions/search";
-import { canonicalAlbumKey } from "@/lib/albumCanonical";
-import { normalize, stripArticle } from "@/lib/textNormalize";
+import { canonicalAlbumKey } from "@/lib/albumCanonical.mjs";
+import { normalize, stripArticle } from "@/lib/textNormalize.mjs";
 
 export { normalize, stripArticle };
 

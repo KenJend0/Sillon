@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { importAlbumFromMusicBrainz } from '@/app/actions/musicbrainz';
-import { canonicalAlbumKey } from '@/lib/albumCanonical';
+import { canonicalAlbumKey } from '@/lib/albumCanonical.mjs';
 import { showToast } from '@/components/Toast';
 import NetworkListenersBottomSheet from '@/components/NetworkListenersBottomSheet';
 import { UserAvatar } from '@/components/avatars/DefaultAvatar';
