@@ -112,8 +112,7 @@ waveform/
 │   ├── supabase_migration_search_cache.sql      # Cache MB 24h
 │   └── ...                     # Autres migrations par feature
 ├── scripts/
-│   ├── generate-supabase-types.sh / .ps1   # Régénère frontend/types/database.ts
-│   └── refresh_discover.sh / .ps1          # Rafraîchit les items Discover
+│   └── generate-supabase-types.sh / .ps1   # Régénère frontend/types/database.ts
 ├── ml/                         # Scripts Python (recommandations, ML)
 ├── .gitignore
 └── README.md

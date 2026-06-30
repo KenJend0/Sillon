@@ -36,8 +36,7 @@ Audit de l'architecture base de données + du pipeline de suppression des critiq
 **Vérifié en base le 2026-06-30 — voir résultats des requêtes de diagnostic.**
 
 - [x] **`recommendations` / `notifications` / `recommendation_likes`** — **CONFIRMÉ : n'existent pas en prod** (`information_schema.tables` ne retourne aucune ligne). `recommendations.ts` + `RecommendationModal.tsx` supprimés (code mort garanti cassé). Commentaire `supabase_schema.sql` mis à jour. PATCH 2 de `supabase_rls_patches.sql` (visait `recommendation_likes`, table inexistante) retiré avec note explicative.
-- [ ] **`album_stats_mat`** — **CONFIRMÉ : existe**, vue matérialisée simple (avg_rating/listeners_count par album), jamais rafraîchie (pas de `pg_cron`, aucun script ne faisait de `REFRESH`). Migration créée : `supabase_migrations/supabase_migration_album_stats_mat.sql` (rapatrie la vue + ajoute une fonction RPC `refresh_album_stats_mat()` réservée au service role). Appel quotidien ajouté dans `.github/workflows/daily-enrich.yml` (step "Refresh album_stats_mat").
-  → **Reste à faire : exécuter la migration SQL dans le dashboard Supabase** (voir requête ci-dessous).
+- [x] **`album_stats_mat`** — **Résolu.** Migration `supabase_migrations/supabase_migration_album_stats_mat.sql` exécutée (rapatrie la vue + fonction RPC `refresh_album_stats_mat()` réservée au service role). Appel quotidien ajouté dans `.github/workflows/daily-enrich.yml`.
 - [x] **`saved_albums` vs liste "À écouter" (`list_items`)** — **CONFIRMÉ divergent et migré.** Découverte en creusant l'UI : `SaveAlbumButton`/`SavedTracks` (les seuls composants qui *affichaient* `saved_albums`) n'étaient déjà rendus nulle part — `saved_albums` ne servait plus qu'en écriture muette (depuis `ImportButton`) et dans un toggle incohérent (`AddToDiaryButton` agissait sur `saved_albums` alors que sa checkbox était pilotée par l'état de `list_items`). Code migré vers `list_items`/`user_lists` (liste par défaut) :
   - `ImportButton.tsx` → `getOrCreateDefaultList()` + `toggleListItem()` au lieu de `saveAlbumOnce()`
   - `AddToDiaryButton.tsx` / `AlbumHero.tsx` → `toggleListItem(defaultListId, …)` au lieu de `toggleSaveAlbum()`
@@ -45,21 +44,26 @@ Audit de l'architecture base de données + du pipeline de suppression des critiq
   - `export.ts` (RGPD) → `saved_albums` retiré (déjà couvert par `lists`/`list_items`)
   - 4 scripts de maintenance (`reconcile-duplicate-albums.mjs`, `reconcile-duplicate-tracks.mjs`, `refix-suspicious-albums.mjs`, `investigate-mbid-not-found.mjs`) → références à `saved_albums` retirées
   - Fichiers supprimés : `saved-albums.ts`, `SaveAlbumButton.tsx`, `SavedTracks.tsx` (code mort)
-  → **Reste à faire en base** : lancer le backfill puis `DROP TABLE saved_albums` une fois le code déployé (voir requêtes ci-dessous).
+  - Backfill vérifié (0 ligne orpheline), `DROP TABLE saved_albums` exécuté. **Terminé.**
 - [x] **`user_taste_vectors` / `recommendation_metrics`** — **CONFIRMÉ actifs** : pipeline ML externe toujours en fonctionnement (dernier calcul du jour même, 2026-06-30). Tables légitimes, à conserver telles quelles. Aucune action requise.
 
 ---
 
 ## 3. Nettoyage mineur / cosmétique (non bloquant, à faire si le temps le permet)
 
-- [ ] Fusionner les migrations dupliquées `supabase_migration_track_ratings.sql` et `supabase_migration_track_diary_likes.sql` (créent les mêmes tables `track_diary_likes`/`track_diary_comments` — inoffensif car idempotent, mais pollue l'historique)
-- [ ] Fusionner `supabase_migration_product_events.sql` et `supabase_migration_beta_dashboard_weekly.sql` (même duplication)
-- [ ] Supprimer ou brancher la vue `beta_dashboard_weekly` — créée en DB mais `app/admin/page.tsx` recalcule les mêmes métriques en JS depuis `product_events` directement
-- [ ] Supprimer le filtre mort `.neq('type', 'discover')` dans `feed.ts` (lignes ~168, ~1157) — devenu un no-op depuis que la contrainte CHECK rejette ce type
-- [ ] Supprimer `external_ids` si confirmé sans usage (RLS + index existent pour une table jamais lue/écrite par le code — les IDs externes sont stockés directement en colonnes ailleurs : `albums.mbid`, `album_metadata.spotify_url`, etc.)
-- [ ] Supprimer les scripts orphelins `scripts/refresh_discover.sh` / `.ps1` (référencent une ancienne API Express qui n'existe plus dans le repo)
-- [ ] Régénérer `supabase_schema.sql` une fois les décisions ci-dessus prises, pour qu'il reflète fidèlement la prod (actuellement partiellement désynchronisé — sert de référence pour le gel, donc doit être fiable)
-- [ ] Harmoniser le pattern de comptage likes/comments (album diary = triggers + colonnes dénormalisées, track diary = vue SQL recalculée, listes = `COUNT()` à la demande) — ou documenter explicitement pourquoi les trois diffèrent
+- [x] Migrations dupliquées supprimées : `supabase_migration_track_diary_likes.sql` (doublon exact des sections 6-8 de `track_ratings.sql`) et `supabase_migration_beta_dashboard_weekly.sql` (doublon de `product_events.sql` + vue maintenant supprimée). Aucun impact en base — fichiers locaux uniquement, le contenu était déjà appliqué via les fichiers d'origine.
+- [x] Supprimer la vue `beta_dashboard_weekly` — confirmé morte : `app/admin/page.tsx` interroge `product_events` directement avec une plage de dates personnalisable (lignes 235, 629), incompatible avec le découpage hebdomadaire figé de la vue. `product_events` (la table) reste active et nécessaire — seule la vue est à supprimer :
+  ```sql
+  DROP VIEW IF EXISTS beta_dashboard_weekly;
+  ```
+- [x] Supprimer le filtre mort `.neq('type', 'discover')` dans `feed.ts` (lignes ~168, ~1157) — devenu un no-op depuis que la contrainte CHECK rejette ce type
+- [x] ~~Supprimer `external_ids`~~ — **Annulé, faux positif des 3 audits précédents.** Re-vérifié par grep sur tout `frontend/` (pas seulement `app/actions/`) : activement écrite par `importAlbumFromMusicBrainz` (musicbrainz.ts:1416-1472) et nettoyée par `admin/actions.ts` (`deleteAlbum`) + 7 scripts de maintenance. Les audits précédents avaient limité leur recherche et manqué ces usages. Table conservée telle quelle.
+- [x] Supprimer les scripts orphelins `scripts/refresh_discover.sh` / `.ps1` (référencent une ancienne API Express qui n'existe plus dans le repo) — supprimés + référence retirée de `README.md`
+- [x] **Régénéré.** `supabase_schema.sql` remplacé par un dump fidèle de la prod (`npx supabase db dump --linked --schema public`, CLI authentifié et lié au projet). Vérifié : `saved_albums`/`recommendations`/`recommendation_likes`/`beta_dashboard_weekly` absents, `album_stats_mat` et les colonnes `likes_count`/`comments_count` dénormalisées présentes. À régénérer avec la même commande après tout futur changement de schéma significatif.
+- [x] **Harmonisé** — comptage likes/comments aligné partout sur le pattern triggers + colonnes dénormalisées (déjà utilisé par `diary_entries`). Migration : `supabase_migrations/supabase_migration_harmonize_counts.sql` :
+  - `track_diary_entries.likes_count`/`comments_count` ajoutées + triggers sur `track_diary_likes`/`track_diary_comments`. La vue `track_diary_entry_stats` est redéfinie en simple lecture de ces colonnes (même forme exposée, donc **aucun changement requis** dans `feed.ts`/`track-diary.ts`/`diary.ts`)
+  - `user_lists.likes_count` ajoutée + trigger sur `list_likes`. Code mis à jour : `attachListMeta()` et `getListWithItems()` (lists.ts) lisent directement la colonne au lieu de recompter `list_likes` à chaque appel
+  - Migration exécutée avec succès (après correction d'un conflit de type bigint/integer sur `track_diary_entry_stats`). **Terminé.**
 
 ---
 

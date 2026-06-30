@@ -165,7 +165,6 @@ export async function getMyFeed({
       `
         )
       .eq('user_id', user.id)
-      .neq('type', 'discover')
       .neq('actor_id', user.id) // Don't show own actions — user already knows what they did
       .order('created_at', { ascending: false })
       .limit(queryLimit);
@@ -1154,7 +1153,6 @@ export async function hasUnseenActivity(): Promise<boolean> {
       .from('feed_events')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .neq('type', 'discover')
       .neq('actor_id', user.id)
       .gt('created_at', since)
       .limit(1);

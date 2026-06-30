@@ -111,10 +111,12 @@ async function attachListMeta(listIds: string[], supabase: SupabaseDbClient): Pr
             .in('list_id', listIds)
             .not('album_id', 'is', null)
             .order('added_at', { ascending: false }),
+        // likes_count est dénormalisé sur user_lists (trigger sur list_likes) —
+        // lecture directe au lieu de recompter list_likes à chaque appel.
         supabase
-            .from('list_likes')
-            .select('list_id')
-            .in('list_id', listIds),
+            .from('user_lists')
+            .select('id, likes_count')
+            .in('id', listIds),
         supabase
             .from('list_items')
             .select('list_id, albums(title, artists(name)), tracks(title, albums(artists(name)))')
@@ -138,7 +140,7 @@ async function attachListMeta(listIds: string[], supabase: SupabaseDbClient): Pr
 
     const likesMap = new Map<string, number>();
     for (const row of likesResults.data || []) {
-        likesMap.set(row.list_id, (likesMap.get(row.list_id) ?? 0) + 1);
+        likesMap.set(row.id, row.likes_count ?? 0);
     }
 
     const previewMap = new Map<string, string[]>();
@@ -667,7 +669,7 @@ export async function getListWithItems(listId: string): Promise<{
 
     const { data: list } = await supabase
         .from('user_lists')
-        .select('id, user_id, title, description, is_public, is_default, created_at, profiles(username, avatar_url)')
+        .select('id, user_id, title, description, is_public, is_default, created_at, likes_count, profiles(username, avatar_url)')
         .eq('id', listId)
         .maybeSingle();
 
@@ -691,12 +693,12 @@ export async function getListWithItems(listId: string): Promise<{
 
     if (itemsError) console.error('getListWithItems items error:', itemsError);
 
-    const [{ count: likesCount }, likeStatus] = await Promise.all([
-        supabase.from('list_likes').select('*', { count: 'exact', head: true }).eq('list_id', listId),
-        user
-            ? supabase.from('list_likes').select('id').eq('list_id', listId).eq('user_id', user.id).maybeSingle()
-            : Promise.resolve({ data: null }),
-    ]);
+    // likes_count vient directement de user_lists (dénormalisé, voir migration
+    // supabase_migration_harmonize_counts.sql) — seul le statut "j'ai liké" a
+    // encore besoin d'interroger list_likes.
+    const likeStatus = user
+        ? await supabase.from('list_likes').select('id').eq('list_id', listId).eq('user_id', user.id).maybeSingle()
+        : { data: null };
 
     const profile = list.profiles;
 
@@ -712,7 +714,7 @@ export async function getListWithItems(listId: string): Promise<{
             item_count: items?.length ?? 0,
             cover_urls: [],
             preview_items: [],
-            likes_count: likesCount ?? 0,
+            likes_count: list.likes_count ?? 0,
             is_liked: !!likeStatus.data,
             creator_username: profile?.username || '',
             creator_avatar: profile?.avatar_url ?? null,
