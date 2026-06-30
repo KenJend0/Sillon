@@ -79,13 +79,13 @@ Rendre les pages albums et artistes vraiment riches.
 
 ### Pages artiste
 - [x] **Bio et tags** — bio Wikipedia déjà fetchée (`fetchArtistMetadata`), l'afficher proprement avec genres et tags ; artistes similaires
-- [ ] **Discographie complète** — filtres par type (Albums, EPs, Singles, Lives), tri par date
-- [ ] **Gérer l'état vide "Artistes similaires"** — même besoin que côté album
+- [x] **Discographie complète** — filtres par type (Albums, EPs, Singles, Lives), tri par date
+- [x] **Gérer l'état vide "Artistes similaires"** — même besoin que côté album
 
 ### Enrichissement des tags & votes communautaires
 - [x] **Améliorer la couverture des tags d'albums** — actuellement ~30% (vs 99% covers/liens streaming) ; arbitrer entre saisie manuelle, IA, ou source externe complémentaire
-- [ ] **Vérifier que les votes communautaires de genre sont réellement pris en compte** dans les tags affichés/utilisés pour la recommandation
-- [ ] **Revoir l'UX du vote communautaire de genre** — beaucoup de skips car l'utilisateur ne sait pas quel style choisir ; proposer des suggestions/exemples plutôt qu'un champ ouvert
+- [x] **Vérifier que les votes communautaires de genre sont réellement pris en compte** dans les tags affichés/utilisés pour la recommandation
+- [x] **Revoir l'UX du vote communautaire de genre** — beaucoup de skips car l'utilisateur ne sait pas quel style choisir ; proposer des suggestions/exemples plutôt qu'un champ ouvert
 
 
 ---
@@ -106,7 +106,7 @@ Ce qui rend l'app vraiment utilisable au quotidien.
 
 ### Profils & stats
 - [ ] **Stats sur le profil** — note moyenne globale, distribution des notes (histogramme), top artistes, top genres ; dans un onglet dédié ou accessible depuis le menu (desktop : accessible depuis le hamburger menu)
-- [ ] **Compte privé / public** — toggle dans les paramètres : compte privé = diary et feed visibles uniquement par les abonnés approuvés
+
 
 ### Notifications
 - [x] **Centre de notifications** — icône cloche dans l'header ; types : like, commentaire, follow, recommandation
@@ -117,7 +117,7 @@ Ce qui rend l'app vraiment utilisable au quotidien.
   - Reminder d'écoute via streaming lié (Spotify/Deezer/Apple Music) : *"tu as écouté X récemment, tu veux le noter ?"* — voir recherche intégration streaming, V2 Découverte
 
 ### Recherche
-- [ ] **Améliorer les scores de pertinence** — pondération par popularité (listeners_count, reviews_count), boost exact-match, dé-boost des entrées sans cover ou sans reviews
+- [x] **Améliorer les scores de pertinence** — pondération par popularité (listeners_count, reviews_count), boost exact-match, dé-boost des entrées sans cover ou sans reviews
 
 ### Import & données
 - [x] **Import historique Last.fm** — pseudo public → top albums ajoutés à une liste privée "Import Last.fm", notables depuis `/add` ou la liste ; mentionné (texte, sans lien) à l'écran de lancement de l'onboarding, dispo dans `/settings`
@@ -125,8 +125,12 @@ Ce qui rend l'app vraiment utilisable au quotidien.
 - [x] **Export RGPD** — dump JSON du diary sur demande (automatisé, pas manuel)
 
 ### Listes (wishlist)
-- [ ] **Ajout rapide à la liste**
-- [ ] **Retrait automatique de la liste** quand l'album passe en diary noté
+- [x] **Recherche directe dans une liste** — pills "Ajouter un album"/"Ajouter un titre" (pattern `/add`) sur la page liste (mode propriétaire), ouvrent la barre de recherche spécifique ; sélectionner un résultat l'ajoute directement, pas de formulaire d'écoute intermédiaire
+- [x] **Réordonnancement des items** — exploite la colonne `position` ; drag-and-drop (`@dnd-kit`) accessible via "Réorganiser" dans le menu kebab, verrouille les autres actions pendant le mode
+- [x] **Suppression du like sur les listes** — uniquement les sauvegardes (`saved_lists`) comme signal de popularité, plus pertinent que le like pour ce type de contenu ; `likes_count`/`list_likes` remplacés par `saves_count` dénormalisé (voir `supabase_migration_remove_list_likes.sql`, à exécuter)
+- [x] **Fix retrait "à écouter" lors de l'ajout d'une écoute** — toast de confirmation ajouté, switch custom au lieu de la checkbox native
+- [x] **Refonte hiérarchie visuelle de `ListCard`** + page liste en hero (cover + titre/username/items resserrés)
+- [x] **Vue liste vs grille** — toggle pour les items à l'intérieur d'une liste, aligné avec les barres de recherche
 
 ### Partage
 - [x] **OG images dynamiques** pour les reviews (partage Twitter/Discord) — génération via `@vercel/og`
@@ -181,6 +185,7 @@ Une fois qu'il y a assez de données.
 - [ ] **Feedback explicite sur les recommandations** — bouton "Pas pour moi" sur les recs "Pour toi" ; signal négatif stocké, utilisé pour filtrer les recs suivantes
 - [ ] **listen_count sur les diary_entries** — migrer `re_listen BOOLEAN` vers `listen_count INT DEFAULT 1` ; signal implicite d'attachement plus fin pour le ML
 - [ ] **Listes thématiques UGC** — *"Best of 2024"*, *"Albums pluvieux"* (à la Letterboxd) — créer, partager, commenter
+- [ ] **Fork de liste** — dupliquer une liste sauvegardée (publique) en sa propre liste éditable ; actuellement impossible, seul le propriétaire peut modifier (RLS) — trop gros chantier pour le moment, à reprendre une fois les bases de la feature listes consolidées
 - [ ] **Stats avancées** — graphes par année / genre / artiste, distribution des notes, tendances temporelles
 - [ ] **Profils "critiques"** — score de crédibilité basé sur cohérence des notes et ancienneté
 - [ ] **Weekly recap** — genre dominant, album le plus clivant de la semaine ; demande de vraies agrégations, à activer une fois le volume de données suffisant

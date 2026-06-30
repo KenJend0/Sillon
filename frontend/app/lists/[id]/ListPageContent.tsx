@@ -1,12 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Plus, ArrowUpDown, Info, Trash2 } from "lucide-react";
 import { CoverImage } from "@/components/CoverImage";
-import { updateList, deleteList, toggleListLike, removeListItem } from "@/app/actions/lists";
+import BottomSheet from "@/components/BottomSheet";
+import { updateList, deleteList, removeListItem, toggleListItem, reorderListItems } from "@/app/actions/lists";
 import { showToast } from "@/components/Toast";
 import { toastErrorMessage } from "@/lib/toastErrors";
+import { useDismissOnOutsideOrScroll } from "@/lib/useDismissOnOutsideOrScroll";
+import { useListSave } from "@/lib/useListSave";
+import AlbumSearchForDiary, { type AlbumUI } from "@/components/AlbumSearchForDiary";
+import TrackSearchForDiary, { type TrackUI } from "@/components/TrackSearchForDiary";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import ListViewToggle from "@/components/ListViewToggle";
+import { CoverCollage, BookmarkIcon } from "@/components/ListCard";
 import type { ListItem, UserList } from "@/app/actions/lists";
 
 type Tab = "tous" | "albums" | "titres";
@@ -15,7 +27,6 @@ type Props = {
     list: UserList & { creator_username: string; creator_avatar: string | null };
     items: ListItem[];
     isOwner: boolean;
-    isAuthenticated: boolean;
 };
 
 function RemoveButton({ onRemove }: { onRemove: () => void }) {
@@ -96,9 +107,11 @@ function TrackCard({ item, onRemove }: { item: ListItem; onRemove?: () => void }
 
 function EditListForm({
     list,
+    isOpen,
     onClose,
 }: {
     list: UserList & { creator_username: string; creator_avatar: string | null };
+    isOpen: boolean;
     onClose: () => void;
 }) {
     const router = useRouter();
@@ -106,8 +119,6 @@ function EditListForm({
     const [description, setDescription] = useState(list.description ?? "");
     const [isPublic, setIsPublic] = useState(list.is_public);
     const [saving, setSaving] = useState(false);
-    const [deleting, setDeleting] = useState(false);
-    const [confirmDelete, setConfirmDelete] = useState(false);
 
     const handleSave = async () => {
         if (!title.trim()) return;
@@ -124,21 +135,9 @@ function EditListForm({
         }
     };
 
-    const handleDelete = async () => {
-        setDeleting(true);
-        try {
-            await deleteList(list.id);
-            showToast("Liste supprimée", "success");
-            router.push("/me?tab=lists");
-        } catch (err) {
-            showToast(toastErrorMessage(err, "Erreur lors de la suppression"), "error");
-            setDeleting(false);
-            setConfirmDelete(false);
-        }
-    };
-
     return (
-        <div className="mt-4 p-4 bg-background-secondary rounded-[12px] space-y-4">
+        <BottomSheet isOpen={isOpen} onClose={onClose} title="Infos">
+        <div className="px-6 py-4 space-y-4">
             <div>
                 <label className="block text-label text-text-tertiary mb-1">Titre</label>
                 <input
@@ -170,7 +169,7 @@ function EditListForm({
                 </button>
                 <span className="text-sm text-text-secondary">{isPublic ? "Publique" : "Privée"}</span>
             </div>
-            <div className="flex items-center gap-3 pt-1">
+            <div className="pt-1">
                 <button
                     onClick={handleSave}
                     disabled={saving || !title.trim()}
@@ -178,91 +177,238 @@ function EditListForm({
                 >
                     {saving ? "Enregistrement…" : "Enregistrer"}
                 </button>
-                <button
-                    onClick={onClose}
-                    className="px-4 py-1.5 rounded-[8px] text-sm text-text-secondary hover:text-text-primary transition-colors"
-                >
-                    Annuler
-                </button>
-                {!list.is_default && (
-                    <button
-                        onClick={() => setConfirmDelete(true)}
-                        className="ml-auto text-sm text-red-500 hover:text-red-600 transition-colors"
-                    >
-                        Supprimer
-                    </button>
-                )}
+            </div>
+        </div>
+        </BottomSheet>
+    );
+}
 
-                {confirmDelete && (
-                    <div className="fixed inset-0 bg-[#1C1C1C]/20 flex items-center justify-center z-50 p-4">
-                        <div className="bg-background rounded-[12px] p-6 max-w-md w-full border border-border">
-                            <h2 className="text-meta font-medium text-text-primary mb-2">Supprimer cette liste ?</h2>
-                            <p className="text-label text-text-secondary mb-4">Cette action ne peut pas être annulée.</p>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => setConfirmDelete(false)}
-                                    className="flex-1 px-3 py-2.5 bg-background-secondary hover:bg-background-tertiary text-text-primary rounded-[8px] text-meta transition-colors"
-                                >
-                                    Annuler
-                                </button>
-                                <button
-                                    onClick={handleDelete}
-                                    disabled={deleting}
-                                    className="flex-1 px-3 py-2.5 bg-[#C86C6C] hover:opacity-85 text-[#F5F3EF] rounded-[8px] text-meta disabled:opacity-50 transition-opacity"
-                                >
-                                    {deleting ? "Suppression…" : "Supprimer"}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+function AddItemsForm({
+    listId,
+    onAdded,
+    itemView,
+    onItemViewChange,
+}: {
+    listId: string;
+    onAdded: () => void;
+    itemView?: "grid" | "list";
+    onItemViewChange?: (view: "grid" | "list") => void;
+}) {
+    const [activePanel, setActivePanel] = useState<"album" | "track" | null>(null);
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleAddAlbum = async (album: AlbumUI) => {
+        setSubmitting(true);
+        try {
+            await toggleListItem(listId, { albumId: album.id });
+            showToast(`"${album.title}" ajouté à la liste`, "success");
+            onAdded();
+        } catch (err) {
+            showToast(toastErrorMessage(err, "Impossible d'ajouter cet album"), "error");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleAddTrack = async (track: TrackUI) => {
+        setSubmitting(true);
+        try {
+            await toggleListItem(listId, { trackId: track.id });
+            showToast(`"${track.title}" ajouté à la liste`, "success");
+            onAdded();
+        } catch (err) {
+            showToast(toastErrorMessage(err, "Impossible d'ajouter ce titre"), "error");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleTabClick = (tab: "album" | "track") => {
+        setActivePanel((current) => (current === tab ? null : tab));
+    };
+
+    return (
+        <div>
+            <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => handleTabClick("album")}
+                        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-pill text-[13px] font-medium transition-colors duration-200 ${
+                            activePanel === "album" ? "bg-accent-deep text-paper-hi" : "bg-background-secondary text-text-secondary"
+                        }`}
+                    >
+                        {activePanel === "album" ? <X size={12} strokeWidth={2.5} /> : <Plus size={12} strokeWidth={2.5} />}
+                        Ajouter un album
+                    </button>
+                    <button
+                        onClick={() => handleTabClick("track")}
+                        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-pill text-[13px] font-medium transition-colors duration-200 ${
+                            activePanel === "track" ? "bg-accent-deep text-paper-hi" : "bg-background-secondary text-text-secondary"
+                        }`}
+                    >
+                        {activePanel === "track" ? <X size={12} strokeWidth={2.5} /> : <Plus size={12} strokeWidth={2.5} />}
+                        Ajouter un titre
+                    </button>
+                </div>
+                {itemView && onItemViewChange && <ListViewToggle view={itemView} onChange={onItemViewChange} />}
+            </div>
+
+            <AnimatePresence initial={false} mode="wait">
+                {activePanel === "album" && (
+                    <motion.div
+                        key="album"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                    >
+                        <AlbumSearchForDiary onSelectAlbum={handleAddAlbum} />
+                    </motion.div>
                 )}
+                {activePanel === "track" && (
+                    <motion.div
+                        key="track"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                    >
+                        <TrackSearchForDiary onSelectTrack={handleAddTrack} />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            {submitting && <p className="text-label text-text-tertiary mt-2">Ajout en cours…</p>}
+        </div>
+    );
+}
+
+function SortableRow({ item }: { item: ListItem }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+    const style = { transform: CSS.Transform.toString(transform), transition };
+    const title = item.album?.title ?? item.track?.title ?? "";
+    const artist = item.album?.artist ?? item.track?.artist ?? "";
+    const coverUrl = item.album?.cover_url ?? item.track?.cover_url ?? null;
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className={`flex items-center gap-3 p-2.5 bg-background-secondary rounded-[10px] transition-opacity duration-150 ${isDragging ? "opacity-50" : ""}`}
+        >
+            <button
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing p-1 text-text-tertiary hover:text-text-primary transition-colors flex-shrink-0"
+            >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                    <circle cx="4" cy="2.5" r="1.2" /><circle cx="10" cy="2.5" r="1.2" />
+                    <circle cx="4" cy="7" r="1.2" /><circle cx="10" cy="7" r="1.2" />
+                    <circle cx="4" cy="11.5" r="1.2" /><circle cx="10" cy="11.5" r="1.2" />
+                </svg>
+            </button>
+            <div className="w-10 h-10 rounded-[6px] overflow-hidden bg-background-tertiary relative flex-shrink-0">
+                {coverUrl ? (
+                    <CoverImage src={coverUrl} alt={title} fill className="object-cover" placeholder={<div className="w-full h-full bg-background-tertiary" />} />
+                ) : (
+                    <div className="w-full h-full bg-background-tertiary" />
+                )}
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className="text-sm text-text-primary font-medium truncate">{title}</p>
+                <p className="text-label text-text-tertiary truncate">{artist}</p>
             </div>
         </div>
     );
 }
 
-function LikeButton({ listId, initialLiked, initialCount }: { listId: string; initialLiked: boolean; initialCount: number }) {
-    const [liked, setLiked] = useState(initialLiked);
-    const [count, setCount] = useState(initialCount);
-    const [loading, setLoading] = useState(false);
-
-    const handleToggle = async () => {
-        setLoading(true);
-        setLiked((v) => !v);
-        setCount((v) => liked ? v - 1 : v + 1);
-        try {
-            await toggleListLike(listId);
-        } catch (err) {
-            setLiked((v) => !v);
-            setCount((v) => liked ? v + 1 : v - 1);
-            showToast(toastErrorMessage(err, "Erreur"), "error");
-        } finally {
-            setLoading(false);
-        }
-    };
+function ItemRow({ item, onRemove }: { item: ListItem; onRemove?: () => void }) {
+    const href = item.album_id && item.album ? `/albums/${item.album.id}` : item.track_id && item.track ? `/tracks/${item.track.id}` : "#";
+    const title = item.album?.title ?? item.track?.title ?? "";
+    const artist = item.album?.artist ?? item.track?.artist ?? "";
+    const coverUrl = item.album?.cover_url ?? item.track?.cover_url ?? null;
+    const isTrack = !!item.track_id && !!item.track;
 
     return (
-        <button
-            onClick={handleToggle}
-            disabled={loading}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-colors duration-150 ${
-                liked
-                    ? "border-text-primary text-text-primary bg-transparent"
-                    : "border-border text-text-secondary hover:border-text-secondary"
-            }`}
-        >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill={liked ? "currentColor" : "none"} className="shrink-0">
-                <path d="M7 12s-5.5-3.5-5.5-7a3.5 3.5 0 0 1 5.5-2.87A3.5 3.5 0 0 1 12.5 5c0 3.5-5.5 7-5.5 7z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
-            </svg>
-            {count > 0 && <span>{count}</span>}
-        </button>
+        <Link href={href} className="group flex items-center gap-3 py-2.5 border-b border-border-divider last:border-b-0">
+            <div className="w-11 h-11 rounded-[6px] overflow-hidden bg-background-secondary relative flex-shrink-0">
+                {coverUrl ? (
+                    <CoverImage src={coverUrl} alt={title} fill className="object-cover group-hover:opacity-80 transition-opacity" placeholder={<div className="w-full h-full bg-background-tertiary" />} />
+                ) : (
+                    <div className="w-full h-full bg-background-tertiary flex items-center justify-center">
+                        {isTrack && <span className="text-text-disabled text-lg">♪</span>}
+                    </div>
+                )}
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className="text-sm text-text-primary font-medium truncate group-hover:text-[#8E6F5E] transition-colors">{title}</p>
+                <p className="text-label text-text-tertiary truncate">{artist}</p>
+            </div>
+            {onRemove && (
+                <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); onRemove(); }}
+                    className="p-1.5 rounded-full text-text-tertiary hover:text-text-primary hover:bg-background-secondary transition-colors flex-shrink-0"
+                    title="Retirer de la liste"
+                >
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                </button>
+            )}
+        </Link>
     );
 }
 
-export default function ListPageContent({ list, items, isOwner, isAuthenticated }: Props) {
+function KebabIcon() {
+    return (
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <circle cx="6" cy="2" r="1" fill="currentColor" />
+            <circle cx="6" cy="6" r="1" fill="currentColor" />
+            <circle cx="6" cy="10" r="1" fill="currentColor" />
+        </svg>
+    );
+}
+
+function CheckIcon() {
+    return (
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <path d="M2.5 6.5l2.8 2.8 5.2-5.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+export default function ListPageContent({ list, items, isOwner }: Props) {
+    const router = useRouter();
     const [tab, setTab] = useState<Tab>("tous");
     const [editing, setEditing] = useState(false);
+    const [reordering, setReordering] = useState(false);
+    const [savingOrder, setSavingOrder] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [itemView, setItemView] = useState<"grid" | "list">("grid");
     const [localItems, setLocalItems] = useState<ListItem[]>(items);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+    const menuRef = useRef<HTMLDivElement>(null);
+    useDismissOnOutsideOrScroll(menuRef, menuOpen, () => setMenuOpen(false));
+    const { saved, toggleSave } = useListSave(list);
+
+    useEffect(() => {
+        setLocalItems(items);
+    }, [items]);
+
+    const handleDeleteList = async () => {
+        setDeleting(true);
+        try {
+            await deleteList(list.id);
+            showToast("Liste supprimée", "success");
+            router.push("/me?tab=lists");
+        } catch (err) {
+            showToast(toastErrorMessage(err, "Erreur lors de la suppression"), "error");
+            setDeleting(false);
+            setConfirmDelete(false);
+        }
+    };
 
     const handleRemove = async (itemId: string) => {
         // Optimistic update
@@ -272,6 +418,27 @@ export default function ListPageContent({ list, items, isOwner, isAuthenticated 
         } catch (err) {
             setLocalItems(items); // revert
             showToast(toastErrorMessage(err, "Erreur lors de la suppression"), "error");
+        }
+    };
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = localItems.findIndex((i) => i.id === active.id);
+        const newIndex = localItems.findIndex((i) => i.id === over.id);
+        if (oldIndex === -1 || newIndex === -1) return;
+
+        const reordered = arrayMove(localItems, oldIndex, newIndex);
+        setLocalItems(reordered);
+        setSavingOrder(true);
+        try {
+            await reorderListItems(list.id, reordered.map((i) => i.id));
+        } catch (err) {
+            setLocalItems(items); // revert
+            showToast(toastErrorMessage(err, "Erreur lors de la réorganisation"), "error");
+        } finally {
+            setSavingOrder(false);
         }
     };
 
@@ -288,60 +455,172 @@ export default function ListPageContent({ list, items, isOwner, isAuthenticated 
 
     return (
         <>
-            {/* Owner actions */}
+            {/* Header */}
+            <div className="mb-8">
+                <div className="flex items-start gap-4">
+                    <div className="w-20 sm:w-24 flex-shrink-0">
+                        <CoverCollage urls={list.cover_urls} />
+                    </div>
+
+                    <div className="flex-1 min-w-0 pt-0.5">
+                        <div className="flex items-start justify-between gap-3">
+                            <h1 className="text-h1 text-text-primary leading-tight line-clamp-2">{list.title}</h1>
+                            <div className="flex items-center gap-2 shrink-0">
+                                {!list.is_public && (
+                                    <span className="text-[11px] text-text-tertiary border border-border rounded-full px-2 py-0.5">
+                                        Privée
+                                    </span>
+                                )}
+                                {isOwner && reordering && (
+                                    <button
+                                        onClick={() => setReordering(false)}
+                                        disabled={savingOrder}
+                                        aria-label="Terminer la réorganisation"
+                                        className="w-7 h-7 rounded-full flex items-center justify-center text-paper-hi bg-accent-deep hover:opacity-90 disabled:opacity-50 transition-opacity"
+                                    >
+                                        <CheckIcon />
+                                    </button>
+                                )}
+                                {!isOwner && list.is_public && (
+                                    <button
+                                        onClick={toggleSave}
+                                        aria-label={saved ? "Retirer des sauvegardes" : "Sauvegarder cette liste"}
+                                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${saved ? "text-accent-deep bg-accent-deep/10" : "text-text-tertiary hover:text-accent hover:bg-background-secondary"}`}
+                                    >
+                                        <BookmarkIcon filled={saved} size={18} />
+                                    </button>
+                                )}
+                                {isOwner && !reordering && (
+                                    <div className="relative" ref={menuRef}>
+                                        <button
+                                            onClick={() => setMenuOpen((v) => !v)}
+                                            aria-label="Menu de la liste"
+                                            className="w-7 h-7 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-background-secondary transition-colors"
+                                        >
+                                            <KebabIcon />
+                                        </button>
+                                        {menuOpen && (
+                                            <div className="absolute top-9 right-0 w-48 bg-background border border-border rounded-[10px] shadow-lg z-20 overflow-hidden">
+                                                {localItems.length > 1 && (
+                                                    <button
+                                                        onClick={() => { setMenuOpen(false); setReordering(true); }}
+                                                        className="w-full flex items-center gap-2 text-left px-3 py-2.5 text-[13px] text-text-primary hover:bg-background-secondary transition-colors"
+                                                    >
+                                                        <ArrowUpDown size={14} className="text-text-tertiary" />
+                                                        Réorganiser
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => { setMenuOpen(false); setEditing((v) => !v); }}
+                                                    className="w-full flex items-center gap-2 text-left px-3 py-2.5 text-[13px] text-text-primary hover:bg-background-secondary transition-colors"
+                                                >
+                                                    <Info size={14} className="text-text-tertiary" />
+                                                    Infos
+                                                </button>
+                                                {!list.is_default && (
+                                                    <>
+                                                        <div className="border-t border-border-divider" />
+                                                        <button
+                                                            onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
+                                                            className="w-full flex items-center gap-2 text-left px-3 py-2.5 text-[13px] text-red-500 hover:bg-background-secondary transition-colors"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                            Supprimer la liste
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <Link
+                            href={`/u/${list.creator_username}`}
+                            className="text-[13px] text-text-secondary hover:text-text-primary transition-colors"
+                        >
+                            @{list.creator_username}
+                        </Link>
+
+                        <p className="text-[12px] text-text-tertiary">
+                            {list.item_count} {list.item_count === 1 ? "item" : "items"}
+                            {" · "}
+                            {list.saves_count} {list.saves_count === 1 ? "sauvegarde" : "sauvegardes"}
+                        </p>
+                    </div>
+                </div>
+
+                {list.description && (
+                    <p className="mt-3 text-[14px] text-text-secondary leading-relaxed max-w-xl">
+                        {list.description}
+                    </p>
+                )}
+            </div>
+
+            {/* Owner actions — masquées pendant la réorganisation pour ne pas interférer avec le drag */}
             {isOwner && (
                 <div className="mb-2">
-                    <button
-                        onClick={() => setEditing((v) => !v)}
-                        className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-                    >
-                        {editing ? "Annuler" : "Modifier la liste"}
-                    </button>
-                    {editing && (
-                        <EditListForm list={list} onClose={() => setEditing(false)} />
+                    {!reordering && (
+                        <AddItemsForm
+                            listId={list.id}
+                            onAdded={() => router.refresh()}
+                            itemView={localItems.length > 1 ? itemView : undefined}
+                            onItemViewChange={setItemView}
+                        />
                     )}
+                    <EditListForm list={list} isOpen={editing} onClose={() => setEditing(false)} />
                 </div>
             )}
 
-            {/* Like — visible pour les listes publiques non-propriétaires connectés */}
-            {!isOwner && list.is_public && isAuthenticated && (
-                <div className="mb-6">
-                    <LikeButton
-                        listId={list.id}
-                        initialLiked={list.is_liked ?? false}
-                        initialCount={list.likes_count}
-                    />
-                </div>
-            )}
-
-            {/* Compteur de likes — visible owner ou visiteur non connecté */}
-            {(isOwner || !isAuthenticated) && list.likes_count > 0 && (
-                <p className="text-label text-text-tertiary mb-6">
-                    ♥ {list.likes_count} {list.likes_count === 1 ? "personne aime cette liste" : "personnes aiment cette liste"}
+            {reordering && (
+                <p className="text-label text-text-tertiary mb-2">
+                    Glisse les éléments pour les réordonner, puis valide avec ✓.
                 </p>
             )}
 
-            {/* Filter tabs — only shown when there are both albums and tracks */}
-            {showFilter && (
-                <div className="flex gap-1.5 mb-6">
-                    {(["tous", "albums", "titres"] as Tab[]).map((t) => (
-                        <button
-                            key={t}
-                            onClick={() => setTab(t)}
-                            className={`px-3 py-1 rounded-full text-label font-medium capitalize transition-colors ${
-                                tab === t
-                                    ? "bg-text-primary text-background"
-                                    : "bg-background-secondary text-text-secondary hover:text-text-primary"
-                            }`}
-                        >
-                            {t === "tous" ? "Tout" : t === "albums" ? "Albums" : "Titres"}
-                        </button>
-                    ))}
+
+            {/* Filter tabs + toggle vue grille/liste (toggle déjà affiché plus haut pour le propriétaire) */}
+            {!reordering && displayed.length > 0 && (showFilter || (!isOwner && displayed.length > 1)) && (
+                <div className="flex items-center justify-between gap-2 mb-6">
+                    {showFilter ? (
+                        <div className="flex gap-1.5">
+                            {(["tous", "albums", "titres"] as Tab[]).map((t) => (
+                                <button
+                                    key={t}
+                                    onClick={() => setTab(t)}
+                                    className={`px-3 py-1 rounded-full text-label font-medium capitalize transition-colors ${
+                                        tab === t
+                                            ? "bg-text-primary text-background"
+                                            : "bg-background-secondary text-text-secondary hover:text-text-primary"
+                                    }`}
+                                >
+                                    {t === "tous" ? "Tout" : t === "albums" ? "Albums" : "Titres"}
+                                </button>
+                            ))}
+                        </div>
+                    ) : <span />}
+                    {!isOwner && displayed.length > 1 && <ListViewToggle view={itemView} onChange={setItemView} />}
                 </div>
             )}
 
             {displayed.length === 0 ? (
                 <p className="text-meta text-text-tertiary">Cette liste est vide.</p>
+            ) : reordering ? (
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={localItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+                        <div className="space-y-2">
+                            {localItems.map((item) => <SortableRow key={item.id} item={item} />)}
+                        </div>
+                    </SortableContext>
+                    {savingOrder && <p className="text-label text-text-tertiary mt-2">Enregistrement de l&apos;ordre…</p>}
+                </DndContext>
+            ) : itemView === "list" ? (
+                <div>
+                    {displayed.map((item) => (
+                        <ItemRow key={item.id} item={item} onRemove={isOwner ? () => handleRemove(item.id) : undefined} />
+                    ))}
+                </div>
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-5">
                     {displayed.map((item) =>
@@ -351,6 +630,30 @@ export default function ListPageContent({ list, items, isOwner, isAuthenticated 
                             ? <TrackCard key={item.id} item={item} onRemove={isOwner ? () => handleRemove(item.id) : undefined} />
                             : null
                     )}
+                </div>
+            )}
+
+            {confirmDelete && (
+                <div className="fixed inset-0 bg-[#1C1C1C]/20 flex items-center justify-center z-[70] p-4">
+                    <div className="bg-background rounded-[12px] p-6 max-w-md w-full border border-border">
+                        <h2 className="text-meta font-medium text-text-primary mb-2">Supprimer cette liste ?</h2>
+                        <p className="text-label text-text-secondary mb-4">Cette action ne peut pas être annulée.</p>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setConfirmDelete(false)}
+                                className="flex-1 px-3 py-2.5 bg-background-secondary hover:bg-background-tertiary text-text-primary rounded-[8px] text-meta transition-colors"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                onClick={handleDeleteList}
+                                disabled={deleting}
+                                className="flex-1 px-3 py-2.5 bg-[#C86C6C] hover:opacity-85 text-[#F5F3EF] rounded-[8px] text-meta disabled:opacity-50 transition-opacity"
+                            >
+                                {deleting ? "Suppression…" : "Supprimer"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </>

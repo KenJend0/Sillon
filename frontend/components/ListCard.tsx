@@ -1,16 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { CoverImage } from "@/components/CoverImage";
-import { toggleSaveList, type UserList } from "@/app/actions/lists";
-import { useAuth } from "@/lib/AuthContext";
-import { showToast } from "@/components/Toast";
-import { toastErrorMessage } from "@/lib/toastErrors";
+import { type UserList } from "@/app/actions/lists";
+import { useListSave } from "@/lib/useListSave";
 
-function BookmarkIcon({ filled }: { filled: boolean }) {
+export function BookmarkIcon({ filled, size = 10 }: { filled: boolean; size?: number }) {
     return (
-        <svg width="10" height="10" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1Z" />
         </svg>
     );
@@ -21,7 +18,7 @@ type Props = {
     href: string;
 };
 
-function CoverCollage({ urls }: { urls: (string | null)[] }) {
+export function CoverCollage({ urls }: { urls: (string | null)[] }) {
     const filled = [...urls, null, null, null, null].slice(0, 4);
     const hasCovers = filled.some((u) => u !== null);
 
@@ -75,30 +72,7 @@ function CoverCollage({ urls }: { urls: (string | null)[] }) {
 }
 
 export default function ListCard({ list, href }: Props) {
-    const { user: authUser } = useAuth();
-    const [saved, setSaved] = useState(!!list.is_saved);
-    const [loading, setLoading] = useState(false);
-    const isOwnList = authUser?.id === list.user_id;
-
-    async function handleToggleSave(e: React.MouseEvent) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!authUser) {
-            showToast("Connecte-toi pour sauvegarder une liste", "error");
-            return;
-        }
-        if (loading) return;
-        setLoading(true);
-        setSaved((v) => !v);
-        try {
-            await toggleSaveList(list.id);
-        } catch (err) {
-            setSaved((v) => !v);
-            showToast(toastErrorMessage(err, "Impossible de sauvegarder cette liste"), "error");
-        } finally {
-            setLoading(false);
-        }
-    }
+    const { saved, isOwnList, toggleSave } = useListSave(list);
 
     return (
         <Link href={href} className="group block">
@@ -116,8 +90,17 @@ export default function ListCard({ list, href }: Props) {
                         <span className="text-[10px] font-medium text-text-primary leading-none">@{list.creator_username}</span>
                     </span>
                 )}
+                {list.is_public && !isOwnList && (
+                    <button
+                        onClick={toggleSave}
+                        aria-label={saved ? "Retirer des sauvegardes" : "Sauvegarder cette liste"}
+                        className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center bg-paper-hi/90 border border-border backdrop-blur-sm z-10 transition-colors ${saved ? "text-accent-deep" : "text-text-tertiary hover:text-accent"}`}
+                    >
+                        <BookmarkIcon filled={saved} size={13} />
+                    </button>
+                )}
             </div>
-            <div className="mt-2">
+            <div className="mt-1.5">
                 <div className="flex items-baseline justify-between gap-2">
                     <p className="font-display font-normal text-sm text-text-warm leading-snug line-clamp-2 group-hover:text-accent transition-colors">
                         {list.title}
@@ -133,43 +116,23 @@ export default function ListCard({ list, href }: Props) {
                     <ul className="mt-2 space-y-1">
                         {list.preview_items.map((item, i) => (
                             <li key={i} className="flex gap-1.5 text-[11.5px] text-text-secondary border-t border-border-divider first:border-t-0 pt-1 first:pt-0">
-                                <span className="font-display italic text-text-tertiary shrink-0">{i + 1}</span>
+                                <span className="font-display italic text-accent shrink-0">{i + 1}</span>
                                 <span className="truncate">{item}</span>
                             </li>
                         ))}
                     </ul>
                 )}
-                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                    {!list.is_public && (
-                        <span className="inline-flex items-center gap-1 font-display italic text-sm text-text-secondary">
+                {!list.is_public && (
+                    <div className="flex items-center gap-2 mt-2">
+                        <span className="inline-flex items-center gap-1 text-label text-text-tertiary">
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                                 <rect x="5" y="11" width="14" height="9" rx="1.5"/>
                                 <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
                             </svg>
                             privée
                         </span>
-                    )}
-                    {list.likes_count > 0 && (
-                        <>
-                            {!list.is_public && <span className="text-text-disabled text-[10px]">·</span>}
-                            <span className="text-label text-text-tertiary">♥ {list.likes_count}</span>
-                        </>
-                    )}
-                    {list.is_public && !isOwnList && (
-                        <>
-                            {(!list.is_public || list.likes_count > 0) && (
-                                <span className="text-text-disabled text-[10px]">·</span>
-                            )}
-                            <button
-                                onClick={handleToggleSave}
-                                className={`inline-flex items-center gap-1 text-label transition-colors ${saved ? "text-accent-deep" : "text-text-tertiary hover:text-accent"}`}
-                            >
-                                <BookmarkIcon filled={saved} />
-                                {saved ? "sauvegardée" : "sauvegarder"}
-                            </button>
-                        </>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         </Link>
     );

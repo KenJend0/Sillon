@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Pencil, Lock, Globe, Trash2 } from "lucide-react";
 import ListCard from "@/components/ListCard";
 import { createList, deleteList, updateList, type UserList } from "@/app/actions/lists";
 import { showToast } from "@/components/Toast";
 import { toastErrorMessage } from "@/lib/toastErrors";
+import { useDismissOnOutsideOrScroll } from "@/lib/useDismissOnOutsideOrScroll";
 
 type Props = {
     lists: UserList[];
@@ -92,6 +94,8 @@ function ListCardWithMenu({ list }: { list: UserList }) {
     const [saving, setSaving] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+    useDismissOnOutsideOrScroll(menuRef, menuOpen, () => setMenuOpen(false));
 
     const handleRename = async () => {
         const t = newTitle.trim();
@@ -133,52 +137,58 @@ function ListCardWithMenu({ list }: { list: UserList }) {
         }
     };
 
+    const menuTrigger = (
+        <button
+            onClick={(e) => { e.preventDefault(); setMenuOpen((v) => !v); }}
+            className="w-6 h-6 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors flex-shrink-0"
+        >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="2" r="1" fill="currentColor" className="text-text-secondary" />
+                <circle cx="6" cy="6" r="1" fill="currentColor" className="text-text-secondary" />
+                <circle cx="6" cy="10" r="1" fill="currentColor" className="text-text-secondary" />
+            </svg>
+        </button>
+    );
+
+    const menuDropdown = menuOpen && (
+        <div className="absolute top-7 right-0 w-44 bg-background border border-border rounded-[10px] shadow-lg z-20 overflow-hidden">
+            <button
+                onClick={() => { setMenuOpen(false); setRenaming(true); }}
+                className="w-full flex items-center gap-2 text-left px-3 py-2.5 text-[13px] text-text-primary hover:bg-background-secondary transition-colors"
+            >
+                <Pencil size={14} className="text-text-tertiary" />
+                Renommer
+            </button>
+            {!list.is_default && (
+                <button
+                    onClick={handleToggleVisibility}
+                    className="w-full flex items-center gap-2 text-left px-3 py-2.5 text-[13px] text-text-primary hover:bg-background-secondary transition-colors"
+                >
+                    {list.is_public ? <Lock size={14} className="text-text-tertiary" /> : <Globe size={14} className="text-text-tertiary" />}
+                    {list.is_public ? "Rendre privée" : "Rendre publique"}
+                </button>
+            )}
+            {!list.is_default && (
+                <>
+                    <div className="border-t border-border-divider" />
+                    <button
+                        onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2.5 text-[13px] text-red-500 hover:bg-background-secondary transition-colors"
+                    >
+                        <Trash2 size={14} />
+                        Supprimer
+                    </button>
+                </>
+            )}
+        </div>
+    );
+
     return (
         <div className="relative">
             <ListCard list={list} href={`/lists/${list.id}`} />
-
-            {/* Menu kebab */}
-            <div className="absolute top-1 right-1">
-                <button
-                    onClick={(e) => { e.preventDefault(); setMenuOpen((v) => !v); }}
-                    className="w-6 h-6 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors"
-                >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <circle cx="6" cy="2" r="1" fill="currentColor" className="text-text-secondary" />
-                        <circle cx="6" cy="6" r="1" fill="currentColor" className="text-text-secondary" />
-                        <circle cx="6" cy="10" r="1" fill="currentColor" className="text-text-secondary" />
-                    </svg>
-                </button>
-
-                {menuOpen && (
-                    <div className="absolute top-7 right-0 w-44 bg-background border border-border rounded-[10px] shadow-lg z-20 overflow-hidden">
-                        <button
-                            onClick={() => { setMenuOpen(false); setRenaming(true); }}
-                            className="w-full text-left px-3 py-2.5 text-[13px] text-text-primary hover:bg-background-secondary transition-colors"
-                        >
-                            Renommer
-                        </button>
-                        {!list.is_default && (
-                            <button
-                                onClick={handleToggleVisibility}
-                                className="w-full text-left px-3 py-2.5 text-[13px] text-text-primary hover:bg-background-secondary transition-colors"
-                            >
-                                {list.is_public ? "Rendre privée" : "Rendre publique"}
-                            </button>
-                        )}
-                        {!list.is_default && (
-                            <>
-                                <div className="border-t border-border-divider" />
-                                <button
-                                    onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
-                                    className="w-full text-left px-3 py-2.5 text-[13px] text-red-500 hover:bg-background-secondary transition-colors"
-                                >
-                                    Supprimer
-                                </button>
-                            </>
-                        )}
-                    </div>
-                )}
+            <div className="absolute top-1 right-1" ref={menuRef}>
+                {menuTrigger}
+                {menuDropdown}
             </div>
 
             {/* Modal confirmation suppression */}

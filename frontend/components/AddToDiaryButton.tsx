@@ -91,9 +91,10 @@ export default function AddToDiaryButton({
         if (removeFromSaved && defaultListId) {
           try {
             await toggleListItem(defaultListId, { albumId });
+            showToast("Retiré de \"À écouter\"", "success");
           } catch (err) {
                 console.error("Error removing from saved albums:", err);
-                showToast("Impossible de retirer l'album des sauvegardes", "error");
+                showToast("Impossible de retirer l'album de \"À écouter\"", "error");
           }
         }
 
@@ -297,15 +298,19 @@ export default function AddToDiaryButton({
           </div>
 
           {initialSaved && (
-            <label className="flex items-center gap-2 text-label text-text-secondary">
-              <input
-                type="checkbox"
-                checked={removeFromSaved}
-                onChange={(e) => setRemoveFromSaved(e.target.checked)}
-                className="h-4 w-4 rounded border-border"
-              />
-              Retirer des sauvegardes après ajout
-            </label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setRemoveFromSaved((v) => !v)}
+                className={`relative w-9 h-5 rounded-full transition-colors duration-200 flex-shrink-0 ${removeFromSaved ? "bg-text-primary" : "bg-border-divider"}`}
+              >
+                <span
+                  className="absolute top-0.5 w-4 h-4 rounded-full bg-background transition-all duration-200"
+                  style={{ left: removeFromSaved ? "18px" : "2px" }}
+                />
+              </button>
+              <span className="text-label text-text-secondary">Retirer de &quot;À écouter&quot; après ajout</span>
+            </div>
           )}
 
           <div className="flex gap-2 pt-2 pb-2">

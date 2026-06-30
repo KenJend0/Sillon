@@ -786,42 +786,6 @@ export type Database = {
           },
         ]
       }
-      list_likes: {
-        Row: {
-          created_at: string
-          id: string
-          list_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          list_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          list_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "list_likes_list_id_fkey"
-            columns: ["list_id"]
-            isOneToOne: false
-            referencedRelation: "user_lists"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "list_likes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       product_events: {
         Row: {
           created_at: string
@@ -1399,7 +1363,7 @@ export type Database = {
           id: string
           is_default: boolean
           is_public: boolean
-          likes_count: number
+          saves_count: number
           title: string
           updated_at: string
           user_id: string
@@ -1410,7 +1374,7 @@ export type Database = {
           id?: string
           is_default?: boolean
           is_public?: boolean
-          likes_count?: number
+          saves_count?: number
           title: string
           updated_at?: string
           user_id: string
@@ -1421,7 +1385,7 @@ export type Database = {
           id?: string
           is_default?: boolean
           is_public?: boolean
-          likes_count?: number
+          saves_count?: number
           title?: string
           updated_at?: string
           user_id?: string
