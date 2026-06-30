@@ -49,10 +49,12 @@ function normalizeReleaseDate(date?: string | null): string | null {
   return null;
 }
 
+type MBArtistCredit = { artist: { id: string; name: string }; name?: string; joinphrase?: string };
+
 interface MBRelease {
   id: string;
   title: string;
-  'artist-credit': Array<{ artist: { id: string; name: string }; name?: string }>;
+  'artist-credit': MBArtistCredit[];
   date?: string;
   'cover-art-archive'?: { front?: boolean };
   'release-group'?: { id: string; 'primary-type'?: string };
@@ -67,7 +69,7 @@ interface MBReleaseGroup {
   id: string;
   title: string;
   'first-release-date'?: string;
-  'artist-credit': Array<{ artist: { id: string; name: string }; name?: string }>;
+  'artist-credit': MBArtistCredit[];
   'primary-type'?: string;
   'secondary-types'?: string[];
   'release-count'?: number;
@@ -106,7 +108,7 @@ interface MBReleaseDetail {
   id: string;
   title: string;
   date?: string;
-  'artist-credit': Array<{ artist: { id: string; name: string } }>;
+  'artist-credit': MBArtistCredit[];
   'release-group'?: { id: string; 'primary-type'?: string };
   media: Array<{
     position: number;
@@ -117,6 +119,7 @@ interface MBReleaseDetail {
       length?: number;
       'track_or_recording_length'?: number;
       recording?: { length?: number };
+      'artist-credit': MBArtistCredit[];
     }>;
   }>;
 }
@@ -196,7 +199,19 @@ function parseMbRelationList(value: unknown): MBRelation[] {
   });
 }
 
-function parseArtistCredit(value: unknown): Array<{ artist: { id: string; name: string }; name?: string }> {
+/** Artists credited beyond the primary one (index 0), each paired with the joinphrase
+ *  that precedes it — e.g. credits [A, " & "], [B, " feat. "], [C] → featured = [{B, " & "}, {C, " feat. "}]. */
+function featuredArtistsFromCredit(
+  credits: MBArtistCredit[]
+): Array<{ mbid: string; name: string; joinphrase: string | null }> {
+  return credits.slice(1).map((credit, i) => ({
+    mbid: credit.artist.id,
+    name: credit.artist.name,
+    joinphrase: credits[i].joinphrase ?? null,
+  }));
+}
+
+function parseArtistCredit(value: unknown): MBArtistCredit[] {
   return arrayValue(value).flatMap((item) => {
     const row = recordValue(item);
     const artist = recordValue(row?.artist);
@@ -204,7 +219,12 @@ function parseArtistCredit(value: unknown): Array<{ artist: { id: string; name: 
     const artistName = stringValue(artist?.name);
     if (!id || !artistName) return [];
     const creditName = stringValue(row?.name);
-    return [{ artist: { id, name: artistName }, ...(creditName ? { name: creditName } : {}) }];
+    const joinphrase = stringValue(row?.joinphrase);
+    return [{
+      artist: { id, name: artistName },
+      ...(creditName ? { name: creditName } : {}),
+      ...(joinphrase ? { joinphrase } : {}),
+    }];
   });
 }
 
@@ -310,6 +330,11 @@ function parseMbReleaseDetail(raw: unknown): MBReleaseDetail | null {
           const trackTitle = stringValue(t?.title);
           if (!trackId || !trackTitle) return [];
           const recording = recordValue(t?.recording);
+          // Track-level artist-credit falls back to the recording's own artist-credit when
+          // absent — both can carry featuring info independently of the release-level credit.
+          const trackArtistCredit = arrayValue(t?.['artist-credit']).length > 0
+            ? parseArtistCredit(t?.['artist-credit'])
+            : parseArtistCredit(recording?.['artist-credit']);
           return [{
             id: trackId,
             title: trackTitle,
@@ -317,6 +342,7 @@ function parseMbReleaseDetail(raw: unknown): MBReleaseDetail | null {
             length: numberValue(t?.length) ?? undefined,
             'track_or_recording_length': numberValue(t?.track_or_recording_length) ?? undefined,
             recording: recording ? { length: numberValue(recording.length) ?? undefined } : undefined,
+            'artist-credit': trackArtistCredit,
           }];
         }),
       };
@@ -1120,18 +1146,68 @@ export async function previewAlbumFromMusicBrainz(mbid: string) {
         artistMbid: artist.id,
         date: data.date || null,
         coverUrl,
+        featuredArtists: featuredArtistsFromCredit(data['artist-credit'] || []),
         tracks: tracks.map((t) => ({
           mbid: t.id,
           title: t.title,
           position: t.position,
           discNo: t._discNo ?? 1,
           duration: t.length ?? t['track_or_recording_length'] ?? t.recording?.length ?? null,
+          featuredArtists: featuredArtistsFromCredit(t['artist-credit'] || []),
         })),
       },
     };
   } catch (err) {
     return { success: false, error: 'An error occurred' };
   }
+}
+
+/** Get-or-create an artist by MBID, shared between the primary artist and every featured artist. */
+async function getOrCreateArtistByMbid(
+  supabase: Awaited<ReturnType<typeof createSupabaseServer>>,
+  mbid: string,
+  name: string
+): Promise<{ artistId: string | null; created: boolean; error: string | null }> {
+  const { data: existingArtist } = await supabase
+    .from('artists')
+    .select('id')
+    .eq('mbid', mbid)
+    .maybeSingle();
+
+  if (existingArtist) {
+    return { artistId: existingArtist.id, created: false, error: null };
+  }
+
+  const newArtistId = crypto.randomUUID();
+  const { error } = await supabase.from('artists').insert({
+    id: newArtistId,
+    name,
+    mbid,
+  });
+  if (error) {
+    return { artistId: null, created: false, error: error.message };
+  }
+  return { artistId: newArtistId, created: true, error: null };
+}
+
+/** Resolves (get-or-create) every featured artist credit in one pass, deduped by MBID —
+ *  the same featured artist commonly appears on several tracks of the same album.
+ *  Best-effort: a credit whose artist can't be resolved is dropped, not fatal to the import. */
+async function resolveFeaturedArtists(
+  supabase: Awaited<ReturnType<typeof createSupabaseServer>>,
+  credits: Array<{ mbid: string; name: string }>
+): Promise<Map<string, string>> {
+  const uniqueByMbid = new Map(credits.map((c) => [c.mbid, c.name]));
+  const resolved = new Map<string, string>();
+  for (const [mbid, name] of uniqueByMbid) {
+    const result = await getOrCreateArtistByMbid(supabase, mbid, name);
+    if (!result.artistId) {
+      console.error('[resolveFeaturedArtists] failed to resolve artist', mbid, result.error);
+      continue;
+    }
+    resolved.set(mbid, result.artistId);
+  }
+  return resolved;
 }
 
 /** Builds the idempotent "already imported" response for an existing album,
@@ -1229,36 +1305,19 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
     }
 
     // Get or create artist
-    let artistId: string;
-    let createdArtist = false;
-    const { data: existingArtist } = await supabase
-      .from('artists')
-      .select('id')
-      .eq('mbid', preview.artistMbid)
-      .maybeSingle();
-
-    if (existingArtist) {
-      artistId = existingArtist.id;
-    } else {
-      const newArtistId = crypto.randomUUID();
-      const { error: artistError } = await supabase.from('artists').insert({
-        id: newArtistId,
-        name: preview.artist,
-        mbid: preview.artistMbid,
+    const mainArtistResult = await getOrCreateArtistByMbid(supabase, preview.artistMbid, preview.artist);
+    if (!mainArtistResult.artistId) {
+      await logAuthedProductEvent('album_import_failed', {
+        surface: 'musicbrainz_import',
+        properties: {
+          mbid: canonicalMbid,
+          reason: mainArtistResult.error ?? 'unknown error',
+        },
       });
-      if (artistError) {
-        await logAuthedProductEvent('album_import_failed', {
-          surface: 'musicbrainz_import',
-          properties: {
-            mbid: canonicalMbid,
-            reason: artistError.message,
-          },
-        });
-        return { success: false, error: artistError.message };
-      }
-      artistId = newArtistId;
-      createdArtist = true;
+      return { success: false, error: mainArtistResult.error ?? 'unknown error' };
     }
+    const artistId = mainArtistResult.artistId;
+    const createdArtist = mainArtistResult.created;
 
     // Canonical-title duplicate check — catches reissues/remasters/deluxe editions that
     // MusicBrainz models as a *different* release-group (different mbid) but that are the
@@ -1422,6 +1481,43 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
         },
       });
       return { success: false, error: externalError.message };
+    }
+
+    // Featured artists (album + pistes) — additif, best-effort : un échec ici ne fait pas
+    // rollback de tout l'import, l'album existe déjà sans son featuring (récupérable au
+    // prochain backfill).
+    const allFeaturedCredits = [
+      ...preview.featuredArtists,
+      ...preview.tracks.flatMap((t) => t.featuredArtists),
+    ];
+    if (allFeaturedCredits.length > 0) {
+      const resolvedArtists = await resolveFeaturedArtists(supabase, allFeaturedCredits);
+
+      const albumFeaturedRows = preview.featuredArtists.flatMap((f, i) => {
+        const featuredArtistId = resolvedArtists.get(f.mbid);
+        return featuredArtistId
+          ? [{ album_id: newAlbumId, artist_id: featuredArtistId, position: i, joinphrase: f.joinphrase }]
+          : [];
+      });
+
+      const trackFeaturedRows = preview.tracks.flatMap((track, trackIndex) =>
+        track.featuredArtists.flatMap((f, i) => {
+          const featuredArtistId = resolvedArtists.get(f.mbid);
+          const trackId = trackRows[trackIndex]?.id;
+          return featuredArtistId && trackId
+            ? [{ track_id: trackId, artist_id: featuredArtistId, position: i, joinphrase: f.joinphrase }]
+            : [];
+        })
+      );
+
+      if (albumFeaturedRows.length > 0) {
+        const { error } = await supabaseAdmin.from('album_featured_artists').insert(albumFeaturedRows);
+        if (error) console.error('[importAlbumFromMusicBrainz] album_featured_artists error:', error);
+      }
+      if (trackFeaturedRows.length > 0) {
+        const { error } = await supabaseAdmin.from('track_featured_artists').insert(trackFeaturedRows);
+        if (error) console.error('[importAlbumFromMusicBrainz] track_featured_artists error:', error);
+      }
     }
 
     // Liens streaming seulement en tâche de fond à l'import (pas l'enrichissement complet) —

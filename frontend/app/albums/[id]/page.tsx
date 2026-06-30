@@ -23,6 +23,7 @@ import AdminRefreshCover from "@/components/AdminRefreshCover";
 import EnrichmentPoller from "@/components/EnrichmentPoller";
 import MyListenSection from "@/components/MyListenSection";
 import NetworkListenersSection from "@/components/NetworkListenersSection";
+import { creditParts, type FeaturedCredit } from "@/lib/creditedArtists";
 
 type PageProps = {
     params: Promise<{ id: string }>;
@@ -89,7 +90,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
     }
 
     // [2] Fetch artist, tracks et user en parallèle (dépendent seulement de album)
-    const [artistResult, tracksResult, user] = await Promise.all([
+    const [artistResult, tracksResult, albumFeaturedResult, user] = await Promise.all([
         supabase
             .from("artists")
             .select("id, name, mbid")
@@ -97,14 +98,23 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
             .maybeSingle(),
         supabase
             .from("tracks")
-            .select("id, title, duration_ms, track_no, disc_no")
+            .select("id, title, duration_ms, track_no, disc_no, track_featured_artists(position, joinphrase, artists(id, name))")
             .eq("album_id", id)
             .order("disc_no", { ascending: true, nullsFirst: true })
             .order("track_no", { ascending: true, nullsFirst: true }),
+        supabase
+            .from("album_featured_artists")
+            .select("position, joinphrase, artists(id, name)")
+            .eq("album_id", id)
+            .order("position", { ascending: true }),
         getAuthUser(),
     ]);
     const artist = artistResult.data;
     const tracks = tracksResult.data ?? [];
+    const albumFeaturedArtists: FeaturedCredit[] = (albumFeaturedResult.data ?? []).flatMap((row) => {
+        const featuredArtist = row.artists as { id: string; name: string } | null;
+        return featuredArtist ? [{ artist: featuredArtist, joinphrase: row.joinphrase }] : [];
+    });
 
     // [3] Grand batch parallèle — tout ce qui dépend de album.id ou user.id
     const [
@@ -284,6 +294,16 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
         };
     }
 
+    // Featured artists par piste, déjà embarqués dans la requête tracks (1 seule requête,
+    // pas de N+1 — voir track_featured_artists(...) dans le select ci-dessus)
+    function trackFeaturedSuffix(row: { track_featured_artists?: Array<{ position: number; joinphrase: string | null; artists: { id: string; name: string } | null }> }): string {
+        return (row.track_featured_artists ?? [])
+            .filter((f) => f.artists)
+            .sort((a, b) => a.position - b.position)
+            .map((f) => `${f.joinphrase || ' feat. '}${(f.artists as { id: string; name: string }).name}`)
+            .join('');
+    }
+
     // T5: durée totale et nombre de pistes
     const trackCount = tracks.length;
     const totalDurationMs = tracks.reduce((sum, t) => sum + (t.duration_ms ?? 0), 0);
@@ -302,6 +322,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
         year,
         trackCount: trackCount > 0 ? trackCount : undefined,
         totalDurationMs: totalDurationMs > 0 ? totalDurationMs : undefined,
+        featuredArtists: albumFeaturedArtists.length > 0 ? albumFeaturedArtists : undefined,
     };
 
     const hasGenres = genres.length > 0;
@@ -431,6 +452,9 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                                                     </span>
                                                     <Link href={`/tracks/${t.id}`} className="flex-1 text-meta text-text-primary hover:text-[#8E6F5E] transition-colors truncate">
                                                         {t.title}
+                                                        {trackFeaturedSuffix(t) && (
+                                                            <span className="text-text-tertiary">{trackFeaturedSuffix(t)}</span>
+                                                        )}
                                                     </Link>
                                                     <span className="text-text-tertiary tabular-nums flex-shrink-0 text-label">
                                                         {msToMMSS(t.duration_ms)}
@@ -453,6 +477,9 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                                                 </span>
                                                 <Link href={`/tracks/${t.id}`} className="flex-1 text-meta text-text-primary hover:text-[#8E6F5E] transition-colors truncate">
                                                     {t.title}
+                                                    {trackFeaturedSuffix(t) && (
+                                                        <span className="text-text-tertiary">{trackFeaturedSuffix(t)}</span>
+                                                    )}
                                                 </Link>
                                                 <span className="text-text-tertiary tabular-nums flex-shrink-0 text-label">
                                                     {msToMMSS(t.duration_ms)}

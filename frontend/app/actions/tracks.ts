@@ -1,6 +1,7 @@
 'use server';
 
 import { createSupabaseServer } from '@/lib/supabase/server';
+import type { FeaturedCredit } from '@/lib/creditedArtists';
 
 export type AlbumTrackItem = {
   id: string;
@@ -8,6 +9,7 @@ export type AlbumTrackItem = {
   track_no: number | null;
   disc_no: number | null;
   duration_ms: number | null;
+  featuredArtists: FeaturedCredit[];
 };
 
 export type TrackDetail = {
@@ -24,7 +26,17 @@ export type TrackDetail = {
   release_date: string | null;
   artist_id: string;
   artist_name: string;
+  featuredArtists: FeaturedCredit[];
 };
+
+type RawFeaturedRow = { position: number; joinphrase: string | null; artists: { id: string; name: string } | null };
+
+function parseFeaturedRows(rows: RawFeaturedRow[] | null | undefined): FeaturedCredit[] {
+  return (rows ?? [])
+    .filter((r): r is RawFeaturedRow & { artists: { id: string; name: string } } => !!r.artists)
+    .sort((a, b) => a.position - b.position)
+    .map((r) => ({ artist: r.artists, joinphrase: r.joinphrase }));
+}
 
 export async function getTrack(id: string): Promise<TrackDetail | null> {
   const supabase = await createSupabaseServer();
@@ -39,6 +51,11 @@ export async function getTrack(id: string): Promise<TrackDetail | null> {
       disc_no,
       mbid,
       album_id,
+      track_featured_artists (
+        position,
+        joinphrase,
+        artists ( id, name )
+      ),
       albums (
         id,
         title,
@@ -74,6 +91,7 @@ export async function getTrack(id: string): Promise<TrackDetail | null> {
     release_date: album?.release_date || null,
     artist_id: artist?.id || album?.artist_id || '',
     artist_name: artist?.name || 'Inconnu',
+    featuredArtists: parseFeaturedRows(data.track_featured_artists as RawFeaturedRow[] | null),
   };
 }
 
@@ -82,11 +100,18 @@ export async function getAlbumTracks(albumId: string): Promise<AlbumTrackItem[]>
 
   const { data, error } = await supabase
     .from('tracks')
-    .select('id, title, track_no, disc_no, duration_ms')
+    .select('id, title, track_no, disc_no, duration_ms, track_featured_artists(position, joinphrase, artists(id, name))')
     .eq('album_id', albumId)
     .order('disc_no', { ascending: true, nullsFirst: true })
     .order('track_no', { ascending: true, nullsFirst: true });
 
   if (error || !data) return [];
-  return data as AlbumTrackItem[];
+  return data.map((row) => ({
+    id: row.id,
+    title: row.title,
+    track_no: row.track_no,
+    disc_no: row.disc_no,
+    duration_ms: row.duration_ms,
+    featuredArtists: parseFeaturedRows(row.track_featured_artists as RawFeaturedRow[] | null),
+  }));
 }

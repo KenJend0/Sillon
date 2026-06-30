@@ -108,7 +108,7 @@ export default async function ArtistPage({ params }: PageProps) {
     const albumReviewsFromStats = Object.values(statsMap).reduce((s, v) => s + (v.reviews_count ?? 0), 0);
 
     // Fetch everything in parallel
-    const [meta, relResult, user, similarArtistsRaw, allListenerRows, trackStatsRows] = await Promise.all([
+    const [meta, relResult, user, similarArtistsRaw, allListenerRows, trackStatsRows, albumFeaturedRows, trackFeaturedRows] = await Promise.all([
         cachedGetOrFetchArtistMeta(artist.id, artist.mbid),
         artist.mbid ? getArtistReleases(artist.mbid) : Promise.resolve(null),
         getAuthUser(),
@@ -121,7 +121,48 @@ export default async function ArtistPage({ params }: PageProps) {
             .from("track_diary_entries")
             .select("user_id, review_body")
             .eq("artist_id", id),
+        // Apparitions — albums où cet artiste est crédité en featuring (pas en principal)
+        supabase
+            .from("album_featured_artists")
+            .select("albums(id, title, cover_url, release_date, artists(name))")
+            .eq("artist_id", id),
+        // Apparitions — pistes où cet artiste est crédité en featuring
+        supabase
+            .from("track_featured_artists")
+            .select("tracks(id, title, albums(id, title, cover_url, artists(name)))")
+            .eq("artist_id", id),
     ]);
+
+    type Apparition = { kind: 'album' | 'track'; id: string; title: string; coverUrl: string | null; subtitle: string; year: number | null; href: string };
+    const apparitions: Apparition[] = [
+        ...((albumFeaturedRows.data ?? []) as any[]).flatMap((row) => {
+            const a = row.albums;
+            if (!a) return [];
+            return [{
+                kind: 'album' as const,
+                id: a.id,
+                title: a.title,
+                coverUrl: a.cover_url,
+                subtitle: a.artists?.name || 'Artiste inconnu',
+                year: a.release_date ? new Date(a.release_date).getFullYear() : null,
+                href: `/albums/${a.id}`,
+            }];
+        }),
+        ...((trackFeaturedRows.data ?? []) as any[]).flatMap((row) => {
+            const t = row.tracks;
+            const a = t?.albums;
+            if (!t) return [];
+            return [{
+                kind: 'track' as const,
+                id: t.id,
+                title: t.title,
+                coverUrl: a?.cover_url ?? null,
+                subtitle: a ? `${a.artists?.name || 'Artiste inconnu'} · ${a.title}` : 'Artiste inconnu',
+                year: null,
+                href: `/tracks/${t.id}`,
+            }];
+        }),
+    ];
 
     // Merge album listeners + track listeners (deduplicated)
     const albumListenerIds = new Set((allListenerRows.data ?? []).map((r: any) => r.user_id));
@@ -190,6 +231,7 @@ export default async function ArtistPage({ params }: PageProps) {
                 networkListeners={networkListeners}
                 similarArtists={similarArtists}
                 userId={user?.id}
+                apparitions={apparitions}
             />
         </main>
     );

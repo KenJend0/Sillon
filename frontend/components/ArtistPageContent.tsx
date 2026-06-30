@@ -77,6 +77,16 @@ type DiscographyItem = {
     releaseType?: ReleaseType | null;
 };
 
+type Apparition = {
+    kind: 'album' | 'track';
+    id: string;
+    title: string;
+    coverUrl: string | null;
+    subtitle: string;
+    year: number | null;
+    href: string;
+};
+
 type ArtistPageContentProps = {
     artist?: Artist;
     albums?: Album[];
@@ -94,6 +104,7 @@ type ArtistPageContentProps = {
     networkListeners?: NetworkListener[];
     similarArtists?: SimilarArtist[];
     userId?: string;
+    apparitions?: Apparition[];
 };
 
 export function ArtistPageContent({
@@ -109,6 +120,7 @@ export function ArtistPageContent({
     networkListeners = [],
     similarArtists = [],
     userId,
+    apparitions = [],
 }: ArtistPageContentProps) {
     const router = useRouter();
     const [importingMbid, setImportingMbid] = useState<string | null>(null);
@@ -427,6 +439,39 @@ export function ArtistPageContent({
                     </section>
                 );
             })()}
+
+            {/* ========== APPARITIONS (featuring) ========== */}
+            {apparitions.length > 0 && (
+                <section className="border-t border-border-divider pt-10 mt-12 mb-8">
+                    <h2 className="text-h2 text-text-primary mb-6">Apparitions</h2>
+                    <div className="grid grid-cols-3 gap-3">
+                        {apparitions.map((item) => (
+                            <Link key={`${item.kind}-${item.id}`} href={item.href} className="group text-left w-full">
+                                <div className="relative aspect-square rounded-cover overflow-hidden bg-background-secondary">
+                                    {item.coverUrl ? (
+                                        <Image
+                                            src={item.coverUrl}
+                                            alt={item.title}
+                                            fill
+                                            className="object-cover group-hover:opacity-80 transition-opacity"
+                                            sizes="(max-width: 768px) 33vw, 200px"
+                                            unoptimized
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full bg-background-tertiary" />
+                                    )}
+                                </div>
+                                <div className="mt-2">
+                                    <div className="font-display font-normal text-sm text-text-warm line-clamp-2 leading-snug">{item.title}</div>
+                                    <div className="text-label text-text-tertiary truncate mt-0.5">
+                                        {item.subtitle}{item.year ? ` · ${item.year}` : ''}
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+            )}
 
             {/* ========== ARTISTES SIMILAIRES ========== */}
             {similarArtists.filter(a => a.id !== null).length > 0 && (

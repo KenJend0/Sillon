@@ -63,6 +63,7 @@ interface TrackRow {
     cover_url: string | null;
     artists: { id: string; name: string } | null;
   } | null;
+  track_featured_artists: Array<{ position: number; artists: { name: string } | null }> | null;
 }
 
 interface FuzzyAlbumRow {
@@ -178,7 +179,7 @@ export async function searchInternal(
     }
     let qb = supabase
       .from("tracks")
-      .select("id, title, mbid, albums(id, title, cover_url, artists(id, name))")
+      .select("id, title, mbid, albums(id, title, cover_url, artists(id, name)), track_featured_artists(position, artists(name))")
       .ilike("title", `%${escapedQuery}%`);
     if (artistIds) {
       qb = qb.in("artist_id", artistIds);
@@ -247,10 +248,17 @@ export async function searchInternal(
     const dedupeKey = `${t.title.toLowerCase().trim()}|||${(artist?.name || '').toLowerCase().trim()}`;
     if (seenTrackKeys.has(dedupeKey)) return;
     seenTrackKeys.add(dedupeKey);
+    const featuredNames = (t.track_featured_artists ?? [])
+      .filter((f): f is { position: number; artists: { name: string } } => !!f.artists)
+      .sort((a, b) => a.position - b.position)
+      .map((f) => f.artists.name);
+    const artistLabel = featuredNames.length > 0
+      ? `${artist?.name || 'Unknown'} feat. ${featuredNames.join(', ')}`
+      : artist?.name || 'Unknown';
     results.push({
       id: t.id,
       title: t.title,
-      subtitle: `${artist?.name || 'Unknown'} · ${album?.title || 'Unknown'}`,
+      subtitle: `${artistLabel} · ${album?.title || 'Unknown'}`,
       kind: "track",
       coverUrl: album?.cover_url || null,
       source: "internal",

@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      album_featured_artists: {
+        Row: {
+          album_id: string
+          artist_id: string
+          created_at: string
+          id: string
+          joinphrase: string | null
+          position: number
+        }
+        Insert: {
+          album_id: string
+          artist_id: string
+          created_at?: string
+          id?: string
+          joinphrase?: string | null
+          position?: number
+        }
+        Update: {
+          album_id?: string
+          artist_id?: string
+          created_at?: string
+          id?: string
+          joinphrase?: string | null
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "album_featured_artists_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "album_featured_artists_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       album_genre_votes: {
         Row: {
           album_id: string
@@ -1243,6 +1285,48 @@ export type Database = {
             foreignKeyName: "track_metadata_track_id_fkey"
             columns: ["track_id"]
             isOneToOne: true
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      track_featured_artists: {
+        Row: {
+          artist_id: string
+          created_at: string
+          id: string
+          joinphrase: string | null
+          position: number
+          track_id: string
+        }
+        Insert: {
+          artist_id: string
+          created_at?: string
+          id?: string
+          joinphrase?: string | null
+          position?: number
+          track_id: string
+        }
+        Update: {
+          artist_id?: string
+          created_at?: string
+          id?: string
+          joinphrase?: string | null
+          position?: number
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "track_featured_artists_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "track_featured_artists_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
             referencedRelation: "tracks"
             referencedColumns: ["id"]
           },

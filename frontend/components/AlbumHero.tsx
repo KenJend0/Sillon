@@ -6,6 +6,7 @@ import AddToListButton from "@/components/AddToListButton";
 import AddToDiaryButton from "@/components/AddToDiaryButton";
 import GenrePills from "@/components/GenrePills";
 import StreamingLinks from "@/components/StreamingLinks";
+import { creditParts, type FeaturedCredit } from "@/lib/creditedArtists";
 
 type AlbumHeroProps = {
     album: {
@@ -16,6 +17,7 @@ type AlbumHeroProps = {
         coverUrl?: string | null;
         coverFallback?: string | null;
         year?: number | null;
+        featuredArtists?: FeaturedCredit[];
     };
     albumId?: string;
     userId?: string;
@@ -75,7 +77,23 @@ export default function AlbumHero({
                     </h1>
 
                     <div className="text-meta text-text-secondary">
-                        {album.artistId ? (
+                        {album.featuredArtists && album.featuredArtists.length > 0 ? (
+                            creditParts(
+                                { id: album.artistId ?? '', name: album.artist },
+                                album.featuredArtists
+                            ).map((part, i) => (
+                                <span key={part.artist.id || i}>
+                                    {part.prefix}
+                                    {part.artist.id ? (
+                                        <Link href={`/artists/${part.artist.id}`} className="border-b border-rule hover:text-accent hover:border-accent transition-colors duration-150">
+                                            {part.artist.name}
+                                        </Link>
+                                    ) : (
+                                        <span className="border-b border-rule">{part.artist.name}</span>
+                                    )}
+                                </span>
+                            ))
+                        ) : album.artistId ? (
                             <Link href={`/artists/${album.artistId}`} className="border-b border-rule hover:text-accent hover:border-accent transition-colors duration-150">
                                 {album.artist}
                             </Link>

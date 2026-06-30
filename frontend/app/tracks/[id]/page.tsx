@@ -16,6 +16,7 @@ import AddToListButton from '@/components/AddToListButton';
 import TrackMyListenSection from '@/components/TrackMyListenSection';
 import ScrollToReviewsStat from '@/components/ScrollToReviewsStat';
 import ScrollToHashClient from '@/components/ScrollToHashClient';
+import { creditParts } from '@/lib/creditedArtists';
 
 type PageProps = { params: Promise<{ id: string }>; searchParams?: Promise<{ source?: string }> };
 
@@ -142,11 +143,16 @@ export default async function TrackPage({ params, searchParams }: PageProps) {
                             {t.title}
                         </h1>
 
-                        {/* Ligne 1 : artiste */}
+                        {/* Ligne 1 : artiste(s) */}
                         <div className="text-meta text-text-secondary">
-                            <Link href={`/artists/${t.artist_id}`} className="border-b border-rule hover:text-accent hover:border-accent transition-colors duration-150">
-                                {t.artist_name}
-                            </Link>
+                            {creditParts({ id: t.artist_id, name: t.artist_name }, t.featuredArtists).map((part, i) => (
+                                <span key={part.artist.id || i}>
+                                    {part.prefix}
+                                    <Link href={`/artists/${part.artist.id}`} className="border-b border-rule hover:text-accent hover:border-accent transition-colors duration-150">
+                                        {part.artist.name}
+                                    </Link>
+                                </span>
+                            ))}
                         </div>
 
                         {/* Ligne 2 : album · année */}
@@ -264,6 +270,11 @@ export default async function TrackPage({ params, searchParams }: PageProps) {
                                 <span className="font-display italic text-accent text-[16px] w-7 text-right leading-none flex-shrink-0 tabular-nums">{tr.track_no ?? '–'}</span>
                                 <span className="flex-1 text-[14px] text-text-primary truncate group-hover:text-[#8E6F5E] transition-colors">
                                     {tr.title}
+                                    {tr.featuredArtists.length > 0 && (
+                                        <span className="text-text-tertiary">
+                                            {tr.featuredArtists.map((f) => `${f.joinphrase || ' feat. '}${f.artist.name}`).join('')}
+                                        </span>
+                                    )}
                                 </span>
                                 <span className="text-[12px] text-text-tertiary shrink-0">{msToMMSS(tr.duration_ms)}</span>
                             </Link>
