@@ -65,10 +65,6 @@ async function main() {
 
   console.log(`→ would delete old compilation album "${album.title}" (${OLD_ALBUM_ID}) — 0 remaining diary entries`);
   if (APPLY) {
-    await supabase.from('external_ids').delete().eq('entity_type', 'album').eq('entity_id', OLD_ALBUM_ID);
-    if (trackIds.length > 0) {
-      await supabase.from('external_ids').delete().in('entity_id', trackIds);
-    }
     const { error } = await supabase.from('albums').delete().eq('id', OLD_ALBUM_ID);
     if (error) console.log(`  ✗ delete failed: ${error.message}`);
     else console.log('  ✓ deleted (tracks cascade)');

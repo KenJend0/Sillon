@@ -1239,7 +1239,7 @@ async function buildExistingAlbumResponse(
 /**
  * Import album from MusicBrainz
  * Idempotent: if exists, return existing
- * Creates: artist, album, tracks, external_ids
+ * Creates: artist, album, tracks
  */
 export async function importAlbumFromMusicBrainz(mbid: string) {
   try {
@@ -1402,20 +1402,10 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
       canonical_title: canonicalTrackTitle(track.title),
     }));
 
-    const trackExternalRows = trackRows.map((track) => ({
-      entity_type: 'track',
-      entity_id: track.id,
-      source: 'musicbrainz',
-      value: track.mbid,
-    }));
-
     const rollbackImport = async () => {
-      const trackIds = trackRows.map((t) => t.id);
-      if (trackIds.length > 0) {
+      if (trackRows.length > 0) {
         await supabase.from('tracks').delete().eq('album_id', newAlbumId);
-        await supabaseAdmin.from('external_ids').delete().in('entity_id', trackIds);
       }
-      await supabaseAdmin.from('external_ids').delete().eq('entity_id', newAlbumId);
       await supabase.from('albums').delete().eq('id', newAlbumId);
 
       if (createdArtist) {
@@ -1449,38 +1439,6 @@ export async function importAlbumFromMusicBrainz(mbid: string) {
         });
         return { success: false, error: tracksError.message };
       }
-    }
-
-    const externalRows = [
-      {
-        entity_type: 'album',
-        entity_id: newAlbumId,
-        source: 'musicbrainz',
-        value: mbid,
-      },
-      ...trackExternalRows,
-    ];
-
-    // Supprimer les lignes orphelines (album supprimé sans CASCADE sur external_ids)
-    await supabaseAdmin
-      .from('external_ids')
-      .delete()
-      .in('value', externalRows.map((r) => r.value));
-
-    const { error: externalError } = await supabaseAdmin
-      .from('external_ids')
-      .insert(externalRows);
-    if (externalError) {
-      console.error('[importAlbumFromMusicBrainz] external_ids error:', externalError);
-      await rollbackImport();
-      await logAuthedProductEvent('album_import_failed', {
-        surface: 'musicbrainz_import',
-        properties: {
-          mbid: canonicalMbid,
-          reason: externalError.message,
-        },
-      });
-      return { success: false, error: externalError.message };
     }
 
     // Featured artists (album + pistes) — additif, best-effort : un échec ici ne fait pas

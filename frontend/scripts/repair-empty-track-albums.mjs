@@ -182,12 +182,6 @@ async function repairAlbum(album) {
     return;
   }
 
-  const extRows = tracks.map((t) => ({ entity_type: 'track', entity_id: t.id, source: 'musicbrainz', value: t.mbid }));
-  const { error: extErr } = await supabase.from('external_ids').insert(extRows);
-  if (extErr) {
-    console.log(`  ⚠ external_ids insert failed (non-fatal): ${extErr.message}`);
-  }
-
   console.log(`  ✓ repaired`);
 }
 

@@ -209,19 +209,10 @@ async function processAlbum(album) {
     return;
   }
 
-  await supabase.from('external_ids').delete().eq('entity_type', 'album').eq('entity_id', album.id);
-  await supabase.from('external_ids').insert({ entity_type: 'album', entity_id: album.id, source: 'musicbrainz', value: best.id });
-
   const { error: tracksErr } = await supabase.from('tracks').insert(tracks);
   if (tracksErr) {
     console.log(`  ✗ tracks insert failed: ${tracksErr.message}`);
     return;
-  }
-
-  const extRows = tracks.map((t) => ({ entity_type: 'track', entity_id: t.id, source: 'musicbrainz', value: t.mbid }));
-  const { error: extErr } = await supabase.from('external_ids').insert(extRows);
-  if (extErr) {
-    console.log(`  ⚠ track external_ids insert failed (non-fatal): ${extErr.message}`);
   }
 
   console.log(`  ✓ re-resolved and repaired`);

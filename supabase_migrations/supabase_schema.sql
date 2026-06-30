@@ -764,20 +764,6 @@ CREATE OR REPLACE VIEW "public"."diary_entry_stats" WITH ("security_invoker"='on
 ALTER VIEW "public"."diary_entry_stats" OWNER TO "authenticated";
 
 
-CREATE TABLE IF NOT EXISTS "public"."external_ids" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "entity_type" "text" NOT NULL,
-    "entity_id" "uuid" NOT NULL,
-    "source" "text" NOT NULL,
-    "value" "text" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "external_ids_entity_type_check" CHECK (("entity_type" = ANY (ARRAY['artist'::"text", 'album'::"text", 'track'::"text"])))
-);
-
-
-ALTER TABLE "public"."external_ids" OWNER TO "postgres";
-
-
 CREATE TABLE IF NOT EXISTS "public"."external_imports" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
@@ -1249,11 +1235,6 @@ ALTER TABLE ONLY "public"."diary_likes"
 
 
 
-ALTER TABLE ONLY "public"."external_ids"
-    ADD CONSTRAINT "external_ids_pkey" PRIMARY KEY ("id");
-
-
-
 ALTER TABLE ONLY "public"."external_imports"
     ADD CONSTRAINT "external_imports_pkey" PRIMARY KEY ("id");
 
@@ -1401,11 +1382,6 @@ ALTER TABLE ONLY "public"."artists"
 
 ALTER TABLE ONLY "public"."diary_entries"
     ADD CONSTRAINT "uq_diary_user_album_day" UNIQUE ("user_id", "album_id", "listened_at");
-
-
-
-ALTER TABLE ONLY "public"."external_ids"
-    ADD CONSTRAINT "uq_external_ids" UNIQUE ("entity_type", "source", "value");
 
 
 
@@ -1600,14 +1576,6 @@ CREATE INDEX "idx_diary_likes_user_entry" ON "public"."diary_likes" USING "btree
 
 
 CREATE INDEX "idx_diary_likes_user_id" ON "public"."diary_likes" USING "btree" ("user_id");
-
-
-
-CREATE INDEX "idx_external_ids_entity" ON "public"."external_ids" USING "btree" ("entity_type", "entity_id");
-
-
-
-CREATE INDEX "idx_external_ids_source_value" ON "public"."external_ids" USING "btree" ("source", "value");
 
 
 
@@ -2007,7 +1975,7 @@ ALTER TABLE ONLY "public"."feed_events"
 
 
 ALTER TABLE ONLY "public"."feed_events"
-    ADD CONSTRAINT "feed_events_entry_id_fkey" FOREIGN KEY ("entry_id") REFERENCES "public"."diary_entries"("id") ON DELETE SET NULL;
+    ADD CONSTRAINT "feed_events_entry_id_fkey" FOREIGN KEY ("entry_id") REFERENCES "public"."diary_entries"("id") ON DELETE CASCADE;
 
 
 
@@ -2365,17 +2333,6 @@ CREATE POLICY "diary_select_public_or_owner" ON "public"."diary_entries" FOR SEL
 
 
 CREATE POLICY "diary_update_owner" ON "public"."diary_entries" FOR UPDATE USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
-
-
-
-ALTER TABLE "public"."external_ids" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "external_ids_read_public" ON "public"."external_ids" FOR SELECT USING (true);
-
-
-
-CREATE POLICY "external_ids_write_service" ON "public"."external_ids" USING (("auth"."role"() = 'service_role'::"text")) WITH CHECK (("auth"."role"() = 'service_role'::"text"));
 
 
 
@@ -2899,12 +2856,6 @@ GRANT ALL ON TABLE "public"."diary_comments" TO "service_role";
 GRANT ALL ON TABLE "public"."diary_likes" TO "anon";
 GRANT ALL ON TABLE "public"."diary_likes" TO "authenticated";
 GRANT ALL ON TABLE "public"."diary_likes" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."external_ids" TO "anon";
-GRANT ALL ON TABLE "public"."external_ids" TO "authenticated";
-GRANT ALL ON TABLE "public"."external_ids" TO "service_role";
 
 
 

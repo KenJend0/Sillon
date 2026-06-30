@@ -98,11 +98,6 @@ async function repointCase(c) {
     console.log(`  ✗ update failed: ${updateErr.message}`);
     return;
   }
-  await supabase.from('external_ids').delete().eq('entity_type', 'album').eq('entity_id', c.albumId);
-  const { error: extErr } = await supabase.from('external_ids').insert({
-    entity_type: 'album', entity_id: c.albumId, source: 'musicbrainz', value: c.newReleaseGroupId,
-  });
-  if (extErr) console.log(`  ⚠ external_ids update failed (non-fatal): ${extErr.message}`);
   console.log('  ✓ repointed');
 }
 
@@ -114,7 +109,7 @@ async function nullMbidCase(c) {
   }
   console.log(`\n=== "${album.title}" (${c.label}) ===`);
   console.log(`  current mbid: ${album.mbid} — no corresponding release-group exists on MusicBrainz (artist has 0 listed)`);
-  console.log('  → would set albums.mbid = NULL and remove its external_ids row (album/tracks/diary entries untouched)');
+  console.log('  → would set albums.mbid = NULL (album/tracks/diary entries untouched)');
 
   if (!APPLY) return;
 
@@ -123,7 +118,6 @@ async function nullMbidCase(c) {
     console.log(`  ✗ update failed: ${updateErr.message}`);
     return;
   }
-  await supabase.from('external_ids').delete().eq('entity_type', 'album').eq('entity_id', c.albumId);
   console.log('  ✓ mbid cleared');
 }
 

@@ -273,13 +273,6 @@ async function importAlbum(mbid) {
     await supabase.from('tracks').insert(trackRows);
   }
 
-  await supabase.from('external_ids').insert({
-    entity_type: 'album',
-    entity_id: newAlbum.id,
-    source: 'musicbrainz',
-    value: mbid,
-  });
-
   // Enrichit immédiatement (genres + bio + streaming) au lieu d'attendre le cron
   // nocturne — sinon un gros import (RYM/Last.fm) reste sans métadonnées jusqu'à
   // 3h du matin. Best-effort : un échec ici ne doit jamais faire échouer l'import.

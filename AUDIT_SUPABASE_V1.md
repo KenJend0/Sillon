@@ -57,13 +57,26 @@ Audit de l'architecture base de données + du pipeline de suppression des critiq
   DROP VIEW IF EXISTS beta_dashboard_weekly;
   ```
 - [x] Supprimer le filtre mort `.neq('type', 'discover')` dans `feed.ts` (lignes ~168, ~1157) — devenu un no-op depuis que la contrainte CHECK rejette ce type
-- [x] ~~Supprimer `external_ids`~~ — **Annulé, faux positif des 3 audits précédents.** Re-vérifié par grep sur tout `frontend/` (pas seulement `app/actions/`) : activement écrite par `importAlbumFromMusicBrainz` (musicbrainz.ts:1416-1472) et nettoyée par `admin/actions.ts` (`deleteAlbum`) + 7 scripts de maintenance. Les audits précédents avaient limité leur recherche et manqué ces usages. Table conservée telle quelle.
+- [x] **`external_ids` supprimée.** Re-creusé après la passe "vérification finale" : la table était bien écrite/nettoyée par `importAlbumFromMusicBrainz` + 10 scripts de maintenance (donc pas un faux positif d'usage), mais **jamais lue** nulle part (zéro `.select()` dans tout le repo) — les vrais lookups MBID passent par `albums.mbid`/`tracks.mbid` (colonnes dédiées). Son intention d'origine (table générique multi-sources d'ID externes) a même été contournée dans les faits : un ID Spotify a fini en colonne dédiée (`album_metadata.spotify_url`) plutôt qu'en ligne `external_ids`. Pur surcoût d'écriture + dette de maintenance (nettoyage manuel dans 10 fichiers, pas de CASCADE) pour zéro bénéfice. Code retiré dans `musicbrainz.ts`, `admin/actions.ts` et 10 scripts ; `DROP TABLE external_ids` exécuté ; `supabase_schema.sql` régénéré.
 - [x] Supprimer les scripts orphelins `scripts/refresh_discover.sh` / `.ps1` (référencent une ancienne API Express qui n'existe plus dans le repo) — supprimés + référence retirée de `README.md`
 - [x] **Régénéré.** `supabase_schema.sql` remplacé par un dump fidèle de la prod (`npx supabase db dump --linked --schema public`, CLI authentifié et lié au projet). Vérifié : `saved_albums`/`recommendations`/`recommendation_likes`/`beta_dashboard_weekly` absents, `album_stats_mat` et les colonnes `likes_count`/`comments_count` dénormalisées présentes. À régénérer avec la même commande après tout futur changement de schéma significatif.
 - [x] **Harmonisé** — comptage likes/comments aligné partout sur le pattern triggers + colonnes dénormalisées (déjà utilisé par `diary_entries`). Migration : `supabase_migrations/supabase_migration_harmonize_counts.sql` :
   - `track_diary_entries.likes_count`/`comments_count` ajoutées + triggers sur `track_diary_likes`/`track_diary_comments`. La vue `track_diary_entry_stats` est redéfinie en simple lecture de ces colonnes (même forme exposée, donc **aucun changement requis** dans `feed.ts`/`track-diary.ts`/`diary.ts`)
   - `user_lists.likes_count` ajoutée + trigger sur `list_likes`. Code mis à jour : `attachListMeta()` et `getListWithItems()` (lists.ts) lisent directement la colonne au lieu de recompter `list_likes` à chaque appel
   - Migration exécutée avec succès (après correction d'un conflit de type bigint/integer sur `track_diary_entry_stats`). **Terminé.**
+
+---
+
+## 4. Trouvé en relisant le dump fidèle ligne par ligne (post-régénération)
+
+Une fois `supabase_schema.sql` régénéré, une relecture des 60 contraintes FK + RLS a révélé deux derniers points que les 3 audits précédents (basés sur l'ancien fichier maintenu à la main, lui-même inexact sur ce point) n'avaient pas vus :
+
+- [x] **`feed_events.entry_id` était en réalité `ON DELETE SET NULL`**, pas `CASCADE` comme l'ancien `supabase_schema.sql` l'affirmait à tort — seule colonne polymorphe de la table à déroger au pattern (`comment_id`, `track_comment_id`, `album_id`, `actor_id`, `user_id`, `followee_id` sont tous en `CASCADE`). Sans nettoyage explicite côté code, ça laisse une ligne `feed_events` orpheline (`entry_id=NULL`) qui ne s'affiche plus mais gonfle indéfiniment le badge "non lu". Migration : `supabase_migrations/supabase_migration_feed_events_entry_cascade.sql` (FK alignée sur `CASCADE` + nettoyage des orphelins déjà accumulés).
+- [x] **`adminDeleteContent` (modération) avait le même bug que celui du début de cette session**, sur un chemin de code différent (suppression de contenu signalé par un admin, pas par l'utilisateur lui-même) — aucun nettoyage de `feed_events` pour les 4 types de contenu, donc une critique de titre supprimée en modération restait visible chez les abonnés exactement comme avant la correction de `deleteTrackDiaryEntry`. Corrigé dans `frontend/app/actions/moderation.ts`.
+
+## 5. Vérification du volume (39 tables, 68 profils)
+
+Demande de l'utilisateur : "ça sert à quoi d'avoir autant de tables ?" — vérifié par comptage de lignes réel plutôt que par supposition. Avec seulement 68 utilisateurs, les tables à 0-4 lignes (`user_blocks`, `list_likes`, `content_reports`, `saved_lists`, `curator_picks`, `cron_health`, `import_requests`, `external_imports`, `recommendation_feedback`) sont proportionnelles au volume — pas des signaux de feature morte. Aucune table supplémentaire identifiée comme candidate à la suppression sur cette base.
 
 ---
 

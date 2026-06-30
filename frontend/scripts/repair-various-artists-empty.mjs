@@ -60,10 +60,6 @@ async function main() {
 
     console.log(`→ would delete "${album.title}" (${albumId}) — ${trackIds.length} tracks, 0 diary entries`);
     if (APPLY) {
-      await supabase.from('external_ids').delete().eq('entity_type', 'album').eq('entity_id', albumId);
-      if (trackIds.length > 0) {
-        await supabase.from('external_ids').delete().in('entity_id', trackIds);
-      }
       const { error } = await supabase.from('albums').delete().eq('id', albumId);
       if (error) console.log(`  ✗ delete failed: ${error.message}`);
       else console.log('  ✓ deleted (tracks cascade)');

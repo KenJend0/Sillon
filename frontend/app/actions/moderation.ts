@@ -63,6 +63,25 @@ export async function adminDeleteContent(
   };
   const table = tableMap[contentType];
   if (!table) return { success: false, error: 'Type inconnu' };
+
+  // track_diary_entry/track_like/track_comment ne référencent l'entrée que via
+  // payload->>trackEntryId (pas de FK) : sans ce nettoyage, le contenu supprimé
+  // reste visible dans le feed des abonnés (même bug que deleteTrackDiaryEntry,
+  // déclenché ici via la modération admin plutôt que par l'utilisateur).
+  if (contentType === 'track_diary_entry') {
+    await supabase
+      .from('feed_events')
+      .delete()
+      .in('type', ['track_diary_entry', 'track_like', 'track_comment'])
+      .eq('payload->>trackEntryId', contentId);
+  }
+  // diary_entry : feed_events.entry_id est ON DELETE SET NULL (pas CASCADE) —
+  // sans ce nettoyage, la ligne reste en base avec entry_id=NULL, filtrée à
+  // l'affichage mais comptée indéfiniment dans le badge "non lu".
+  if (contentType === 'diary_entry') {
+    await supabase.from('feed_events').delete().eq('entry_id', contentId);
+  }
+
   const { error } = await supabase.from(table).delete().eq('id', contentId);
 
   if (error) {

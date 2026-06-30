@@ -208,13 +208,6 @@ async function writeAlbumImport(resolved) {
     throw new Error(`tracks insert failed: ${tracksErr.message}`);
   }
 
-  const extRows = [
-    { entity_type: 'album', entity_id: albumId, source: 'musicbrainz', value: resolved.rgId },
-    ...trackRows.map((t) => ({ entity_type: 'track', entity_id: t.id, source: 'musicbrainz', value: t.mbid })),
-  ];
-  await supabase.from('external_ids').delete().in('value', extRows.map((r) => r.value));
-  await supabase.from('external_ids').insert(extRows);
-
   return { albumId, artistId, tracks: trackRows };
 }
 
@@ -296,11 +289,6 @@ async function migrateOne(c) {
   }
   console.log('    ✓ diary entry remapped');
 
-  await supabase.from('external_ids').delete().eq('entity_type', 'album').eq('entity_id', c.oldAlbumId);
-  const { data: oldTracks } = await supabase.from('tracks').select('id').eq('album_id', c.oldAlbumId);
-  if (oldTracks?.length) {
-    await supabase.from('external_ids').delete().in('entity_id', oldTracks.map((t) => t.id));
-  }
   const { error: deleteErr } = await supabase.from('albums').delete().eq('id', c.oldAlbumId);
   if (deleteErr) console.log(`    ✗ old album delete failed: ${deleteErr.message}`);
   else console.log('    ✓ old compilation album deleted');

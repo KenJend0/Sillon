@@ -12,21 +12,19 @@
  *      normalized title — PARTIAL matches are allowed (different editions,
  *      incomplete imports). Tracks on the duplicate with no equivalent on the
  *      kept album are reported (titles + any track_diary_entries on them)
- *      instead of silently lost to the cascade delete in step 5.
+ *      instead of silently lost to the cascade delete in step 4.
  *   3. Reattributes diary_entries, track_diary_entries (+ remapped track_id),
  *      user_favorite_albums to the kept album/tracks, dropping
  *      a row instead of reattributing it when that would violate a
  *      UNIQUE(user_id, ...) constraint (the user already has the kept version).
- *   4. Deletes external_ids for the removed album + its tracks (no FK/CASCADE
- *      on that table — orphans would otherwise survive the deletion below).
- *   5. Deletes the duplicate album (cascades tracks + every other FK'd table:
+ *   4. Deletes the duplicate album (cascades tracks + every other FK'd table:
  *      curator_picks, album_genre_votes, list_items, album_metadata,
  *      similar_albums_cache, recommendation_feedback, track_metadata,
  *      user_track_recommendations).
  *
  * curator_picks and list_items are editorial/user-curated, not just
  * engagement data — this script REPORTS how many rows would be lost to the
- * cascade in step 5 (per group) instead of silently deleting them. Review
+ * cascade in step 4 (per group) instead of silently deleting them. Review
  * those counts before running --apply; move the pick/list item to the kept
  * album by hand first if it matters.
  *
@@ -230,7 +228,6 @@ async function reconcileGroup(group) {
             await supabase.from('track_diary_entries').update({ track_id: keepTrackId, album_id: kept.id }).eq('id', entry.id);
           }
         }
-        await supabase.from('external_ids').delete().eq('entity_type', 'track').eq('entity_id', dupTrackId);
       }
 
       // 2. diary_entries — no UNIQUE(user_id, album_id), plain reassignment (album_stats dedups per-user via DISTINCT ON anyway)
@@ -240,8 +237,7 @@ async function reconcileGroup(group) {
       const favResult = await reattributeUserScoped('user_favorite_albums', 'album_id', dup.id, kept.id);
       console.log(`    user_favorite_albums: moved ${favResult.moved}, dropped ${favResult.dropped} (already favorited)`);
 
-      // 4. external_ids for the album itself, then the album row (cascades everything else)
-      await supabase.from('external_ids').delete().eq('entity_type', 'album').eq('entity_id', dup.id);
+      // 4. the album row itself (cascades everything else)
       const { error: deleteError } = await supabase.from('albums').delete().eq('id', dup.id);
       if (deleteError) {
         console.error(`    ✗ delete failed: ${deleteError.message}`);

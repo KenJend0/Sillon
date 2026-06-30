@@ -115,11 +115,6 @@ async function main() {
         console.log(`    ✗ update failed: ${updateErr.message}`);
         continue;
       }
-      await supabase.from('external_ids').delete().eq('entity_type', 'album').eq('entity_id', c.albumId);
-      const { error: extErr } = await supabase.from('external_ids').insert({
-        entity_type: 'album', entity_id: c.albumId, source: 'musicbrainz', value: c.realReleaseGroupId,
-      });
-      if (extErr) console.log(`    ⚠ external_ids update failed (non-fatal): ${extErr.message}`);
     }
 
     await delay(DELAY_MS);

@@ -5,7 +5,7 @@
  *   1. Skips if album already imported (dedup by mbid or title+artist)
  *   2. Searches MusicBrainz release-group endpoint to find the best match
  *   3. Fetches full release details (tracks, cover art)
- *   4. Inserts artist, album, tracks, and external_ids into Supabase
+ *   4. Inserts artist, album, and tracks into Supabase
  *
  * Usage (from frontend/ directory):
  *   node --env-file=.env.local scripts/bulk-import-albums.mjs
@@ -592,22 +592,6 @@ async function importAlbum(title, artist) {
     await supabase.from('albums').delete().eq('id', albumId);
     await rollbackOrphanArtist();
     return { status: 'error', reason: `Tracks insert failed: ${tracksErr.message}` };
-  }
-
-  // 9. Insert external_ids (album + tracks)
-  const extRows = [
-    { entity_type: 'album', entity_id: albumId, source: 'musicbrainz', value: rgMbid },
-    ...tracks.map((t) => ({
-      entity_type: 'track',
-      entity_id: t.id,
-      source: 'musicbrainz',
-      value: t.mbid,
-    })),
-  ];
-
-  const { error: extErr } = await supabase.from('external_ids').insert(extRows);
-  if (extErr) {
-    console.warn(`  ⚠️  external_ids insert failed (non-fatal): ${extErr.message}`);
   }
 
   return { status: 'imported', albumId, rgTitle, rgArtist, trackCount: tracks.length, coverUrl };
