@@ -37,16 +37,16 @@ export default function TrackNetworkListeners({ listeners }: Props) {
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                className="flex items-center gap-2 hover:opacity-75 transition-opacity duration-150"
+                className="flex items-start gap-2 w-full hover:opacity-75 transition-opacity duration-150"
             >
-                <div className="flex -space-x-1.5">
+                <div className="flex -space-x-1.5 flex-shrink-0 mt-0.5">
                     {shown.map((l) => (
                         <div key={l.userId} className="border border-background-primary rounded-full flex-shrink-0">
                             <UserAvatar userId={l.userId} src={l.avatarUrl} size={20} />
                         </div>
                     ))}
                 </div>
-                <span className="text-[12px] text-text-tertiary leading-snug">{label}</span>
+                <span className="text-[12px] text-text-tertiary leading-snug min-w-0 flex-1 text-left">{label}</span>
             </button>
 
             <NetworkListenersBottomSheet

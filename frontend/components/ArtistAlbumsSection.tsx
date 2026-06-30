@@ -26,6 +26,9 @@ type MbAlbum = {
 type Props = {
     dbAlbums: DbAlbum[];
     mbAlbums: MbAlbum[];
+    // Renomme dynamiquement le titre de la section en "Plus de [Artiste]" quand l'album
+    // affiché a du featuring — "Du même artiste" est ambigu dès qu'il y a 2+ artistes crédités.
+    primaryArtistName?: string;
 };
 
 const CoverPlaceholder = () => (
@@ -93,7 +96,7 @@ function AlbumCard({ title, coverSrc, coverFallback, year, onClick, href, import
     );
 }
 
-export default function ArtistAlbumsSection({ dbAlbums, mbAlbums }: Props) {
+export default function ArtistAlbumsSection({ dbAlbums, mbAlbums, primaryArtistName }: Props) {
     const router = useRouter();
     const [importing, setImporting] = useState<string | null>(null);
 
@@ -130,7 +133,9 @@ export default function ArtistAlbumsSection({ dbAlbums, mbAlbums }: Props) {
 
     return (
         <section className="border-t border-border-divider pt-8 mb-12">
-            <h2 className="text-h2 text-text-primary mb-8">Du même artiste</h2>
+            <h2 className="text-h2 text-text-primary mb-8">
+                {primaryArtistName ? `Plus de ${primaryArtistName}` : 'Du même artiste'}
+            </h2>
             <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2">
                 {dbAlbums.map((a) => {
                     const { src, fallback } = coverSrcWithFallback(a.mbid, a.cover_url);

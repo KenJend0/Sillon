@@ -516,6 +516,7 @@ export default async function AlbumPage({ params, searchParams }: PageProps) {
                 <ArtistAlbumsSection
                     dbAlbums={artistAlbums}
                     mbAlbums={mbArtistAlbums}
+                    primaryArtistName={albumFeaturedArtists.length > 0 ? (artist?.name || undefined) : undefined}
                 />
             )}
 

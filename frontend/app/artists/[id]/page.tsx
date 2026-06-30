@@ -126,43 +126,32 @@ export default async function ArtistPage({ params }: PageProps) {
             .from("album_featured_artists")
             .select("albums(id, title, cover_url, release_date, artists(name))")
             .eq("artist_id", id),
-        // Apparitions — pistes où cet artiste est crédité en featuring
+        // Apparitions — albums dont une piste (pas l'album entier) crédite cet artiste en featuring
         supabase
             .from("track_featured_artists")
-            .select("tracks(id, title, albums(id, title, cover_url, artists(name)))")
+            .select("tracks(albums(id, title, cover_url, release_date, artists(name)))")
             .eq("artist_id", id),
     ]);
 
-    type Apparition = { kind: 'album' | 'track'; id: string; title: string; coverUrl: string | null; subtitle: string; year: number | null; href: string };
-    const apparitions: Apparition[] = [
-        ...((albumFeaturedRows.data ?? []) as any[]).flatMap((row) => {
-            const a = row.albums;
-            if (!a) return [];
-            return [{
-                kind: 'album' as const,
-                id: a.id,
-                title: a.title,
-                coverUrl: a.cover_url,
-                subtitle: a.artists?.name || 'Artiste inconnu',
-                year: a.release_date ? new Date(a.release_date).getFullYear() : null,
-                href: `/albums/${a.id}`,
-            }];
-        }),
-        ...((trackFeaturedRows.data ?? []) as any[]).flatMap((row) => {
-            const t = row.tracks;
-            const a = t?.albums;
-            if (!t) return [];
-            return [{
-                kind: 'track' as const,
-                id: t.id,
-                title: t.title,
-                coverUrl: a?.cover_url ?? null,
-                subtitle: a ? `${a.artists?.name || 'Artiste inconnu'} · ${a.title}` : 'Artiste inconnu',
-                year: null,
-                href: `/tracks/${t.id}`,
-            }];
-        }),
-    ];
+    // Apparitions affichées par ALBUM uniquement (pas de pistes individuelles) — un featuring sur
+    // une seule piste fait quand même apparaître l'album entier, dédupliqué si déjà credité au
+    // niveau album.
+    type Apparition = { id: string; title: string; coverUrl: string | null; subtitle: string; year: number | null; href: string };
+    const apparitionsByAlbumId = new Map<string, Apparition>();
+    const addApparitionAlbum = (a: { id: string; title: string; cover_url: string | null; release_date: string | null; artists?: { name: string } | null } | null | undefined) => {
+        if (!a || apparitionsByAlbumId.has(a.id)) return;
+        apparitionsByAlbumId.set(a.id, {
+            id: a.id,
+            title: a.title,
+            coverUrl: a.cover_url,
+            subtitle: a.artists?.name || 'Artiste inconnu',
+            year: a.release_date ? new Date(a.release_date).getFullYear() : null,
+            href: `/albums/${a.id}`,
+        });
+    };
+    ((albumFeaturedRows.data ?? []) as any[]).forEach((row) => addApparitionAlbum(row.albums));
+    ((trackFeaturedRows.data ?? []) as any[]).forEach((row) => addApparitionAlbum(row.tracks?.albums));
+    const apparitions: Apparition[] = [...apparitionsByAlbumId.values()];
 
     // Merge album listeners + track listeners (deduplicated)
     const albumListenerIds = new Set((allListenerRows.data ?? []).map((r: any) => r.user_id));

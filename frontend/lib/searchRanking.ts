@@ -42,6 +42,15 @@ export function computeRank(item: SearchResultUI, query: string): number {
   return rank;
 }
 
+// MB album subtitles join every credited artist ("Artist A, Artist B"), while internal
+// album subtitles carry only the primary artist — comparing the raw strings makes a collab
+// album's MB result and its already-imported DB result hash to different canonical keys,
+// so the same album shows up twice. Keying off the primary (first) credited artist only
+// keeps both sides comparable regardless of how many collaborators are listed.
+function primaryArtistName(subtitle: string): string {
+  return (subtitle || "").split(",")[0].trim();
+}
+
 export function mergeAndRank(
   internal: SearchResultUI[],
   external: SearchResultUI[],
@@ -53,7 +62,7 @@ export function mergeAndRank(
   const internalAlbumKeys = new Set(
     internal
       .filter((r) => r.kind === "album")
-      .map((r) => canonicalAlbumKey(r.title, r.subtitle || ""))
+      .map((r) => canonicalAlbumKey(r.title, primaryArtistName(r.subtitle || "")))
   );
   const internalArtistNames = new Set(
     internal
@@ -72,7 +81,7 @@ export function mergeAndRank(
   const dedupedExternal = external.filter((ext) => {
     if (internalIds.has(ext.id)) return false;
     if (ext.kind === "album") {
-      const key = canonicalAlbumKey(ext.title, ext.subtitle || "");
+      const key = canonicalAlbumKey(ext.title, primaryArtistName(ext.subtitle || ""));
       if (internalAlbumKeys.has(key)) return false;
     }
     if (ext.kind === "artist") {

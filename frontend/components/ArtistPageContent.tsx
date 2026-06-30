@@ -78,7 +78,6 @@ type DiscographyItem = {
 };
 
 type Apparition = {
-    kind: 'album' | 'track';
     id: string;
     title: string;
     coverUrl: string | null;
@@ -256,16 +255,16 @@ export function ArtistPageContent({
                     return (
                         <button
                             onClick={() => setIsNetworkOpen(true)}
-                            className="flex items-center gap-2 mt-5 hover:opacity-75 transition-opacity duration-150"
+                            className="flex items-start gap-2 mt-5 w-full hover:opacity-75 transition-opacity duration-150"
                         >
-                            <div className="flex -space-x-1.5">
+                            <div className="flex -space-x-1.5 flex-shrink-0 mt-0.5">
                                 {shown.map(l => (
                                     <div key={l.userId} className="border border-background-primary rounded-full flex-shrink-0">
                                         <UserAvatar userId={l.userId} src={l.avatarUrl} size={20} />
                                     </div>
                                 ))}
                             </div>
-                            <span className="text-label text-text-tertiary leading-snug">{label}</span>
+                            <span className="text-label text-text-tertiary leading-snug min-w-0 flex-1 text-left">{label}</span>
                         </button>
                     );
                 })()}
@@ -443,10 +442,10 @@ export function ArtistPageContent({
             {/* ========== APPARITIONS (featuring) ========== */}
             {apparitions.length > 0 && (
                 <section className="border-t border-border-divider pt-10 mt-12 mb-8">
-                    <h2 className="text-h2 text-text-primary mb-6">Apparitions</h2>
-                    <div className="grid grid-cols-3 gap-3">
+                    <h2 className="text-h2 text-text-primary mb-6">Apparaît sur</h2>
+                    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2">
                         {apparitions.map((item) => (
-                            <Link key={`${item.kind}-${item.id}`} href={item.href} className="group text-left w-full">
+                            <Link key={item.id} href={item.href} className="snap-center shrink-0 w-32 sm:w-36 group">
                                 <div className="relative aspect-square rounded-cover overflow-hidden bg-background-secondary">
                                     {item.coverUrl ? (
                                         <Image
@@ -454,7 +453,7 @@ export function ArtistPageContent({
                                             alt={item.title}
                                             fill
                                             className="object-cover group-hover:opacity-80 transition-opacity"
-                                            sizes="(max-width: 768px) 33vw, 200px"
+                                            sizes="(max-width: 768px) 33vw, 144px"
                                             unoptimized
                                         />
                                     ) : (
