@@ -53,16 +53,14 @@ const TARGET_ALBUM_IDS = [
 ];
 
 async function getActivitySummary(albumId) {
-  const [diary, saved, favorited, listItems, curatorPicks] = await Promise.all([
+  const [diary, favorited, listItems, curatorPicks] = await Promise.all([
     supabase.from('diary_entries').select('id', { count: 'exact', head: true }).eq('album_id', albumId),
-    supabase.from('saved_albums').select('id', { count: 'exact', head: true }).eq('album_id', albumId),
     supabase.from('user_favorite_albums').select('id', { count: 'exact', head: true }).eq('album_id', albumId),
     supabase.from('list_items').select('id', { count: 'exact', head: true }).eq('album_id', albumId),
     supabase.from('curator_picks').select('id', { count: 'exact', head: true }).eq('album_id', albumId),
   ]);
   return {
     diaryEntries: diary.count ?? 0,
-    saved: saved.count ?? 0,
     favorited: favorited.count ?? 0,
     listItems: listItems.count ?? 0,
     curatorPicks: curatorPicks.count ?? 0,
@@ -115,7 +113,7 @@ async function main() {
     console.log(`  stored mbid: ${album.mbid}  |  stored type: ${album.type}  |  artist mbid: ${album.artists?.mbid}`);
 
     const activity = await getActivitySummary(album.id);
-    console.log(`  activity: ${activity.diaryEntries} diary, ${activity.saved} saved, ${activity.favorited} favorited, ${activity.listItems} list items, ${activity.curatorPicks} curator picks`);
+    console.log(`  activity: ${activity.diaryEntries} diary, ${activity.favorited} favorited, ${activity.listItems} list items, ${activity.curatorPicks} curator picks`);
 
     await delay(DELAY_MS);
     let asRelease = null;

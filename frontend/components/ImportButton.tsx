@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { importAlbumFromMusicBrainz } from "@/app/actions/musicbrainz";
-import { saveAlbumOnce } from "@/app/actions/saved-albums";
+import { getOrCreateDefaultList, toggleListItem } from "@/app/actions/lists";
 import { showToast } from "@/components/Toast";
 
 type ImportButtonProps = {
@@ -26,7 +26,12 @@ export default function ImportButton({ albumId }: ImportButtonProps) {
             const importedAlbumId = res.albumId;
             const wasImported = res.imported ?? true;
 
-            await saveAlbumOnce(importedAlbumId);
+            try {
+                const defaultListId = await getOrCreateDefaultList();
+                await toggleListItem(defaultListId, { albumId: importedAlbumId });
+            } catch {
+                // Best-effort : l'import a réussi même si l'ajout à "À écouter" échoue
+            }
             showToast("Importé", "success");
 
             // Enrichissement en arrière-plan (route API séparée pour éviter le timeout Vercel)

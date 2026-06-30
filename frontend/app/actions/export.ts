@@ -18,7 +18,6 @@ export async function exportUserData() {
     diaryLikes,
     following,
     followers,
-    savedAlbums,
     favoriteAlbums,
     lists,
   ] = await Promise.all([
@@ -29,7 +28,6 @@ export async function exportUserData() {
     supabase.from('diary_likes').select('*').eq('user_id', user.id),
     supabase.from('follows').select('followee_id, created_at').eq('follower_id', user.id),
     supabase.from('follows').select('follower_id, created_at').eq('followee_id', user.id),
-    supabase.from('saved_albums').select('*').eq('user_id', user.id),
     supabase.from('user_favorite_albums').select('*').eq('user_id', user.id),
     supabase.from('user_lists').select('*, list_items(*)').eq('user_id', user.id),
   ]);
@@ -45,7 +43,6 @@ export async function exportUserData() {
       diary_likes: diaryLikes.data ?? [],
       following: following.data ?? [],
       followers: followers.data ?? [],
-      saved_albums: savedAlbums.data ?? [],
       favorite_albums: favoriteAlbums.data ?? [],
       lists: lists.data ?? [],
     },

@@ -309,9 +309,12 @@ CREATE TABLE IF NOT EXISTS import_requests (
 CREATE INDEX IF NOT EXISTS idx_import_requests_user_created_at ON import_requests(user_id, created_at DESC);
 
 -- ============================================================
--- TABLES NON PRÉSENTES EN PRODUCTION (à créer si besoin)
--- saved_tracks, notifications, recommendations,
--- recommendation_likes, discover_items
+-- TABLES CONFIRMÉES ABSENTES EN PRODUCTION (vérifié 2026-06-30 via
+-- information_schema.tables) : saved_tracks, notifications,
+-- recommendations, recommendation_likes, discover_items.
+-- Le code qui écrivait dans recommendations/notifications
+-- (frontend/app/actions/recommendations.ts + RecommendationModal.tsx,
+-- feature jamais branchée à l'UI) a été supprimé.
 -- ============================================================
 
 

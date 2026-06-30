@@ -117,9 +117,9 @@ export async function getTrendingThisWeek(limit = 10): Promise<TrendingAlbum[]> 
         { data: prevEntries }, { data: prevSaves },
     ] = await Promise.all([
         supabase.from('diary_entries').select('album_id, albums(id, title, cover_url, artists(name))').gte('created_at', sevenDaysAgo).eq('is_public', true).limit(200),
-        supabase.from('saved_albums').select('album_id, albums(id, title, cover_url, artists(name))').gte('saved_at', sevenDaysAgo).limit(200),
+        supabase.from('list_items').select('album_id, albums(id, title, cover_url, artists(name)), user_lists!inner(is_default)').eq('user_lists.is_default', true).not('album_id', 'is', null).gte('added_at', sevenDaysAgo).limit(200),
         supabase.from('diary_entries').select('album_id').gte('created_at', eightDaysAgo).lt('created_at', oneDayAgo).eq('is_public', true).limit(200),
-        supabase.from('saved_albums').select('album_id').gte('saved_at', eightDaysAgo).lt('saved_at', oneDayAgo).limit(200),
+        supabase.from('list_items').select('album_id, user_lists!inner(is_default)').eq('user_lists.is_default', true).not('album_id', 'is', null).gte('added_at', eightDaysAgo).lt('added_at', oneDayAgo).limit(200),
     ]);
 
     const albumScores = new Map<string, { score: number; title: string; artist_name: string; cover_url: string | null }>();

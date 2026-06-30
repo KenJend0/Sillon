@@ -121,6 +121,7 @@ export default function AlbumHero({
                     albumId={albumId || album.id}
                     userId={userId}
                     initialSaved={listsContaining.some((id) => userLists.find((l) => l.id === id)?.is_default)}
+                    defaultListId={userLists.find((l) => l.is_default)?.id}
                     existingEntriesCount={myEntriesCount}
                     autoOpen={autoOpenDiary}
                     source={recSource}

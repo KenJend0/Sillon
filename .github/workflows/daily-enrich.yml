@@ -49,6 +49,17 @@ jobs:
           if [ -n "${{ inputs.limit }}" ]; then ARGS="$ARGS --limit ${{ inputs.limit }}"; fi
           node scripts/enrich-missing.mjs $ARGS
 
+      # album_stats_mat n'a aucun mécanisme de refresh natif (pas de pg_cron
+      # en place) — sans cet appel, ses stats (avg_rating/listeners_count,
+      # utilisées par curator.ts/explore.ts) restent figées indéfiniment.
+      - name: Refresh album_stats_mat
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/rest/v1/rpc/refresh_album_stats_mat" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{}"
+
       # Filet de rattrapage pour les albums créés sans canonical_key par des
       # chemins d'écriture hors importAlbumFromMusicBrainz (notamment le worker
       # process-external-imports.mjs, qui tourne en continu sur des titres bruts

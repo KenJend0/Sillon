@@ -239,8 +239,12 @@ export async function deleteDiaryEntry(entryId: string) {
       return { success: false, error: 'Forbidden' };
     }
 
-    // Delete feed_events linked to entry
-    await supabase
+    // Delete feed_events linked to entry — feed_events n'a pas de policy RLS
+    // DELETE (RLS ne reste protecteur que pour SELECT/INSERT), donc ce nettoyage
+    // ne fonctionne qu'avec le client admin. La contrainte FK entry_id ON DELETE
+    // CASCADE couvrirait aussi ce cas, mais on garde ce delete explicite pour ne
+    // pas dépendre uniquement de l'ordre des opérations / de l'état du schéma.
+    await createSupabaseAdmin()
       .from('feed_events')
       .delete()
       .eq('entry_id', entryId);

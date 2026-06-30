@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { upsertDiaryEntry } from "@/app/actions/diary";
-import { toggleSaveAlbum } from "@/app/actions/saved-albums";
+import { toggleListItem } from "@/app/actions/lists";
 import { voteAlbumGenre } from "@/app/actions/metadata";
 import { GENRE_FAMILIES, type GenreFamily } from "@/lib/genre-families";
 import StarRating from "@/components/StarRating";
@@ -14,6 +14,8 @@ type AddToDiaryButtonProps = {
   albumId: string;
   userId?: string;
   initialSaved?: boolean;
+  /** ID de la liste "À écouter" par défaut — requis pour pouvoir en retirer l'album après ajout */
+  defaultListId?: string;
   existingEntriesCount?: number;
   autoOpen?: boolean;
   source?: string;
@@ -25,6 +27,7 @@ export default function AddToDiaryButton({
   albumId,
   userId,
   initialSaved = false,
+  defaultListId,
   existingEntriesCount = 0,
   autoOpen = false,
   source,
@@ -85,9 +88,9 @@ export default function AddToDiaryButton({
       });
 
       if (result.success) {
-        if (removeFromSaved) {
+        if (removeFromSaved && defaultListId) {
           try {
-            await toggleSaveAlbum(albumId);
+            await toggleListItem(defaultListId, { albumId });
           } catch (err) {
                 console.error("Error removing from saved albums:", err);
                 showToast("Impossible de retirer l'album des sauvegardes", "error");

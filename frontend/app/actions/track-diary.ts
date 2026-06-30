@@ -216,6 +216,17 @@ export async function deleteTrackDiaryEntry(entryId: string) {
     if (fetchError || !entry) return { success: false, error: 'Entrée introuvable' };
     if (entry.user_id !== user.id) return { success: false, error: 'Forbidden' };
 
+    // track_diary_entries n'a pas de FK depuis feed_events (référencée seulement
+    // via payload->>trackEntryId) : il n'y a pas de cascade DB, donc on doit
+    // explicitement purger les events (track_diary_entry/track_like/track_comment)
+    // dans le feed de TOUS les abonnés via le client admin (RLS ne le permettrait
+    // que pour le propre feed du propriétaire).
+    await createSupabaseAdmin()
+      .from('feed_events')
+      .delete()
+      .in('type', ['track_diary_entry', 'track_like', 'track_comment'])
+      .eq('payload->>trackEntryId', entryId);
+
     const { error: deleteError } = await supabase
       .from('track_diary_entries')
       .delete()
@@ -1101,6 +1112,15 @@ export async function deleteTrackComment(commentId: string): Promise<void> {
 
   const { error: deleteError } = await supabase.from('track_diary_comments').delete().eq('id', commentId);
   if (deleteError) throw new Error('Une erreur est survenue');
+
+  // feed_events.track_comment_id est ON DELETE SET NULL (pas CASCADE) : sans ce
+  // nettoyage explicite, la notification "a commenté" reste affichée chez les
+  // abonnés une fois le commentaire supprimé.
+  await createSupabaseAdmin()
+    .from('feed_events')
+    .delete()
+    .eq('type', 'track_comment')
+    .eq('track_comment_id', commentId);
 }
 
 export async function getTrackEntryComments(entryId: string): Promise<TrackDiaryComment[]> {

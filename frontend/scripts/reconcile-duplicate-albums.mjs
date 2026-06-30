@@ -14,7 +14,7 @@
  *      kept album are reported (titles + any track_diary_entries on them)
  *      instead of silently lost to the cascade delete in step 5.
  *   3. Reattributes diary_entries, track_diary_entries (+ remapped track_id),
- *      saved_albums, user_favorite_albums to the kept album/tracks, dropping
+ *      user_favorite_albums to the kept album/tracks, dropping
  *      a row instead of reattributing it when that would violate a
  *      UNIQUE(user_id, ...) constraint (the user already has the kept version).
  *   4. Deletes external_ids for the removed album + its tracks (no FK/CASCADE
@@ -236,10 +236,8 @@ async function reconcileGroup(group) {
       // 2. diary_entries — no UNIQUE(user_id, album_id), plain reassignment (album_stats dedups per-user via DISTINCT ON anyway)
       await supabase.from('diary_entries').update({ album_id: kept.id }).eq('album_id', dup.id);
 
-      // 3. saved_albums / user_favorite_albums — UNIQUE(user_id, album_id), drop on conflict
-      const savedResult = await reattributeUserScoped('saved_albums', 'album_id', dup.id, kept.id);
+      // 3. user_favorite_albums — UNIQUE(user_id, album_id), drop on conflict
       const favResult = await reattributeUserScoped('user_favorite_albums', 'album_id', dup.id, kept.id);
-      console.log(`    saved_albums: moved ${savedResult.moved}, dropped ${savedResult.dropped} (already saved)`);
       console.log(`    user_favorite_albums: moved ${favResult.moved}, dropped ${favResult.dropped} (already favorited)`);
 
       // 4. external_ids for the album itself, then the album row (cascades everything else)
@@ -251,9 +249,8 @@ async function reconcileGroup(group) {
         console.log(`    ✓ merged into ${kept.id}`);
       }
     } else {
-      const savedResult = await reattributeUserScoped('saved_albums', 'album_id', dup.id, kept.id);
       const favResult = await reattributeUserScoped('user_favorite_albums', 'album_id', dup.id, kept.id);
-      console.log(`    [dry-run] would reattribute diary_entries, ${trackPairs.length} tracks' track_diary_entries, ~${savedResult.moved} saved_albums, ~${favResult.moved} user_favorite_albums, then delete the album`);
+      console.log(`    [dry-run] would reattribute diary_entries, ${trackPairs.length} tracks' track_diary_entries, ~${favResult.moved} user_favorite_albums, then delete the album`);
     }
   }
 }
