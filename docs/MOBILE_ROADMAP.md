@@ -19,14 +19,14 @@ Application mobile native (React Native / Expo) partageant le même backend Supa
 
 ## Phase 1 — Préparation du repo
 
-- [ ] Restructurer en monorepo :
-  - [ ] Déplacer `frontend/` → `apps/web/`
-  - [ ] Créer `apps/mobile/` avec `npx create-expo-app`
-  - [ ] Créer `packages/db/` avec les types Supabase partagés (`types/database.ts`)
-  - [ ] Mettre en place `npm workspaces` dans le `package.json` racine
-- [ ] Vérifier que le web tourne toujours après la restructuration (`npm run dev`)
-- [ ] Mettre à jour la config Vercel (Root Directory : `apps/web`)
-- [ ] Vérifier que Vercel redéploie correctement
+- [x] Restructurer en monorepo :
+  - [x] Déplacer `frontend/` → `apps/web/`
+  - [x] Créer `apps/mobile/` avec `npx create-expo-app`
+  - [x] Créer `packages/db/` avec les types Supabase partagés (`types/database.ts`)
+  - [x] Mettre en place `npm workspaces` dans le `package.json` racine
+- [x] Vérifier que le web tourne toujours après la restructuration (`npm run dev`)
+- [x] Mettre à jour la config Vercel (Root Directory : `apps/web`)
+- [x] Vérifier que Vercel redéploie correctement
 
 ---
 
