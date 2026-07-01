@@ -9,7 +9,6 @@ export type StatsEntry = {
   album_title: string;
   artist_id: string;
   artist_name: string;
-  cover_url: string | null;
 };
 
 export type StatsGenreEntry = {
@@ -36,52 +35,53 @@ export type StatsData = {
 export async function getUserStatsData(userId: string): Promise<StatsData> {
   const supabase = await createSupabaseServer();
 
-  // 1. Fetch all diary entries (lightweight, no review body)
-  const { data: rawEntries } = await supabase
-    .from('diary_entries')
-    .select(`
-      album_id,
-      listened_at,
-      rating,
-      albums (
-        id,
-        title,
-        cover_url,
-        artists ( id, name )
-      )
-    `)
-    .eq('user_id', userId)
-    .order('listened_at', { ascending: true });
+  // 1. Fetch diary entries + genres + angles morts in parallel
+  //    Uses idx_diary_entries_user_listened (user_id, listened_at DESC)
+  //    Uses idx_album_genres_album_id
+  //    Uses get_angles_morts RPC (idx_album_stats_mat_rated + NOT EXISTS via idx_diary_entries_album_user)
+  const [entriesResult, anglesMortsResult] = await Promise.all([
+    supabase
+      .from('diary_entries')
+      .select(`
+        album_id,
+        listened_at,
+        rating,
+        albums (
+          id,
+          title,
+          artists ( id, name )
+        )
+      `)
+      .eq('user_id', userId)
+      .order('listened_at', { ascending: true }),
 
-  const entries: StatsEntry[] = (rawEntries ?? []).map((e: any) => ({
+    supabase.rpc('get_angles_morts', {
+      p_user_id: userId,
+      p_min_rating: 7.0,
+      p_min_listeners: 5,
+      p_limit: 5,
+    }),
+  ]);
+
+  const entries: StatsEntry[] = (entriesResult.data ?? []).map((e: any) => ({
     album_id: e.album_id,
     listened_at: e.listened_at,
     rating: e.rating ?? null,
     album_title: e.albums?.title ?? '',
     artist_id: e.albums?.artists?.id ?? '',
     artist_name: e.albums?.artists?.name ?? '',
-    cover_url: e.albums?.cover_url ?? null,
   }));
 
   const albumIds = [...new Set(entries.map((e) => e.album_id))];
 
-  // 2. Fetch genre data + candidate stats in parallel
-  const [genreResult, statsResult] = await Promise.all([
-    albumIds.length > 0
-      ? supabase
-          .from('album_genres')
-          .select('album_id, weight, genres ( slug )')
-          .in('album_id', albumIds)
-      : Promise.resolve({ data: [] }),
-
-    supabase
-      .from('album_stats_mat')
-      .select('album_id, avg_rating, listeners_count')
-      .gte('avg_rating', 7.0)
-      .gte('listeners_count', 5)
-      .order('avg_rating', { ascending: false })
-      .limit(200),
-  ]);
+  // 2. Fetch genres for user's albums (runs after we have albumIds)
+  //    Uses idx_album_genres_album_id
+  const genreResult = albumIds.length > 0
+    ? await supabase
+        .from('album_genres')
+        .select('album_id, weight, genres ( slug )')
+        .in('album_id', albumIds)
+    : { data: [] };
 
   const genreData: StatsGenreEntry[] = (genreResult.data ?? [])
     .map((g: any) => ({
@@ -91,32 +91,14 @@ export async function getUserStatsData(userId: string): Promise<StatsData> {
     }))
     .filter((g) => g.genre_slug !== '');
 
-  // 3. Filter candidates not in user's diary
-  const userAlbumSet = new Set(albumIds);
-  const candidates = (statsResult.data ?? [])
-    .filter((r: any) => !userAlbumSet.has(r.album_id))
-    .slice(0, 40);
-
-  let anglesMorts: AnglesMortsAlbum[] = [];
-
-  if (candidates.length > 0) {
-    const candidateIds = candidates.map((r: any) => r.album_id);
-    const avgRatingMap = new Map(candidates.map((r: any) => [r.album_id, r.avg_rating as number]));
-
-    const { data: albumRows } = await supabase
-      .from('albums')
-      .select('id, title, cover_url, mbid, artists ( name )')
-      .in('id', candidateIds);
-
-    anglesMorts = (albumRows ?? []).map((a: any) => ({
-      id: a.id,
-      title: a.title,
-      artist_name: a.artists?.name ?? '',
-      cover_url: a.cover_url ?? null,
-      mbid: a.mbid ?? null,
-      avg_rating: avgRatingMap.get(a.id) ?? 0,
-    }));
-  }
+  const anglesMorts: AnglesMortsAlbum[] = (anglesMortsResult.data ?? []).map((r: any) => ({
+    id: r.id,
+    title: r.title,
+    artist_name: r.artist_name,
+    cover_url: r.cover_url ?? null,
+    mbid: r.mbid ?? null,
+    avg_rating: Number(r.avg_rating),
+  }));
 
   return { entries, genreData, anglesMorts };
 }
