@@ -1,0 +1,1652 @@
+{
+  "generatedAt": "2026-06-29T07:00:49.593Z",
+  "artistSkip": 0,
+  "artistsAudited": 780,
+  "artistErrors": 0,
+  "albumsChecked": 1318,
+  "skippedArtists": [
+    {
+      "artistId": "0b05e99f-5079-4243-9c53-45b27e6e0625",
+      "artistName": "Depeche Mode",
+      "reason": "643 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 1
+    },
+    {
+      "artistId": "0e694c47-8c4a-4f12-830a-324908e26af7",
+      "artistName": "Radiohead",
+      "reason": "581 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 5
+    },
+    {
+      "artistId": "19dffb81-58ee-46e3-b2da-f696b0aa6993",
+      "artistName": "Bob Dylan",
+      "reason": "1185 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 7
+    },
+    {
+      "artistId": "1d5c557d-05e7-4d05-9f61-afddbb12ccce",
+      "artistName": "George Frideric Handel",
+      "reason": "1766 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 1
+    },
+    {
+      "artistId": "2a9eddfb-8f74-4bb2-87dd-7ea1fb5d490c",
+      "artistName": "Nirvana",
+      "reason": "783 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 2
+    },
+    {
+      "artistId": "2fac9975-2932-4699-9840-ff5f8cafa94a",
+      "artistName": "Bob Marley & The Wailers",
+      "reason": "731 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 1
+    },
+    {
+      "artistId": "3549608d-5864-430b-a73f-ff27b66daac3",
+      "artistName": "The Beatles",
+      "reason": "1024 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 6
+    },
+    {
+      "artistId": "4b33234e-36e5-421b-8101-eac7cb111928",
+      "artistName": "David Bowie",
+      "reason": "658 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 2
+    },
+    {
+      "artistId": "5662a486-9dad-44a3-b22b-a40648d23575",
+      "artistName": "Ennio Morricone",
+      "reason": "815 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 1
+    },
+    {
+      "artistId": "5749adc7-3da1-40b9-9f1d-ff1f1970790b",
+      "artistName": "Ludwig van Beethoven",
+      "reason": "6163 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 1
+    },
+    {
+      "artistId": "60e0980e-9109-499b-802c-0890525e1be2",
+      "artistName": "Snoop Dogg",
+      "reason": "575 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 3
+    },
+    {
+      "artistId": "64275b82-5ee1-44bb-9d65-eb14f4038b5d",
+      "artistName": "John Coltrane",
+      "reason": "505 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 3
+    },
+    {
+      "artistId": "72f6eda0-95d2-4ae3-8c2b-de8c8972b2eb",
+      "artistName": "Various Artists",
+      "reason": "Various Artists — not browsable in a reasonable time",
+      "albumCount": 13
+    },
+    {
+      "artistId": "7ccf1aad-3806-4136-9301-820e4f565a54",
+      "artistName": "Eric Clapton",
+      "reason": "581 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 1
+    },
+    {
+      "artistId": "90aa2b75-d72d-46a3-b9f4-e2ef100b1e74",
+      "artistName": "Fryderyk Chopin",
+      "reason": "2030 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 1
+    },
+    {
+      "artistId": "9623342c-c036-48ca-bb35-a1111935896c",
+      "artistName": "Miles Davis",
+      "reason": "790 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 4
+    },
+    {
+      "artistId": "a923ca31-446b-401f-bc66-333c99e44134",
+      "artistName": "Johnny Cash",
+      "reason": "831 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 1
+    },
+    {
+      "artistId": "c157488f-57ac-44a2-b476-c0839fe59596",
+      "artistName": "The Smashing Pumpkins",
+      "reason": "708 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 2
+    },
+    {
+      "artistId": "c590dd4e-5605-456d-8a96-8c6f51fcb452",
+      "artistName": "Metallica",
+      "reason": "1097 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 1
+    },
+    {
+      "artistId": "c5ec87d2-e9b7-4e32-8ee3-7f850b7a510c",
+      "artistName": "Led Zeppelin",
+      "reason": "602 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 2
+    },
+    {
+      "artistId": "c82fdb4b-e424-41b3-837b-283535a321fb",
+      "artistName": "Prince",
+      "reason": "642 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 2
+    },
+    {
+      "artistId": "d358569d-5307-44eb-8a23-0b8b16bb563f",
+      "artistName": "Neil Young",
+      "reason": "757 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 2
+    },
+    {
+      "artistId": "d7489ba3-04f9-4d14-bb6b-e4a967e26e73",
+      "artistName": "Ella Fitzgerald",
+      "reason": "783 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 1
+    },
+    {
+      "artistId": "d8499b93-2b3a-4912-86d4-dce1caeec340",
+      "artistName": "Wolfgang Amadeus Mozart",
+      "reason": "5982 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 1
+    },
+    {
+      "artistId": "e0f1e75c-6a16-46dd-942a-ab71257b619c",
+      "artistName": "Pink Floyd",
+      "reason": "650 release-groups on MB — too many to browse exhaustively",
+      "albumCount": 5
+    }
+  ],
+  "storedReleaseNotGroup": [
+    {
+      "albumId": "dd12e503-8060-45aa-ae52-98fceb9f5423",
+      "title": "Blood on the Tracks",
+      "artistName": "Scarlet and the Spooky Spiders",
+      "artistId": "04b5e252-5198-4b0d-817e-116a837f66c4",
+      "storedMbid": "7a666784-1478-4465-a600-88ba93de56c2",
+      "storedType": "Album",
+      "realReleaseGroupId": "030876a7-2bcd-4185-b415-63ed945d95e7",
+      "realReleaseGroupTitle": "Blood on the Tracks"
+    },
+    {
+      "albumId": "75ed1de4-49dc-4d9e-a458-64ce639358e1",
+      "title": "Madvillainy",
+      "artistName": "Madvillain",
+      "artistId": "06b777dd-1a71-4be6-9498-3463144d5321",
+      "storedMbid": "264702af-dd10-46b5-83ef-7419552de193",
+      "storedType": "Album",
+      "realReleaseGroupId": "ab570ccb-b06b-3746-8147-4903163ba895",
+      "realReleaseGroupTitle": "Madvillainy"
+    },
+    {
+      "albumId": "ad910d1f-83f6-4f8d-949c-d2444ad316cf",
+      "title": "The Art of Loving",
+      "artistName": "Olivia Dean",
+      "artistId": "0be74626-7af5-4616-9bd9-2711cdae8023",
+      "storedMbid": "42a30aa1-ba82-4177-ae5e-9c7b93f035f2",
+      "storedType": "Album",
+      "realReleaseGroupId": "35eae658-4243-4bf5-91d6-5a391bbb3699",
+      "realReleaseGroupTitle": "The Art of Loving"
+    },
+    {
+      "albumId": "d8634e4c-cbce-4bae-bacd-0ff46acf3204",
+      "title": "GARÇON",
+      "artistName": "Luther",
+      "artistId": "0c488ed3-5b71-44ea-8326-2ba0c892b660",
+      "storedMbid": "e08fa6ba-bb7f-40db-939c-0480a6a32554",
+      "storedType": "Album",
+      "realReleaseGroupId": "583a18b2-5e03-44d0-b08f-8d49c505f10f",
+      "realReleaseGroupTitle": "GARÇON"
+    },
+    {
+      "albumId": "ffcd563a-fffd-4fac-b1e0-a4a792bdb4ed",
+      "title": "Commando",
+      "artistName": "Niska",
+      "artistId": "0d8f4eca-4a85-4536-bea4-97a8f38b21c7",
+      "storedMbid": "3cff234d-4d90-4109-8575-c0299ae19020",
+      "storedType": "Album",
+      "realReleaseGroupId": "84162092-fd6d-4277-bef6-52257431bdb8",
+      "realReleaseGroupTitle": "Commando"
+    },
+    {
+      "albumId": "17b5755f-3467-41d1-86cf-b38bd9c30a7b",
+      "title": "Dima",
+      "artistName": "Zaho",
+      "artistId": "0ee92c96-7163-470a-80dd-afaea523bcbe",
+      "storedMbid": "2896a4f9-865f-474d-88ab-d5776c05e66d",
+      "storedType": "Album",
+      "realReleaseGroupId": "04a3b6c2-2837-32e9-b7c0-19a2598973ee",
+      "realReleaseGroupTitle": "Dima"
+    },
+    {
+      "albumId": "8612db27-26e9-49e7-a925-ff7597c08a1c",
+      "title": "Sincèrement",
+      "artistName": "Hamza",
+      "artistId": "114fad89-697a-4c85-a993-d63611540be9",
+      "storedMbid": "fd34cad3-3bd1-455c-90fa-3fdd1b051087",
+      "storedType": "Album",
+      "realReleaseGroupId": "612e7c0b-6aa2-4b22-b06d-ad46df279372",
+      "realReleaseGroupTitle": "Sincèrement"
+    },
+    {
+      "albumId": "8fb3cb9f-8d1a-4ec3-8078-ef6d015b44e4",
+      "title": "MANIA",
+      "artistName": "Hamza",
+      "artistId": "114fad89-697a-4c85-a993-d63611540be9",
+      "storedMbid": "384c2875-67bb-4a84-b209-b12be6c5fca2",
+      "storedType": "Album",
+      "realReleaseGroupId": "13f27e56-e315-45f1-bf6b-4842c3c1aae5",
+      "realReleaseGroupTitle": "MANIA"
+    },
+    {
+      "albumId": "45ea1dad-1054-456e-a7d0-0a3a495fb00d",
+      "title": "Grand Garçon",
+      "artistName": "PLK",
+      "artistId": "1562498e-b558-4e84-87e9-270d6037d4ad",
+      "storedMbid": "6c30458f-0994-4e5a-b21d-cdaf777e3fa5",
+      "storedType": "Album",
+      "realReleaseGroupId": "145052b5-2c23-49eb-8be7-b59e9252ff65",
+      "realReleaseGroupTitle": "Grand Garçon"
+    },
+    {
+      "albumId": "97ba786e-e290-4a69-a6b5-cd43ae04da8b",
+      "title": "good kid, m.A.A.d city",
+      "artistName": "Kendrick Lamar",
+      "artistId": "15dec182-8751-4cbd-815f-bcb570fb7c78",
+      "storedMbid": "9fc676d7-9a01-4653-83fd-4ea43b8a84d9",
+      "storedType": "Album",
+      "realReleaseGroupId": "499c19c8-0dab-4824-884b-6191d145e95b",
+      "realReleaseGroupTitle": "good kid, m.A.A.d city"
+    },
+    {
+      "albumId": "fd8c382d-7186-40a6-838a-8749f1f2fd68",
+      "title": "To Pimp a Butterfly",
+      "artistName": "Kendrick Lamar",
+      "artistId": "15dec182-8751-4cbd-815f-bcb570fb7c78",
+      "storedMbid": "98e80256-8123-4243-baf8-cc088e087a67",
+      "storedType": "Album",
+      "realReleaseGroupId": "d9103c72-3807-4378-9ce7-b6f3e8fdd547",
+      "realReleaseGroupTitle": "To Pimp a Butterfly"
+    },
+    {
+      "albumId": "a6f51855-0a82-413a-a198-56a138f5ef64",
+      "title": "Suprême NTM",
+      "artistName": "Suprême NTM",
+      "artistId": "24b8385b-7b52-4f92-8295-72d2f3e56adf",
+      "storedMbid": "6bd94722-b58a-4c0a-9b8c-39e182b2c117",
+      "storedType": "Album",
+      "realReleaseGroupId": "8935869b-8925-35a2-8f3c-2872cfb8f125",
+      "realReleaseGroupTitle": "Suprême NTM"
+    },
+    {
+      "albumId": "c7aeffea-8c08-4d79-a3ef-3886c248d455",
+      "title": "Getting Killed",
+      "artistName": "Geese",
+      "artistId": "2648357b-2efb-4965-abae-f06cd02039de",
+      "storedMbid": "0bf006ce-45a5-4963-89cb-cd285fd768bb",
+      "storedType": "Album",
+      "realReleaseGroupId": "3c18308c-9072-4810-b26e-0c573e46fb07",
+      "realReleaseGroupTitle": "Getting Killed"
+    },
+    {
+      "albumId": "65ae66ce-7bcf-4e19-a3be-ee243115d3a1",
+      "title": "I LAY DOWN MY LIFE FOR YOU",
+      "artistName": "JPEGMAFIA",
+      "artistId": "29b9c534-1a8c-4cb4-b255-60370bb41bf7",
+      "storedMbid": "023044f8-f3ac-45e8-a595-debc17179886",
+      "storedType": "Album",
+      "realReleaseGroupId": "1e9e8f2b-febc-4c81-b067-77e595b5d5ba",
+      "realReleaseGroupTitle": "I LAY DOWN MY LIFE FOR YOU"
+    },
+    {
+      "albumId": "53865600-4051-4d29-b8c1-088952c7b138",
+      "title": "24",
+      "artistName": "La Fève",
+      "artistId": "2a7504a1-39be-4d7b-90bb-1227c3de9d5c",
+      "storedMbid": "ff1b20e9-a780-42c8-9f29-3c5a02c7e211",
+      "storedType": "Album",
+      "realReleaseGroupId": "d7bea120-daee-4987-b299-3a1178bd42e0",
+      "realReleaseGroupTitle": "24"
+    },
+    {
+      "albumId": "88f52cd8-9782-45a3-a2e6-1f384d43021f",
+      "title": "BIGLAF",
+      "artistName": "La Fève",
+      "artistId": "2a7504a1-39be-4d7b-90bb-1227c3de9d5c",
+      "storedMbid": "0d6208d7-5fbd-4b06-82be-53b7916c6cef",
+      "storedType": "Album",
+      "realReleaseGroupId": "34b72571-0432-416d-9db9-8b0bcb0459ca",
+      "realReleaseGroupTitle": "BIGLAF"
+    },
+    {
+      "albumId": "3aa48797-7719-45f2-aa58-126485ac3975",
+      "title": "APOCALYPSE",
+      "artistName": "Gazo",
+      "artistId": "2f8de71b-a1e8-45c6-873b-5336b28ca829",
+      "storedMbid": "b3d06518-97ca-4283-bb24-f86aa2b844f7",
+      "storedType": "Album",
+      "realReleaseGroupId": "78863586-5ba6-4ad4-8229-8e0ac7876cec",
+      "realReleaseGroupTitle": "APOCALYPSE"
+    },
+    {
+      "albumId": "95f80085-d1ad-4980-8557-1494db876811",
+      "title": "Love Deluxe",
+      "artistName": "Sade",
+      "artistId": "30799f74-dacc-4884-b38d-a6e03c0c30a0",
+      "storedMbid": "2728659f-ae53-44b2-acd8-993d0e803b56",
+      "storedType": "Album",
+      "realReleaseGroupId": "e4a67add-6aab-390c-bb82-53939fb9cd0a",
+      "realReleaseGroupTitle": "Love Deluxe"
+    },
+    {
+      "albumId": "3929ea91-e8d9-4b05-896c-98b58f8b3800",
+      "title": "Lost & Found",
+      "artistName": "Jorja Smith",
+      "artistId": "33a3e185-b92b-48a6-aad4-469525ad2b3a",
+      "storedMbid": "a6aaf001-6d32-4b21-b276-099cc774844f",
+      "storedType": "Album",
+      "realReleaseGroupId": "a5138f9a-eca0-4f13-ad19-87d5cbc9ba78",
+      "realReleaseGroupTitle": "Lost & Found"
+    },
+    {
+      "albumId": "697ab7bb-7e7f-456f-af06-ac4bc79a3393",
+      "title": "Sang pour sang",
+      "artistName": "Johnny Hallyday",
+      "artistId": "33d4b8b1-b994-4273-8cc0-6e4b9f5bf591",
+      "storedMbid": "48b5f640-7489-3a3f-a90d-0c19a9f5cb4a",
+      "storedType": "Album",
+      "realReleaseGroupId": "1d9b4e9b-99a5-32e4-869c-18a10969ec2c",
+      "realReleaseGroupTitle": "Sang pour sang"
+    },
+    {
+      "albumId": "1bc2a407-daf9-48aa-8768-62df93b0fac5",
+      "title": "Mixture Elecstro",
+      "artistName": "Stromae",
+      "artistId": "37b4fa9e-633d-4bb7-b29f-46371b2c6e4b",
+      "storedMbid": "7c5e55d9-7f56-4c9b-a4f5-a7ab0a36479b",
+      "storedType": "Album",
+      "realReleaseGroupId": "871d3f5c-ea39-4fc1-b5e2-fdd552329982",
+      "realReleaseGroupTitle": "Mixture Elecstro"
+    },
+    {
+      "albumId": "3b8304f1-394a-48b2-8b01-130ebe5a459e",
+      "title": "Racine carrée",
+      "artistName": "Stromae",
+      "artistId": "37b4fa9e-633d-4bb7-b29f-46371b2c6e4b",
+      "storedMbid": "348662a8-54ce-4d14-adf5-3ce2cefd57bb",
+      "storedType": "Album",
+      "realReleaseGroupId": "d079dc50-fa9b-4a88-90f4-5e8723accd75",
+      "realReleaseGroupTitle": "Racine carrée"
+    },
+    {
+      "albumId": "3beeb9ce-be68-4e08-b409-dcd5b4ba92a9",
+      "title": "Cheese",
+      "artistName": "Stromae",
+      "artistId": "37b4fa9e-633d-4bb7-b29f-46371b2c6e4b",
+      "storedMbid": "93ae4c1d-28db-4232-94a8-2094ca8c3083",
+      "storedType": "Album",
+      "realReleaseGroupId": "ce87cfa3-42cc-411b-b8bc-2d92aaa73c81",
+      "realReleaseGroupTitle": "Cheese"
+    },
+    {
+      "albumId": "4bbe1124-7487-443e-95de-40cbe9b49532",
+      "title": "Multitude",
+      "artistName": "Stromae",
+      "artistId": "37b4fa9e-633d-4bb7-b29f-46371b2c6e4b",
+      "storedMbid": "2cc15d57-74bf-4b2a-ac0b-f6cc196cf4ce",
+      "storedType": "Album",
+      "realReleaseGroupId": "d6cfccc8-026d-4028-b567-4f762354ff91",
+      "realReleaseGroupTitle": "Multitude"
+    },
+    {
+      "albumId": "a27cb10d-c5de-4208-a982-33e6227afbf0",
+      "title": "Juste un cerveau, un flow, un fond et un mic…",
+      "artistName": "Stromae",
+      "artistId": "37b4fa9e-633d-4bb7-b29f-46371b2c6e4b",
+      "storedMbid": "15179be1-010a-4e15-85b4-709c887bcb53",
+      "storedType": "Album",
+      "realReleaseGroupId": "3d22d7d9-80bc-45fb-9128-17c2ef68a893",
+      "realReleaseGroupTitle": "Juste un cerveau, un flow, un fond et un mic…"
+    },
+    {
+      "albumId": "d0c6f5b3-6f6d-4b2a-8c08-f4e4aaca9ce9",
+      "title": "Let God Sort Em Out",
+      "artistName": "Clipse",
+      "artistId": "39f59cbf-2f3b-43fc-9383-d1d6509226d2",
+      "storedMbid": "b65cfcb5-9a09-4902-8c27-caced55b204d",
+      "storedType": "Album",
+      "realReleaseGroupId": "18cdc08c-03a1-4e55-9624-b7f9dbb968f5",
+      "realReleaseGroupTitle": "Let God Sort Em Out"
+    },
+    {
+      "albumId": "d20a1e3a-7aaf-43af-85fd-9dfc6d9cc1b6",
+      "title": "Deux frères",
+      "artistName": "PNL",
+      "artistId": "420849c2-925a-450e-99ec-b6b07d434179",
+      "storedMbid": "95cc1585-dc6e-44d5-a609-66b9d3cbfc33",
+      "storedType": "Album",
+      "realReleaseGroupId": "d9390962-495f-466e-8674-e705e660ed8b",
+      "realReleaseGroupTitle": "Deux frères"
+    },
+    {
+      "albumId": "d51b6679-5a0f-4043-8bbc-0cf0996dc786",
+      "title": "Le Monde Chico",
+      "artistName": "PNL",
+      "artistId": "420849c2-925a-450e-99ec-b6b07d434179",
+      "storedMbid": "dd7c45de-ab56-4a72-9c75-0317181df07d",
+      "storedType": "Album",
+      "realReleaseGroupId": "fb0e1291-2bc5-4935-af67-0a0863e24302",
+      "realReleaseGroupTitle": "Le Monde Chico"
+    },
+    {
+      "albumId": "7f028ae8-4095-4fa9-985a-f1d41cf1729c",
+      "title": "Love Is a Kingdom",
+      "artistName": "Tems",
+      "artistId": "46d7cffe-cacb-418c-9a03-0619990a8a7c",
+      "storedMbid": "0ef9d814-79ee-4552-aa62-d520a085819d",
+      "storedType": "Album",
+      "realReleaseGroupId": "778a70fd-55df-44ba-b0e3-a98589f10668",
+      "realReleaseGroupTitle": "Love Is a Kingdom"
+    },
+    {
+      "albumId": "7b8a1b7d-e690-4607-873a-00baa0fd5ab0",
+      "title": "La machine",
+      "artistName": "Jul",
+      "artistId": "4c2dd0c4-93c1-4af4-be58-e20ed3735497",
+      "storedMbid": "7d9eaad3-f723-48ff-b6c3-d8b047a78f9f",
+      "storedType": "Album",
+      "realReleaseGroupId": "35d50b63-f720-4969-bf54-4bbb36a7e4a4",
+      "realReleaseGroupTitle": "La machine"
+    },
+    {
+      "albumId": "1954c162-17a8-4c3f-83d8-43953c6ea2b8",
+      "title": "So Tonight That I Might See",
+      "artistName": "Mazzy Star",
+      "artistId": "4c474d0a-0f92-4d52-bfdd-b02703d10abc",
+      "storedMbid": "64401612-4788-445c-bcea-22fcc8ddb78b",
+      "storedType": "Album",
+      "realReleaseGroupId": "2863caa0-14e9-3016-83e4-4f0cdab55f4f",
+      "realReleaseGroupTitle": "So Tonight That I Might See"
+    },
+    {
+      "albumId": "f14e7868-6d9d-4b12-b7d9-80cfea825f99",
+      "title": "OCHO (Deluxe)",
+      "artistName": "SDM",
+      "artistId": "576a309e-5d52-4b7d-84f7-ceffc844e367",
+      "storedMbid": "999b0598-bcaa-420c-b18a-0748dbcab543",
+      "storedType": "Album",
+      "realReleaseGroupId": "4fab497a-e13b-409a-8294-d2e554e05d41",
+      "realReleaseGroupTitle": "OCHO"
+    },
+    {
+      "albumId": "b8a10028-d0ba-4e17-9731-a5fd207a2d7b",
+      "title": "ANTI",
+      "artistName": "Rihanna",
+      "artistId": "5af6b91b-df1d-4929-b9be-da53951a25c4",
+      "storedMbid": "a0f89482-f6ea-4f74-a75c-ebce6b8bd3d5",
+      "storedType": "Album",
+      "realReleaseGroupId": "0c482acd-35a2-466b-b833-ef5f2f1297d4",
+      "realReleaseGroupTitle": "ANTI"
+    },
+    {
+      "albumId": "0b92a7da-ef1d-44b1-81be-f3c8810b3118",
+      "title": "Les Amants Terribles",
+      "artistName": "Tuerie",
+      "artistId": "5b4299c8-ae3c-40a0-93ae-bc6c85dff66a",
+      "storedMbid": "ba442b1f-1c46-4ba9-8b73-90f247ad9c5e",
+      "storedType": "Album",
+      "realReleaseGroupId": "deb1d953-5cbf-4669-8d88-4ec94a070248",
+      "realReleaseGroupTitle": "Les Amants Terribles"
+    },
+    {
+      "albumId": "d10a9ed8-40c9-41f8-90e2-7ca0d3436c32",
+      "title": "Be",
+      "artistName": "Common",
+      "artistId": "645b92d7-8670-4853-8a97-71b21ea83799",
+      "storedMbid": "702f226a-ee12-3d75-897a-77ead57611be",
+      "storedType": "Album",
+      "realReleaseGroupId": "93b891c9-4fc4-3085-960e-5da4c7fe8113",
+      "realReleaseGroupTitle": "Be"
+    },
+    {
+      "albumId": "3ba83d98-69c6-47e0-88e7-cea2ecef3dc2",
+      "title": "Farq Kebir",
+      "artistName": "راغب علامة",
+      "artistId": "64c33219-935a-4dd6-a6c6-a2741f8b0230",
+      "storedMbid": "8b2f8642-13f8-416c-90bb-afb5cc199671",
+      "storedType": "Album",
+      "realReleaseGroupId": "ef8f4cee-d2e5-3333-8d0e-ee8321b9b546",
+      "realReleaseGroupTitle": "Farek Kabir"
+    },
+    {
+      "albumId": "a8e965c9-4d03-4abb-8810-e6662ff1de5a",
+      "title": "À l’ancienne",
+      "artistName": "DJ Abdel",
+      "artistId": "6678caec-d59c-48ff-b7d7-72d5fe69c60a",
+      "storedMbid": "4c955ef8-79ee-476f-b0e6-52d6b90232cf",
+      "storedType": "Album",
+      "realReleaseGroupId": "603649d7-c45a-390f-a9dc-2e8fe4505a5c",
+      "realReleaseGroupTitle": "À l’ancienne"
+    },
+    {
+      "albumId": "cbf095a1-7978-4cce-8201-17e243f9f1c7",
+      "title": "EXTASIA",
+      "artistName": "Ino Casablanca",
+      "artistId": "690d5690-37f0-44c0-83b0-8500ca1f38fb",
+      "storedMbid": "9524a15c-cf84-4c0c-b66b-f8e63134a76e",
+      "storedType": "Album",
+      "realReleaseGroupId": "2562bc9b-ebc7-4825-b151-a72c12ffdb4f",
+      "realReleaseGroupTitle": "EXTASIA"
+    },
+    {
+      "albumId": "e2e89b60-1334-404c-ae20-c499c933909b",
+      "title": "TAMARA",
+      "artistName": "Ino Casablanca",
+      "artistId": "690d5690-37f0-44c0-83b0-8500ca1f38fb",
+      "storedMbid": "733884a9-6f5f-4b77-aeb2-01458aea2fa0",
+      "storedType": "Album",
+      "realReleaseGroupId": "6559a4f6-051c-43ec-99be-b585be4e7edf",
+      "realReleaseGroupTitle": "TAMARA"
+    },
+    {
+      "albumId": "04f6c54b-71bc-4914-a896-631f86210879",
+      "title": "THUG CEREMONY",
+      "artistName": "Leto",
+      "artistId": "69378af4-5960-43f3-bed1-fb02398a135e",
+      "storedMbid": "e31518f3-31ed-426e-a382-763270411bfc",
+      "storedType": "Album",
+      "realReleaseGroupId": "69a8d4c8-7bdf-4b06-96d2-17c787008db3",
+      "realReleaseGroupTitle": "THUG CEREMONY"
+    },
+    {
+      "albumId": "e737c338-24a2-4379-b635-49b451b4a901",
+      "title": "Si - Slimane",
+      "artistName": "Djamel Allam",
+      "artistId": "6af531d8-b1bf-40a0-b41e-b54ebd73806a",
+      "storedMbid": "53b62028-8b00-4252-881e-02dabcf03d46",
+      "storedType": "Album",
+      "realReleaseGroupId": "1f801522-da98-4e0f-b1de-7e5b78ad0c8e",
+      "realReleaseGroupTitle": "Si - Slimane"
+    },
+    {
+      "albumId": "760717ca-fea9-4559-955a-d0e195c4c3de",
+      "title": "omar chappier",
+      "artistName": "Mairo",
+      "artistId": "6bbdfe35-ba27-4841-b073-034c9b3dd25f",
+      "storedMbid": "ec1d78b1-91de-443b-abb9-b68537c6f1c6",
+      "storedType": "Album",
+      "realReleaseGroupId": "bb0ec24b-4983-4084-a652-63977414fdec",
+      "realReleaseGroupTitle": "omar chappier"
+    },
+    {
+      "albumId": "da0f531f-5018-40ab-8aad-70cb3648ac3c",
+      "title": "Jeunesse Dorée",
+      "artistName": "Guy2Bezbar",
+      "artistId": "7296da05-5a07-4cae-ba2b-41791e76ad12",
+      "storedMbid": "4ad1aad9-9b0b-414c-b7b9-dc2864e069f4",
+      "storedType": "Album",
+      "realReleaseGroupId": "22400689-6de3-46a0-bc1d-80fca6908bf7",
+      "realReleaseGroupTitle": "Jeunesse Dorée"
+    },
+    {
+      "albumId": "04687c06-9e78-4134-a349-b6c0117f7da1",
+      "title": "S/O DIEU",
+      "artistName": "Jeune Lion",
+      "artistId": "780ccfbc-f320-4897-bb19-ba0d62a18c85",
+      "storedMbid": "0270da66-2faa-40f4-a701-db4af24a8a8e",
+      "storedType": "Album",
+      "realReleaseGroupId": "cc3cf411-7c06-4267-922f-dc39e5ca66e5",
+      "realReleaseGroupTitle": "S/O DIEU"
+    },
+    {
+      "albumId": "61862306-9905-470c-aa6d-5458b857d030",
+      "title": "BABYLONE BRÛLE",
+      "artistName": "Jeune Lion",
+      "artistId": "780ccfbc-f320-4897-bb19-ba0d62a18c85",
+      "storedMbid": "efff5489-4c94-4b47-8a4b-171c8503b8da",
+      "storedType": "Album",
+      "realReleaseGroupId": "3611f4e9-a0ab-47d9-a778-9b8754dbcd33",
+      "realReleaseGroupTitle": "BABYLONE BRÛLE"
+    },
+    {
+      "albumId": "c159e021-96db-4a66-803a-e514e51bbb11",
+      "title": "HIGHLY SPIRITUAL",
+      "artistName": "Jeune Lion",
+      "artistId": "780ccfbc-f320-4897-bb19-ba0d62a18c85",
+      "storedMbid": "65822cf6-f8e1-41a5-b7f9-11dd9bfdb73b",
+      "storedType": "Album",
+      "realReleaseGroupId": "46e72436-830e-4288-95bb-6f73a1f920ad",
+      "realReleaseGroupTitle": "HIGHLY SPIRITUAL"
+    },
+    {
+      "albumId": "2d800684-16d5-4928-bff2-2d4ff56d5331",
+      "title": "Siembra",
+      "artistName": "Willie Colón",
+      "artistId": "78749cf0-9b69-47e3-b467-97b6b6a3c7b1",
+      "storedMbid": "800f8b42-1e7f-40e5-9a26-a50f5f22e752",
+      "storedType": "Album",
+      "realReleaseGroupId": "0efd12a2-2d31-3fa8-a76c-5f8af6613fca",
+      "realReleaseGroupTitle": "Siembra"
+    },
+    {
+      "albumId": "1dc9871c-8dbc-46fc-8afb-9e746a24d521",
+      "title": "SAUDADE",
+      "artistName": "Green Montana",
+      "artistId": "7b78292a-23bc-4957-8b97-a47fdc9f195a",
+      "storedMbid": "f042f98e-489f-42d6-b461-3f12e69f25ac",
+      "storedType": "Album",
+      "realReleaseGroupId": "bfaac974-654f-4699-881c-00333f9d6669",
+      "realReleaseGroupTitle": "SAUDADE"
+    },
+    {
+      "albumId": "6690a72c-c1ea-485a-9d3e-e0f3bba0b4ca",
+      "title": "MELANCHOLIA 999",
+      "artistName": "Green Montana",
+      "artistId": "7b78292a-23bc-4957-8b97-a47fdc9f195a",
+      "storedMbid": "4fe0146f-3e5d-4c4b-9751-fc8381a76596",
+      "storedType": "Album",
+      "realReleaseGroupId": "21bca14d-3c35-4be1-99df-51e9aaa8748e",
+      "realReleaseGroupTitle": "MELANCHOLIA 999"
+    },
+    {
+      "albumId": "1f774740-73ef-4da2-a1bb-5e39d8b813d9",
+      "title": "MAGNIFICAT",
+      "artistName": "Vald",
+      "artistId": "82ca4a5c-a542-495c-8071-f2cb21e515ad",
+      "storedMbid": "2e4e250a-3669-4d20-9185-9dfced624c97",
+      "storedType": "Album",
+      "realReleaseGroupId": "57d337a3-b4d2-4936-8daf-bb19c2ccbf14",
+      "realReleaseGroupTitle": "MAGNIFICAT"
+    },
+    {
+      "albumId": "57692584-1f04-4aca-b352-6f3124751683",
+      "title": "Hounds of Love",
+      "artistName": "Kate Bush",
+      "artistId": "92efa482-8c14-4af9-aa67-22fcb5f32d92",
+      "storedMbid": "fde7ed79-5fa9-45fb-b2e3-c89158c00a6d",
+      "storedType": "Album",
+      "realReleaseGroupId": "017f2a37-a78f-3578-9611-fa40408e5d90",
+      "realReleaseGroupTitle": "Hounds of Love"
+    },
+    {
+      "albumId": "10c950a1-95de-4bbf-99a2-67a193286a1d",
+      "title": "archives",
+      "artistName": "FEMTOGO",
+      "artistId": "935b23cb-1076-4e38-8cda-0251e9ec2347",
+      "storedMbid": "5703f9c9-08d8-475d-aac4-46f85d78920e",
+      "storedType": "Album",
+      "realReleaseGroupId": "8900a1ff-3d92-4509-89c1-7618b169caa4",
+      "realReleaseGroupTitle": "archives"
+    },
+    {
+      "albumId": "25638ed4-f566-4b04-b7cd-e25210321cfd",
+      "title": "One Man Army",
+      "artistName": "FEMTOGO",
+      "artistId": "935b23cb-1076-4e38-8cda-0251e9ec2347",
+      "storedMbid": "c6803a3d-c9d3-40f7-8417-9357da01bce1",
+      "storedType": "Album",
+      "realReleaseGroupId": "0531fa7f-ec82-490d-a78e-a4a9de61cc44",
+      "realReleaseGroupTitle": "One Man Army"
+    },
+    {
+      "albumId": "69b1b312-7653-4282-84b9-a4a1ba78b7eb",
+      "title": "FRANCS-TIREURS PARTISANS",
+      "artistName": "FEMTOGO",
+      "artistId": "935b23cb-1076-4e38-8cda-0251e9ec2347",
+      "storedMbid": "8be68182-9dce-41b2-a950-981fa56144ab",
+      "storedType": "Album",
+      "realReleaseGroupId": "a39e4709-f09b-4630-8072-c05b8097cb61",
+      "realReleaseGroupTitle": "FRANCS-TIREURS PARTISANS"
+    },
+    {
+      "albumId": "be761fb6-a1b3-4cf5-b439-3cea0c731b91",
+      "title": "NAMELESS BELLIGERENT",
+      "artistName": "FEMTOGO",
+      "artistId": "935b23cb-1076-4e38-8cda-0251e9ec2347",
+      "storedMbid": "9a0c1feb-2269-4624-9d73-7ab65399e5b8",
+      "storedType": "Album",
+      "realReleaseGroupId": "ca24103b-514b-4bad-8067-9d4e6bd8863d",
+      "realReleaseGroupTitle": "NAMELESS BELLIGERENT"
+    },
+    {
+      "albumId": "fc597648-a653-4434-8bcc-8a8391a7aa9a",
+      "title": "Ultraviolence",
+      "artistName": "Lana Del Rey",
+      "artistId": "95999d26-5802-481e-b5a7-51ce2f68357c",
+      "storedMbid": "81f18a9a-091f-44b0-bf39-35e2f8f88d8e",
+      "storedType": "Album",
+      "realReleaseGroupId": "9d9b3ac3-e630-4644-92c7-fb14d4d68d86",
+      "realReleaseGroupTitle": "Ultraviolence"
+    },
+    {
+      "albumId": "3bbd9eaa-22f5-4e15-8a2c-1e534264316e",
+      "title": "勇気",
+      "artistName": "betcover!!",
+      "artistId": "959ee659-c4e8-4234-84df-31609dd5800b",
+      "storedMbid": "a6ce7575-f80a-4df9-b06a-ffb429cd2aba",
+      "storedType": "Album",
+      "realReleaseGroupId": "b5111f91-80cc-4772-b786-5b32b37d21e3",
+      "realReleaseGroupTitle": "勇気"
+    },
+    {
+      "albumId": "fe5a7c02-555c-49d1-bbd6-975375609106",
+      "title": "Buena Vista Social Club",
+      "artistName": "Buena Vista Social Club",
+      "artistId": "9f83fc3c-a193-4fa5-b277-106fd9e47401",
+      "storedMbid": "87bc3460-639e-3308-9aac-242cade60c07",
+      "storedType": "Album",
+      "realReleaseGroupId": "32bbab8e-02c0-30d2-9e23-a19739864b84",
+      "realReleaseGroupTitle": "Buena Vista Social Club"
+    },
+    {
+      "albumId": "1110d878-bae3-460e-8409-6a317486052a",
+      "title": "WASTELAND",
+      "artistName": "Brent Faiyaz",
+      "artistId": "a6d73067-3e43-4d40-9ee7-08f390b1fda3",
+      "storedMbid": "72beaf88-a359-4577-87e7-4a489e18800d",
+      "storedType": "Album",
+      "realReleaseGroupId": "52859a02-4538-4e5c-b484-7d179f4c6ff6",
+      "realReleaseGroupTitle": "WASTELAND"
+    },
+    {
+      "albumId": "b67a00ba-70f6-4a70-900f-8dc51dc25657",
+      "title": "Icon",
+      "artistName": "Brent Faiyaz",
+      "artistId": "a6d73067-3e43-4d40-9ee7-08f390b1fda3",
+      "storedMbid": "21eff1d0-c156-4421-85d4-4e047290be20",
+      "storedType": "Album",
+      "realReleaseGroupId": "bcf5d1a3-db78-4ff1-900e-50654333ef4f",
+      "realReleaseGroupTitle": "Icon"
+    },
+    {
+      "albumId": "c878160a-902a-4613-9aea-6be97c15f7e0",
+      "title": "La Bête",
+      "artistName": "Vilhelm.",
+      "artistId": "a7535215-0486-4a8b-aba4-3d6f2242a7e2",
+      "storedMbid": "9386afad-beba-4f65-802e-84015195bd70",
+      "storedType": "Album",
+      "realReleaseGroupId": "fc484432-9e01-4f24-8e36-2dba9c895b66",
+      "realReleaseGroupTitle": "La Bête"
+    },
+    {
+      "albumId": "8ff16bff-c072-4f68-904e-f84cec3e7b45",
+      "title": "Short n’ Sweet",
+      "artistName": "Sabrina Carpenter",
+      "artistId": "a880a93f-754b-4190-b8d3-bba6db3a6e0a",
+      "storedMbid": "51ce8f75-7b47-49d0-8892-88348154b396",
+      "storedType": "Album",
+      "realReleaseGroupId": "c8bea388-c195-4177-bf9b-7469f6e695a1",
+      "realReleaseGroupTitle": "Short n’ Sweet"
+    },
+    {
+      "albumId": "5c9212cb-8606-42ce-a9df-a4325458d444",
+      "title": "Vie d'artiste",
+      "artistName": "4Keus",
+      "artistId": "b260f43b-3fdc-4d42-bdcc-4925babf0562",
+      "storedMbid": "220a4af7-b197-4647-813d-223268369e8f",
+      "storedType": "Album",
+      "realReleaseGroupId": "5bfc2a27-9be1-4ad4-ba6b-d975983b128f",
+      "realReleaseGroupTitle": "Vie d'artiste"
+    },
+    {
+      "albumId": "6d629001-73c0-4f75-8813-d79548685084",
+      "title": "Neptune",
+      "artistName": "Theodora",
+      "artistId": "b4936d1c-02e8-4acb-a17a-db0426acea7a",
+      "storedMbid": "874fd0a0-798b-4cee-b94a-0ccfde3cff81",
+      "storedType": "Album",
+      "realReleaseGroupId": "e1cf1d36-db72-4d83-a69c-15414b1ab5df",
+      "realReleaseGroupTitle": "Neptune"
+    },
+    {
+      "albumId": "94e12875-1179-4f4d-b74e-f857fcad784b",
+      "title": "BAD BOY LOVESTORY",
+      "artistName": "Theodora",
+      "artistId": "b4936d1c-02e8-4acb-a17a-db0426acea7a",
+      "storedMbid": "55aba97f-eb81-43ac-8050-06076ab99e79",
+      "storedType": "Album",
+      "realReleaseGroupId": "66fc6d80-c186-44bd-8c30-43466083f275",
+      "realReleaseGroupTitle": "BAD BOY LOVESTORY"
+    },
+    {
+      "albumId": "274f90b3-f7e5-4574-b46c-ce56b75557f1",
+      "title": "La La Land (Original Motion Picture Soundtrack)",
+      "artistName": "Justin Hurwitz",
+      "artistId": "b5d01303-5162-4fab-8033-fefc8e14a176",
+      "storedMbid": "b06d7f3e-7732-4f8c-9427-112dd78e66b1",
+      "storedType": "Album",
+      "realReleaseGroupId": "85d94dcd-6043-4b02-994d-162da6f6df51",
+      "realReleaseGroupTitle": "La La Land: Original Motion Picture Soundtrack"
+    },
+    {
+      "albumId": "998e4053-d319-4ae0-916e-25261affd9e8",
+      "title": "Gemini Rights",
+      "artistName": "Steve Lacy",
+      "artistId": "b747edae-eefc-414b-a0d3-039775285639",
+      "storedMbid": "127a1e14-dd97-4f0d-8d74-2e8cb6238106",
+      "storedType": "Album",
+      "realReleaseGroupId": "ab1c1fd8-f769-4d78-90bc-4677f8ad8c22",
+      "realReleaseGroupTitle": "Gemini Rights"
+    },
+    {
+      "albumId": "567e9d47-be99-4971-8d08-075b6101b69a",
+      "title": "BRAT",
+      "artistName": "Charli xcx",
+      "artistId": "b957bbd6-16a8-4ca3-a807-112f125dc311",
+      "storedMbid": "c7bf41e6-c03c-428b-8a03-5ed418f2ed69",
+      "storedType": "Album",
+      "realReleaseGroupId": "e0fdb431-0109-420d-8a37-f99eaeb4d671",
+      "realReleaseGroupTitle": "BRAT"
+    },
+    {
+      "albumId": "1bc1a75e-865f-4555-a3d5-d844014d52ca",
+      "title": "93 Empire",
+      "artistName": "93 Empire",
+      "artistId": "c03992ed-8484-47d7-bf89-f2419e8cc920",
+      "storedMbid": "43f651c1-80d6-4c2a-8fe5-bf16ad2f6e96",
+      "storedType": "Album",
+      "realReleaseGroupId": "3f6b139d-0f01-407a-84cd-80d97c0c2a79",
+      "realReleaseGroupTitle": "93 Empire"
+    },
+    {
+      "albumId": "9e0625f7-2c0b-4bfc-9ceb-5c7929421b20",
+      "title": "L'AFRO OU LES TRESSES",
+      "artistName": "Yvnnis",
+      "artistId": "c7bf3f03-110c-4677-ab42-2fe42f179928",
+      "storedMbid": "c245689b-57a6-426a-8628-55c845e9f1a6",
+      "storedType": "Album",
+      "realReleaseGroupId": "432c757f-1b93-4111-a770-65714f4944e1",
+      "realReleaseGroupTitle": "L'AFRO OU LES TRESSES"
+    },
+    {
+      "albumId": "c24759b0-b1b7-4859-a871-f0dfb9ea3b7a",
+      "title": "ARIZONA BABY",
+      "artistName": "Kevin Abstract",
+      "artistId": "cb501f61-0439-4516-9c2a-ceb5d383c336",
+      "storedMbid": "e9260e60-12d9-45b6-b7a5-f997f5d076ff",
+      "storedType": "Album",
+      "realReleaseGroupId": "3269eebb-892f-47cd-a575-ae7444805814",
+      "realReleaseGroupTitle": "ARIZONA BABY"
+    },
+    {
+      "albumId": "73d50ac0-29b7-4023-a8aa-38f858cac415",
+      "title": "PLM DEATHROW",
+      "artistName": "Khali",
+      "artistId": "cce329a1-66ae-42ee-9921-d8b31fb126b7",
+      "storedMbid": "47d00784-82d8-4a44-a463-42d95c144d6b",
+      "storedType": "Album",
+      "realReleaseGroupId": "848e2561-ec29-4d62-93d0-96a499080a73",
+      "realReleaseGroupTitle": "PLM DEATHROW"
+    },
+    {
+      "albumId": "7764f42e-70c0-484c-abb2-aba1697215bb",
+      "title": "23 -",
+      "artistName": "Khali",
+      "artistId": "cce329a1-66ae-42ee-9921-d8b31fb126b7",
+      "storedMbid": "e078d58b-e144-42ab-b21f-481181590d7a",
+      "storedType": "Album",
+      "realReleaseGroupId": "1f8cd78e-30f7-49da-9ceb-9b0422063232",
+      "realReleaseGroupTitle": "23 -"
+    },
+    {
+      "albumId": "14a2b161-3682-47c9-9ce0-0d847432e07a",
+      "title": "Either/Or",
+      "artistName": "Elliott Smith",
+      "artistId": "cde92491-648c-4554-8ab7-165336b6c758",
+      "storedMbid": "df24dc47-1e1d-4508-aef0-172705324e11",
+      "storedType": "Album",
+      "realReleaseGroupId": "dfb85157-313b-3f5f-8739-a5162bcb6345",
+      "realReleaseGroupTitle": "Either/Or"
+    },
+    {
+      "albumId": "1eac7c8c-b531-470b-a657-ce280cd83ed4",
+      "title": "Ethir Neechal",
+      "artistName": "Anirudh Ravichander",
+      "artistId": "ce4d5901-23a3-4abb-bc70-aab975968b0c",
+      "storedMbid": "c35651db-8e18-4e4a-bdcb-a2bbfb8360eb",
+      "storedType": "Album",
+      "realReleaseGroupId": "1d9563b3-5c66-4d1d-a4b3-9461bc3f4664",
+      "realReleaseGroupTitle": "Ethir Neechal"
+    },
+    {
+      "albumId": "6ae88271-df5d-4c8e-8f83-1858a3d11e76",
+      "title": "Over It",
+      "artistName": "Summer Walker",
+      "artistId": "ceb517a7-1971-44bc-ae18-a48db0356b16",
+      "storedMbid": "7f5be361-562b-4d5f-8e3c-26be440dcff5",
+      "storedType": "Album",
+      "realReleaseGroupId": "9ec40de4-2125-41c8-8a91-bb7141ff6337",
+      "realReleaseGroupTitle": "Over It"
+    },
+    {
+      "albumId": "6a42ad4a-1daf-486a-9a91-68fc6b6e1e50",
+      "title": "Tyler",
+      "artistName": "Tyler Collins",
+      "artistId": "d1cde018-677a-4680-b017-6f9aca94e8c1",
+      "storedMbid": "9c6a735b-5f81-49f1-ba91-bb569efa3b71",
+      "storedType": "Album",
+      "realReleaseGroupId": "739084b7-a0f0-382c-8103-ba9c48d37ccf",
+      "realReleaseGroupTitle": "Tyler"
+    },
+    {
+      "albumId": "ea37bc30-e857-4a00-9c44-b52d62ef4bb0",
+      "title": "For the First Time / What a Time to Be Alive",
+      "artistName": "Black Country, New Road",
+      "artistId": "d4117f93-76b3-4d92-856e-f3b52408e0cd",
+      "storedMbid": "4444d24c-bb27-4d28-add8-3f26073c335a",
+      "storedType": "Album",
+      "realReleaseGroupId": "968b13bb-026b-410e-831e-a7bb7418ea60",
+      "realReleaseGroupTitle": "For the First Time"
+    },
+    {
+      "albumId": "3a24264a-8996-478a-8b5a-734f8180201f",
+      "title": "Mélo",
+      "artistName": "Tiakola",
+      "artistId": "d67e7026-a771-470f-a23d-271dfdbfd831",
+      "storedMbid": "36013793-657b-48a5-8dee-6491cea1c379",
+      "storedType": "Album",
+      "realReleaseGroupId": "f7c8f02f-a70f-442e-b279-534ea779c2e7",
+      "realReleaseGroupTitle": "Mélo"
+    },
+    {
+      "albumId": "88e7119c-167d-434c-8eed-5f89453ec060",
+      "title": "J'AI MENTI.",
+      "artistName": "Damso",
+      "artistId": "dd0b49fc-056e-4bd9-aada-49f55ea3674f",
+      "storedMbid": "2607a510-6172-412b-a499-3452ef4571b5",
+      "storedType": "Album",
+      "realReleaseGroupId": "2bed8aed-50d8-47ea-984e-702bcf6518fc",
+      "realReleaseGroupTitle": "J'AI MENTI."
+    },
+    {
+      "albumId": "4c3d611e-3556-420c-8f83-99bb3f85d446",
+      "title": "HIT ME HARD AND SOFT",
+      "artistName": "Billie Eilish",
+      "artistId": "e4d25529-c222-46ad-892a-880b306f0a0d",
+      "storedMbid": "375595ef-428b-4fe4-90c2-85f8481810b0",
+      "storedType": "Album",
+      "realReleaseGroupId": "02a544b3-0459-42c7-bd9c-047162e7b67a",
+      "realReleaseGroupTitle": "HIT ME HARD AND SOFT"
+    },
+    {
+      "albumId": "6fc90a0d-9f88-4a72-90a0-9edaf834761c",
+      "title": "DeBÍ TiRAR MáS FOToS",
+      "artistName": "Bad Bunny",
+      "artistId": "e5225871-f1df-4cc9-9b17-361f54d89d03",
+      "storedMbid": "c9e6b642-a6d9-4b22-8ec1-16c47b6143fc",
+      "storedType": "Album",
+      "realReleaseGroupId": "b3073a10-2d7c-484c-b387-e49ae629da3d",
+      "realReleaseGroupTitle": "DeBÍ TiRAR MáS FOToS"
+    },
+    {
+      "albumId": "44e2a9e5-05b0-4c11-ae6a-11019af8b7e0",
+      "title": "channel ORANGE",
+      "artistName": "Frank Ocean",
+      "artistId": "e600dcf1-b2aa-4bdc-9798-c2a8dabbc94c",
+      "storedMbid": "9519df6d-f8a6-4b57-9ab4-ddb35aa7d09e",
+      "storedType": "Album",
+      "realReleaseGroupId": "f8f4167d-897c-4b25-a171-638374d1dfa4",
+      "realReleaseGroupTitle": "channel ORANGE"
+    },
+    {
+      "albumId": "481209da-c50b-494b-8deb-fe33958ff437",
+      "title": "Blonde",
+      "artistName": "Frank Ocean",
+      "artistId": "e600dcf1-b2aa-4bdc-9798-c2a8dabbc94c",
+      "storedMbid": "8294645a-f996-44b6-9060-7f189b9f59f3",
+      "storedType": "Album",
+      "realReleaseGroupId": "0da340a0-6ad7-4fc2-a272-6f94393a7831",
+      "realReleaseGroupTitle": "Blonde"
+    },
+    {
+      "albumId": "60cedf61-c772-4c9b-aaf1-1eead20c86a0",
+      "title": "unreleased, MISC.",
+      "artistName": "Frank Ocean",
+      "artistId": "e600dcf1-b2aa-4bdc-9798-c2a8dabbc94c",
+      "storedMbid": "952f5603-789b-4e87-8d8b-b30e5564be3c",
+      "storedType": "Album",
+      "realReleaseGroupId": "1a75468e-b63c-45ee-8824-ac61b21bffe8",
+      "realReleaseGroupTitle": "unreleased, MISC."
+    },
+    {
+      "albumId": "6ec263f8-7794-4da9-b919-924ce6b16626",
+      "title": "Live at FYF Fest",
+      "artistName": "Frank Ocean",
+      "artistId": "e600dcf1-b2aa-4bdc-9798-c2a8dabbc94c",
+      "storedMbid": "54c20b4d-e61e-4f8f-b428-41aa37bb8443",
+      "storedType": "Album",
+      "realReleaseGroupId": "85ab7e19-18dc-4af8-85a9-b7b325006f04",
+      "realReleaseGroupTitle": "Live at FYF Fest"
+    },
+    {
+      "albumId": "8a3416b2-04be-4400-98d3-0d6d9f165a45",
+      "title": "Endless",
+      "artistName": "Frank Ocean",
+      "artistId": "e600dcf1-b2aa-4bdc-9798-c2a8dabbc94c",
+      "storedMbid": "52a23fb7-98da-497f-b19c-f70707732142",
+      "storedType": "Album",
+      "realReleaseGroupId": "b69366e3-8145-405e-9220-c0a575f23474",
+      "realReleaseGroupTitle": "Endless"
+    },
+    {
+      "albumId": "b99d4942-82d6-4305-b08b-4c6bdbe524bf",
+      "title": "nostalgia,ULTRA.",
+      "artistName": "Frank Ocean",
+      "artistId": "e600dcf1-b2aa-4bdc-9798-c2a8dabbc94c",
+      "storedMbid": "4fe337a7-2e91-4475-be84-af9cf8ad2e3c",
+      "storedType": "Album",
+      "realReleaseGroupId": "c2dde373-d47b-45a9-8b7e-0a9f5f011ed4",
+      "realReleaseGroupTitle": "nostalgia,ULTRA."
+    },
+    {
+      "albumId": "fa40108d-7a08-48bb-bdee-1f776a7d7a48",
+      "title": "undocumented, RARE.",
+      "artistName": "Frank Ocean",
+      "artistId": "e600dcf1-b2aa-4bdc-9798-c2a8dabbc94c",
+      "storedMbid": "0514b9b4-a9fb-423d-92ac-27255c83e5bf",
+      "storedType": "Album",
+      "realReleaseGroupId": "b08e36e5-762e-4e81-81bd-0ea49996e461",
+      "realReleaseGroupTitle": "undocumented, RARE."
+    },
+    {
+      "albumId": "fecf97b4-cb07-4713-9233-1996f8a8ac39",
+      "title": "The Lonny Breaux Collection",
+      "artistName": "Frank Ocean",
+      "artistId": "e600dcf1-b2aa-4bdc-9798-c2a8dabbc94c",
+      "storedMbid": "60c834b3-a1f0-4a50-ac36-e77ca5000871",
+      "storedType": "Album",
+      "realReleaseGroupId": "143eb007-3c7f-4bf7-ae20-f1e3f8269035",
+      "realReleaseGroupTitle": "The Lonny Breaux Collection"
+    },
+    {
+      "albumId": "e5e611a4-1bc0-4ce5-933b-8fc5a5f52ffb",
+      "title": "open this wall",
+      "artistName": "berlioz",
+      "artistId": "ea62c49f-b492-4ab9-9477-21e94115d14b",
+      "storedMbid": "cb2890d9-93d4-41a8-ac0b-bfca87723747",
+      "storedType": "Album",
+      "realReleaseGroupId": "c6e01487-ee35-490d-acbc-d80c235d08a0",
+      "realReleaseGroupTitle": "open this wall"
+    },
+    {
+      "albumId": "9cee8163-0d3f-4468-965b-901350659e4b",
+      "title": "Deface the Currency",
+      "artistName": "The Messthetics",
+      "artistId": "ebf842be-b5bb-497a-b5f3-bbb68983f5ed",
+      "storedMbid": "3921f189-3072-4f2d-b894-d5ccfcd9fa04",
+      "storedType": "Album",
+      "realReleaseGroupId": "a0c213c7-a743-4b26-b129-b597f66a2709",
+      "realReleaseGroupTitle": "Deface the Currency"
+    },
+    {
+      "albumId": "b8e006c0-2d25-494a-aeef-00b045f8b483",
+      "title": "The Miseducation of Lauryn Hill",
+      "artistName": "Lauryn Hill",
+      "artistId": "ef0c10b5-cad4-4198-af25-8ba2f193aa4c",
+      "storedMbid": "fd73e3d1-c162-46c6-a904-1fd77e6bde17",
+      "storedType": "Album",
+      "realReleaseGroupId": "8691d12c-abd8-385c-b1eb-d841190124f7",
+      "realReleaseGroupTitle": "The Miseducation of Lauryn Hill"
+    },
+    {
+      "albumId": "5dd2a4b2-d895-4be8-b147-73d544da84af",
+      "title": "Bitume Caviar, Vol. 2",
+      "artistName": "ISHA",
+      "artistId": "f188bc38-03fa-45e2-9a09-250d8aae6925",
+      "storedMbid": "a39452a7-f697-452c-80cb-45f847956ff8",
+      "storedType": "Album",
+      "realReleaseGroupId": "46c3977f-198e-410b-8a8c-d1cc206761bf",
+      "realReleaseGroupTitle": "Bitume Caviar, Vol. 2"
+    },
+    {
+      "albumId": "70db37f5-135a-44ac-9b67-f7c4bfb307fa",
+      "title": "Drôle d'oiseau",
+      "artistName": "ISHA",
+      "artistId": "f188bc38-03fa-45e2-9a09-250d8aae6925",
+      "storedMbid": "58182eae-f0c3-45c9-a0f9-043910d7f4fe",
+      "storedType": "Album",
+      "realReleaseGroupId": "2b72892c-a41a-444c-bf4a-f85dbc457947",
+      "realReleaseGroupTitle": "Drôle d'oiseau"
+    },
+    {
+      "albumId": "816c68b9-1421-4656-8007-aebd58099265",
+      "title": "Bitume Caviar, Vol. 01",
+      "artistName": "ISHA",
+      "artistId": "f188bc38-03fa-45e2-9a09-250d8aae6925",
+      "storedMbid": "55ab21a1-6cb5-459b-949b-8ef2c8fecc66",
+      "storedType": "Album",
+      "realReleaseGroupId": "19374775-d958-4115-b9af-8f7563152e9b",
+      "realReleaseGroupTitle": "Bitume Caviar, Vol. 01"
+    },
+    {
+      "albumId": "fab27ce5-d108-44fa-bdc2-d2a3a9d96a18",
+      "title": "Bitume Caviar (Vol.1)",
+      "artistName": "ISHA",
+      "artistId": "f188bc38-03fa-45e2-9a09-250d8aae6925",
+      "storedMbid": "1a095d29-1953-43b5-902f-cfb7373a4852",
+      "storedType": "Album",
+      "realReleaseGroupId": "19374775-d958-4115-b9af-8f7563152e9b",
+      "realReleaseGroupTitle": "Bitume Caviar, Vol. 01"
+    },
+    {
+      "albumId": "9828832c-8c5b-4ba7-bdf1-f1158617140b",
+      "title": "PRETTY DOLLCORPSE",
+      "artistName": "Ptite Soeur",
+      "artistId": "f1a50d3c-5baf-475b-a693-163c8f1948fd",
+      "storedMbid": "5cfb3294-70bf-430f-a0c9-3357770b80b4",
+      "storedType": "Album",
+      "realReleaseGroupId": "b30f82a0-de30-4a12-a104-0a4617166101",
+      "realReleaseGroupTitle": "PRETTY DOLLCORPSE"
+    },
+    {
+      "albumId": "8b0102c3-bc56-438d-95c4-4fd2b4636e89",
+      "title": "YAMOTO",
+      "artistName": "Makala",
+      "artistId": "f40f34da-f2ec-4be2-b045-568763ee55a8",
+      "storedMbid": "530eba4d-c183-47d5-9a79-b22e5f1fda00",
+      "storedType": "Album",
+      "realReleaseGroupId": "244c1f54-8663-4e6c-a5fe-e8816bc2535b",
+      "realReleaseGroupTitle": "YAMOTO"
+    },
+    {
+      "albumId": "cdbd0d3d-3674-4772-9247-fa10050d5c65",
+      "title": "Dire Straits",
+      "artistName": "Dire Straits",
+      "artistId": "f535a545-2b0a-4348-aac7-a91e9a2178fc",
+      "storedMbid": "067c4fc9-b8bb-4038-a684-53fba25a6a2e",
+      "storedType": "Album",
+      "realReleaseGroupId": "0c9bc273-a9e9-3290-b423-c61b9f8d20bc",
+      "realReleaseGroupTitle": "Dire Straits"
+    },
+    {
+      "albumId": "80f056e3-da2d-4744-b121-f0900a40044f",
+      "title": "IGOR",
+      "artistName": "Tyler, The Creator",
+      "artistId": "f69502e9-d0ac-4559-8551-0cafe7341970",
+      "storedMbid": "8fc14822-33d9-4541-94e5-b5fedc7810ed",
+      "storedType": "Album",
+      "realReleaseGroupId": "0f1b9e07-b38b-4bba-9794-55e0924d7177",
+      "realReleaseGroupTitle": "IGOR"
+    },
+    {
+      "albumId": "02b28c01-3bc9-4496-9e4d-e9a92d586a46",
+      "title": "In the Aeroplane Over the Sea",
+      "artistName": "Neutral Milk Hotel",
+      "artistId": "f88514a6-9614-4d67-a93c-ade5d76b9010",
+      "storedMbid": "b9f77c8d-882f-35e9-9229-8940cb125524",
+      "storedType": "Album",
+      "realReleaseGroupId": "8f310800-045b-3e12-8268-50b3d33a2267",
+      "realReleaseGroupTitle": "In the Aeroplane Over the Sea"
+    },
+    {
+      "albumId": "1668bed3-ff56-4b23-86f4-87c36d902348",
+      "title": "London’s Saviour",
+      "artistName": "fakemink",
+      "artistId": "f9ab58ec-4587-441e-841c-77c5fce1a976",
+      "storedMbid": "59863fba-2751-4db0-9cd4-c5d3290c5fec",
+      "storedType": "Album",
+      "realReleaseGroupId": "d3d6f96b-b0a2-4b96-adbc-71c77b033fc1",
+      "realReleaseGroupTitle": "London’s Saviour"
+    },
+    {
+      "albumId": "a9b1439c-aec5-4da7-b451-5ff1d9b7b753",
+      "title": "The Boy who cried Terrified .",
+      "artistName": "fakemink",
+      "artistId": "f9ab58ec-4587-441e-841c-77c5fce1a976",
+      "storedMbid": "26426b9f-3adb-4e93-8b00-b48cbd2522f5",
+      "storedType": "Album",
+      "realReleaseGroupId": "0fa58f21-bfa9-4c81-bfae-8b50c817d2a1",
+      "realReleaseGroupTitle": "The Boy who cried Terrified ."
+    },
+    {
+      "albumId": "1281492d-a6a0-4924-96d2-e77e8fc08317",
+      "title": "J.000.$",
+      "artistName": "Josman",
+      "artistId": "fc745ce5-5e35-44cb-878f-b09e77127c99",
+      "storedMbid": "0753f072-6bd0-454c-84b7-767f10231fec",
+      "storedType": "Album",
+      "realReleaseGroupId": "1cfd42c0-2bbf-4ea2-8d2f-2e3e7b5deea5",
+      "realReleaseGroupTitle": "J.000.$"
+    },
+    {
+      "albumId": "3a4d1684-d97a-4893-be1f-6f0d5e0f932d",
+      "title": "SPLIT",
+      "artistName": "Josman",
+      "artistId": "fc745ce5-5e35-44cb-878f-b09e77127c99",
+      "storedMbid": "eb5e7693-8f2c-40f7-a403-66ae9cadf1d2",
+      "storedType": "Album",
+      "realReleaseGroupId": "eb17e579-2c9b-45a0-b8a9-b182af175785",
+      "realReleaseGroupTitle": "SPLIT"
+    },
+    {
+      "albumId": "56d6c7b6-d87f-4707-93a1-994e9aca4168",
+      "title": "DOM PERIGNON CRYING",
+      "artistName": "Josman",
+      "artistId": "fc745ce5-5e35-44cb-878f-b09e77127c99",
+      "storedMbid": "749f3c4a-04ce-4ca0-9eb8-c2ae52ae55d3",
+      "storedType": "Album",
+      "realReleaseGroupId": "74b4548e-d54a-4200-bc1e-147fe148be05",
+      "realReleaseGroupTitle": "DOM PERIGNON CRYING"
+    },
+    {
+      "albumId": "aa8bb477-14d2-457c-bfb7-30b4f260dede",
+      "title": "M.A.N",
+      "artistName": "Josman",
+      "artistId": "fc745ce5-5e35-44cb-878f-b09e77127c99",
+      "storedMbid": "85734b0f-68d2-4cc8-b173-508618812905",
+      "storedType": "Album",
+      "realReleaseGroupId": "6dc8e640-7068-4788-9504-0610e73ff24c",
+      "realReleaseGroupTitle": "M.A.N"
+    },
+    {
+      "albumId": "d495d8be-69d9-456e-867f-3028f9b9ad64",
+      "title": "HHHH",
+      "artistName": "Josman",
+      "artistId": "fc745ce5-5e35-44cb-878f-b09e77127c99",
+      "storedMbid": "058ad539-2309-4aaa-b56c-380d6ecbefb1",
+      "storedType": "Album",
+      "realReleaseGroupId": "c113ce34-5eea-40cc-b883-71655519aa62",
+      "realReleaseGroupTitle": "HHHH"
+    }
+  ],
+  "mbidNotFoundAnywhere": [
+    {
+      "albumId": "0ddaf3a1-4aca-41a2-a67c-744f50cec078",
+      "title": "rema",
+      "artistName": "Rema",
+      "artistId": "2deb2395-c597-43b5-bef1-c2ed04395932",
+      "storedMbid": "f54fb2b0-65c3-4f69-b3f4-b23564c55a2a",
+      "storedType": "Album",
+      "resolvedToDifferentArtist": false
+    },
+    {
+      "albumId": "4653a2f9-bf68-4c73-91c1-cf0d4508b8d3",
+      "title": "GenY⁵",
+      "artistName": "geny⁸⁹",
+      "artistId": "4b1e971d-4137-4e89-a339-9cf82b11194a",
+      "storedMbid": "ee407db5-964a-4fec-b2bc-07a0535cac4a",
+      "storedType": "Album",
+      "resolvedToDifferentArtist": false
+    },
+    {
+      "albumId": "b1d56fa5-08b1-427a-962e-61d788c200b9",
+      "title": "BULLY (Deluxe)",
+      "artistName": "Ye",
+      "artistId": "c6ba3593-1385-4ece-8486-666263c14a27",
+      "storedMbid": "b04ac6b1-f908-48e4-b67f-8d5d15db1d43",
+      "storedType": "Album",
+      "resolvedToDifferentArtist": false
+    }
+  ],
+  "typeMismatch": [
+    {
+      "albumId": "380ab3b5-a5d3-4d2a-abd2-dede1d5fc438",
+      "title": "Shay",
+      "artistName": "Shay",
+      "artistId": "15568fcd-4132-43af-b80d-9726a05c31d1",
+      "mbid": "9d239d70-9a50-49ad-bf50-702ba701408b",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "Shay"
+    },
+    {
+      "albumId": "50f8a706-0b22-43c9-8654-0b0b0863c125",
+      "title": "Once in a LIVEtime",
+      "artistName": "Dream Theater",
+      "artistId": "18f7b31d-f2e2-4217-97f0-3a3ee213a7a5",
+      "mbid": "3d54b846-c980-3c7d-94f7-0371b60d8dc3",
+      "storedType": "Album",
+      "expectedType": "Live",
+      "realTitle": "Once in a LIVEtime"
+    },
+    {
+      "albumId": "e8e89094-04b0-4cbf-ae2d-d452f6230bdb",
+      "title": "Récital public à Paris",
+      "artistName": "Mouloudji",
+      "artistId": "1a63ea28-ebaf-41b0-aae9-e41cb54fcd40",
+      "mbid": "d71ad1fc-8672-3bb2-ab1d-40ce6f491c6c",
+      "storedType": "Album",
+      "expectedType": "Live",
+      "realTitle": "Récital public à Paris"
+    },
+    {
+      "albumId": "50aae750-f222-4ecc-aaaf-8f288232642d",
+      "title": "The Real Thing",
+      "artistName": "Faith No More",
+      "artistId": "236d4f3a-8555-4cf3-9d10-9e00f2b54c21",
+      "mbid": "5b6fc942-a05b-443c-b3f4-ac529ce8e17d",
+      "storedType": "Album",
+      "expectedType": "Live",
+      "realTitle": "The Real Thing"
+    },
+    {
+      "albumId": "e7702585-4616-4c14-839e-dd00e9f95f8d",
+      "title": "Love Songs Tour",
+      "artistName": "Vanessa Paradis",
+      "artistId": "326ef559-593e-4b3f-b3af-e8eddd92ebcd",
+      "mbid": "0584a58e-f931-4669-bfc4-9f05617088ca",
+      "storedType": "Album",
+      "expectedType": "Live",
+      "realTitle": "Love Songs Tour"
+    },
+    {
+      "albumId": "ecaffae6-8028-4cf7-b846-7f92263f0fa8",
+      "title": "Be Right Back",
+      "artistName": "Jorja Smith",
+      "artistId": "33a3e185-b92b-48a6-aad4-469525ad2b3a",
+      "mbid": "84f9e2bc-3c8d-4372-81bf-157735538ca6",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "Be Right Back"
+    },
+    {
+      "albumId": "f72a0e27-97e0-4ae3-bd92-4c47f1631ef6",
+      "title": "The Spinning the Wheel E.P.",
+      "artistName": "George Michael",
+      "artistId": "3dbd6a99-6000-448f-8bea-0386f3ac5ddf",
+      "mbid": "9db62ee9-2708-3c92-a268-27818c894351",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "The Spinning the Wheel E.P."
+    },
+    {
+      "albumId": "2c9ed497-7809-49b1-9b64-467c1346cf5b",
+      "title": "TRANSITIONS",
+      "artistName": "Naïka",
+      "artistId": "4700d630-d4de-493f-9414-8939d669228c",
+      "mbid": "d2328876-de06-46b0-8083-4651a6fb22f8",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "TRANSITIONS"
+    },
+    {
+      "albumId": "ab4eed33-e443-4892-8690-2c099f2c3338",
+      "title": "Lost in Paradïse, Part 1",
+      "artistName": "Naïka",
+      "artistId": "4700d630-d4de-493f-9414-8939d669228c",
+      "mbid": "05608174-3b05-4623-826b-a8fab6ba2f20",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "Lost in Paradïse, Part 1"
+    },
+    {
+      "albumId": "d7090c44-905d-4f1e-91ae-ce1103724399",
+      "title": "Lost in Paradïse, Pt. 2",
+      "artistName": "Naïka",
+      "artistId": "4700d630-d4de-493f-9414-8939d669228c",
+      "mbid": "da6f897e-c46e-4075-bc9f-057176791cf8",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "Lost in Paradïse, Pt. 2"
+    },
+    {
+      "albumId": "8e53f24c-cf58-4834-8c39-1a9d414e234c",
+      "title": "Split Decision",
+      "artistName": "Dave",
+      "artistId": "4d1ce3f2-a32b-4c83-bcb7-334398d85a2d",
+      "mbid": "45982c06-25b3-4865-a455-a73e0f0136bf",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "Split Decision"
+    },
+    {
+      "albumId": "5fc69d7c-36ae-4cbe-9522-ebd8481273e1",
+      "title": "The Road to Hell & Back",
+      "artistName": "Chris Rea",
+      "artistId": "52b0a8fd-67c9-4966-981b-45c98d45faae",
+      "mbid": "9b3c8abf-759b-3419-afc8-e596f0acb2a7",
+      "storedType": "Album",
+      "expectedType": "Live",
+      "realTitle": "The Road to Hell & Back"
+    },
+    {
+      "albumId": "f7ab9e89-7236-44dc-acae-4a2c71eb216c",
+      "title": "Franchement !",
+      "artistName": "TRIANGLE DES BERMUDES",
+      "artistId": "5a70891d-4431-4164-9790-3ff21468ea9a",
+      "mbid": "18811503-ff55-4c58-b3ca-2a8e13a131aa",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "Franchement !"
+    },
+    {
+      "albumId": "dfdc31a7-def8-4584-9c5e-41553a2da0a3",
+      "title": "Freedom.",
+      "artistName": "Justin Bieber",
+      "artistId": "5aeae7d1-53bf-4a0a-9d52-d5ef7bd505b0",
+      "mbid": "866674da-d46a-43d5-aae2-bb3a25070faf",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "Freedom."
+    },
+    {
+      "albumId": "c917e8b4-57a5-4d6c-95ff-f14f52c58204",
+      "title": "GRAND LUXXXE Vol.1",
+      "artistName": "Zek",
+      "artistId": "64611700-b2df-4d17-a691-fd43a8ce3843",
+      "mbid": "6de995ff-f19f-42e7-b936-ad7bda18bdc9",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "GRAND LUXXXE Vol.1"
+    },
+    {
+      "albumId": "9a6c8932-e7eb-4b3c-9040-2cbe1f793404",
+      "title": "Love Letters / رسائل حب",
+      "artistName": "Saint Levant",
+      "artistId": "66a077b8-b9cf-4395-917c-4b2d40ee8520",
+      "mbid": "bb8ada3f-c79b-457b-881f-1d1ae0778f33",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "Love Letters / رسائل حب"
+    },
+    {
+      "albumId": "ef5c481b-c778-4f01-8a26-cd6e7f830669",
+      "title": "2ème Mouvement",
+      "artistName": "H JeuneCrack",
+      "artistId": "7c34c892-2936-4066-9276-b9a4f0a7fa40",
+      "mbid": "162fdaed-5a4a-42e8-9c43-7d1e42f3978f",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "2ème Mouvement"
+    },
+    {
+      "albumId": "fad71384-6c41-4d2b-865b-8e891aa6a763",
+      "title": "1er Mouvement",
+      "artistName": "H JeuneCrack",
+      "artistId": "7c34c892-2936-4066-9276-b9a4f0a7fa40",
+      "mbid": "5e6eb302-f0f4-4ad3-916f-a47b18aebad2",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "1er Mouvement"
+    },
+    {
+      "albumId": "6e8f2c48-7662-46ef-b615-d4c3cc9fe8ef",
+      "title": "NQNT 2",
+      "artistName": "Vald",
+      "artistId": "82ca4a5c-a542-495c-8071-f2cb21e515ad",
+      "mbid": "ce6c77ba-c208-49e9-a015-a2d5da58b311",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "NQNT 2"
+    },
+    {
+      "albumId": "732111a2-5b0b-4c1a-b4df-cba28a50451d",
+      "title": "My Eyes Only",
+      "artistName": "RnBoi",
+      "artistId": "8785296c-adc7-4667-a3a1-d841ee01a783",
+      "mbid": "7a632bec-bd0e-49af-928e-47133180b3cf",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "My Eyes Only"
+    },
+    {
+      "albumId": "becfb607-549f-4edd-a8b9-9a2d2361d351",
+      "title": "Tom's Diner",
+      "artistName": "Kenny Blake",
+      "artistId": "8b122f65-6219-410f-8d0b-313825551f27",
+      "mbid": "97a4ffbb-b5a2-33fb-9064-a7a213423219",
+      "storedType": "Album",
+      "expectedType": "Single",
+      "realTitle": "Tom's Diner"
+    },
+    {
+      "albumId": "f9c3ecbb-ce09-4984-8d95-3c549f70b3c2",
+      "title": "Station Paradiso",
+      "artistName": "a6el",
+      "artistId": "96632d49-1a10-486b-bbba-52b30e5a4d96",
+      "mbid": "3cb8e346-c195-4ca3-befd-a8d2cbb6cffc",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "Station Paradiso"
+    },
+    {
+      "albumId": "afccb6ce-3fdd-45cb-9199-e946c819cd49",
+      "title": "100 GIGS",
+      "artistName": "Drake",
+      "artistId": "9dd6a315-abd6-4acb-b6f8-56328b215477",
+      "mbid": "4906f293-e7a2-4f95-a759-6df70611f20e",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "100 GIGS"
+    },
+    {
+      "albumId": "b951c361-8e26-4844-81c4-9f11d59cd561",
+      "title": "1.6 (LIVE SESSION)",
+      "artistName": "TIF",
+      "artistId": "a888b473-a405-479b-a8fe-9f182d2489cd",
+      "mbid": "f6c9cf71-97e5-425d-aaac-a56484b780c2",
+      "storedType": "Album",
+      "expectedType": "Live",
+      "realTitle": "1.6 (LIVE SESSION)"
+    },
+    {
+      "albumId": "d3c07dd5-2dfc-47e0-8c78-86c774792357",
+      "title": "Euforia",
+      "artistName": "Fito Páez",
+      "artistId": "ab4e3ed8-bed3-4c34-9911-46fedce497b1",
+      "mbid": "f38b7428-325b-35af-a520-5970c97101e5",
+      "storedType": "Album",
+      "expectedType": "Live",
+      "realTitle": "Euforia"
+    },
+    {
+      "albumId": "8aa25404-9125-4640-b725-01743d1a1b68",
+      "title": "Mercy",
+      "artistName": "Laylow",
+      "artistId": "b2cccff9-9fca-40bd-a3d7-7a13bcbc15d5",
+      "mbid": "2785fce9-63ab-43e0-8ab0-16f482fe3562",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "Mercy"
+    },
+    {
+      "albumId": "09a40492-e367-400f-8ce9-6e324225a2ff",
+      "title": "14 minutes",
+      "artistName": "Dominic Fike",
+      "artistId": "b62d4957-e1dc-40a3-a7f3-b0a613beb0f9",
+      "mbid": "1350570e-5a48-4c1c-a2ee-f43611ffd20e",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "14 minutes"
+    },
+    {
+      "albumId": "32291bce-a077-4749-8472-d89cc7fff8ee",
+      "title": "Here are the first 3 songs from my mixtape, Rocket",
+      "artistName": "Dominic Fike",
+      "artistId": "b62d4957-e1dc-40a3-a7f3-b0a613beb0f9",
+      "mbid": "50094c3b-76c3-46b5-81b0-c477ec79a60a",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "Here are the first 3 songs from my mixtape, Rocket"
+    },
+    {
+      "albumId": "a1424b47-8d7e-4cee-ae80-36f541a2c0f3",
+      "title": "Don’t Forget About Me, Demos",
+      "artistName": "Dominic Fike",
+      "artistId": "b62d4957-e1dc-40a3-a7f3-b0a613beb0f9",
+      "mbid": "d8d6b92f-be29-4e93-aedc-3015649394ab",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "Don't Forget About Me, Demos"
+    },
+    {
+      "albumId": "a2a7be26-cf80-4e89-a893-964a66ed7b5b",
+      "title": "CRUISE",
+      "artistName": "Ashh",
+      "artistId": "bfac766f-2b6b-45b0-acd2-a783dd8aa47f",
+      "mbid": "2e36353a-2f3f-4874-98fd-e262622f9ed4",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "CRUISE"
+    },
+    {
+      "albumId": "f1298af8-e665-4157-827e-4c75603d09fc",
+      "title": "The Fame Monster",
+      "artistName": "Lady Gaga",
+      "artistId": "c65b5c12-efdb-4d93-9c3c-5ab184177d2e",
+      "mbid": "20b4c8b3-e922-44a3-90e8-fa00acad8ed4",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "The Fame Monster"
+    },
+    {
+      "albumId": "d88d5917-b509-43aa-8e48-2db50ae2ecf6",
+      "title": "Luka",
+      "artistName": "Suzanne Vega",
+      "artistId": "ed030961-623d-47ee-bdb6-3ff35a9c835d",
+      "mbid": "70048726-8b5a-3af5-ab0a-1055674eb4cc",
+      "storedType": "Album",
+      "expectedType": "Single",
+      "realTitle": "Luka"
+    },
+    {
+      "albumId": "c7883e56-bb3b-4038-a4dd-0d7586d9b7da",
+      "title": "Doom",
+      "artistName": "Asinine",
+      "artistId": "f18a003e-8881-489f-ba82-4b48c7d8bb2a",
+      "mbid": "bd1b4cf0-b26c-41b2-90ba-aacd70c730e1",
+      "storedType": "Album",
+      "expectedType": "EP",
+      "realTitle": "Doom"
+    },
+    {
+      "albumId": "a6bbaed4-ddf2-4028-8f2d-f51321fa9676",
+      "title": "And All That Could Have Been",
+      "artistName": "Nine Inch Nails",
+      "artistId": "f37b72c9-aee8-4753-be90-f4aa44a790ec",
+      "mbid": "36be9276-38fb-36eb-a116-9b2fc725d2e6",
+      "storedType": "Album",
+      "expectedType": "Live",
+      "realTitle": "And All That Could Have Been"
+    },
+    {
+      "albumId": "88025701-f8c3-4716-bc40-7e744712a7d7",
+      "title": "Shoplifters of the World Unite",
+      "artistName": "The Smiths",
+      "artistId": "f4656531-42fc-4eb2-b929-7ccfd261109d",
+      "mbid": "6318cb6a-20b7-33ce-8d75-7987a9d3b37c",
+      "storedType": "Album",
+      "expectedType": "Single",
+      "realTitle": "Shoplifters of the World Unite"
+    },
+    {
+      "albumId": "812453d4-ee21-4511-9fec-81ae3298e33b",
+      "title": "Live",
+      "artistName": "Corneille",
+      "artistId": "fb5eadf2-4bdb-4c10-99f3-26f44d12d2fe",
+      "mbid": "a6a4316b-2365-3536-b9ae-70d8074175af",
+      "storedType": "Album",
+      "expectedType": "Live",
+      "realTitle": "Live"
+    },
+    {
+      "albumId": "d00a0a70-b35a-4466-ad8b-f8f0aee7df34",
+      "title": "Paranoid",
+      "artistName": "Black Sabbath",
+      "artistId": "ffe493b3-c3c5-4cea-9398-d81de9208be5",
+      "mbid": "0a4484de-f894-4629-bf81-cf30f27bd8c4",
+      "storedType": "Single",
+      "expectedType": "Live",
+      "realTitle": "Paranoid"
+    }
+  ]
+}

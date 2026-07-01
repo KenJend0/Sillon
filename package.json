@@ -1,5 +1,8 @@
 {
-  "devDependencies": {
-    "supabase": "^2.76.11"
-  }
+  "name": "waveform",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
 }

@@ -11,10 +11,10 @@ Journal musical social. Suis tes écoutes, note tes albums et titres, découvre 
 | Frontend | Next.js 15 (App Router) |
 | Auth & BDD | Supabase (Postgres + Auth + Storage) |
 | Styles | Tailwind CSS v4 |
-| Données musicales | MusicBrainz API |
+| Données musicales | MusicBrainz API, Last.fm API, iTunes Search API, Deezer API |
 | Déploiement | Vercel |
 
-Pas de backend custom. Tout passe par des **Server Actions** Next.js et le client Supabase côté serveur.
+Pas de backend custom. Toute la logique passe par des **Server Actions** Next.js et le client Supabase côté serveur.
 
 ---
 
@@ -45,17 +45,18 @@ Variables requises :
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_KEY=eyJ...      # serveur uniquement — ne jamais préfixer NEXT_PUBLIC_
+SUPABASE_SERVICE_KEY=eyJ...
 ```
 
 Variables optionnelles :
 
 ```env
-UPSTASH_REDIS_REST_URL=https://...
+LASTFM_API_KEY=...                  # enrichissement genres + descriptions
+SPOTIFY_CLIENT_ID=...               # liens streaming Spotify
+SPOTIFY_CLIENT_SECRET=...           # liens streaming Spotify
+UPSTASH_REDIS_REST_URL=https://...  # rate limiting (désactivé si absent)
 UPSTASH_REDIS_REST_TOKEN=...
 ```
-
-Sans elles, le rate limiting est désactivé (mode fail-open).
 
 ### Lancer en dev
 
@@ -71,51 +72,59 @@ npm run dev
 
 ```
 waveform/
-├── frontend/                   # Application Next.js 15
+├── frontend/                        # Application Next.js 15
 │   ├── app/
-│   │   ├── actions/            # Server Actions (logique métier)
-│   │   ├── api/                # Route Handlers Next.js
-│   │   ├── add/                # Ajouter une écoute (album ou titre)
-│   │   ├── albums/[id]/        # Page album
-│   │   ├── artists/[id]/       # Page artiste
-│   │   ├── auth/               # Login / Signup
-│   │   ├── diary/              # Journal + entrée détaillée
-│   │   ├── explore/            # Découverte (tendances, listes, suggestions)
-│   │   ├── feed/               # Fil d'activité
-│   │   ├── lists/              # Listes d'albums
-│   │   ├── me/                 # Profil personnel
-│   │   ├── search/             # Page résultats de recherche
-│   │   ├── settings/           # Paramètres & favoris
-│   │   ├── tracks/[id]/        # Page titre
-│   │   └── u/[username]/       # Profil public + followers/following
-│   ├── components/             # Composants React
-│   │   ├── avatars/            # 12 avatars SVG générés
-│   │   ├── feed/cards/         # Cartes du feed par type
-│   │   ├── icons/              # Icônes custom
-│   │   ├── profile/            # Composants profil
-│   │   └── social/             # Follow button
+│   │   ├── actions/                 # Server Actions (logique métier)
+│   │   ├── api/                     # Route Handlers Next.js
+│   │   ├── add/                     # Ajouter une écoute (album ou titre)
+│   │   ├── albums/[id]/             # Page album
+│   │   ├── artists/[id]/            # Page artiste
+│   │   ├── auth/                    # Login / Signup / Reset
+│   │   ├── diary/[entry_id]/        # Entrée journal album
+│   │   ├── explore/                 # Découverte (tendances, suggestions)
+│   │   ├── feed/                    # Fil d'activité
+│   │   ├── lists/                   # Listes d'albums
+│   │   ├── me/                      # Profil personnel + stats
+│   │   ├── search/                  # Résultats de recherche
+│   │   ├── settings/                # Paramètres & favoris
+│   │   ├── track-diary/[entry_id]/  # Entrée journal titre
+│   │   ├── tracks/[id]/             # Page titre
+│   │   └── u/[username]/            # Profil public + followers/following
+│   ├── components/
+│   │   ├── album/                   # CoverImage, AlbumHero, Reviews, ImportButton…
+│   │   ├── artist/                  # ArtistPageContent, ArtistAlbumsSection
+│   │   ├── track/                   # TrackReviewSection, TrackSearchForDiary…
+│   │   ├── user/                    # UserCard, FollowersList, FollowingList…
+│   │   ├── feed/cards/              # Cartes du feed par type d'événement
+│   │   ├── explore/                 # TrendingSection, DiscoverCard, PourToiSection…
+│   │   ├── lists/                   # ListCard, ListSwitcher, AddToListButton
+│   │   ├── profile/                 # ProfileHeader, ProfileTabs, DiaryList…
+│   │   ├── layout/                  # Header, BottomNav, SearchOverlay, AuthenticatedLayout…
+│   │   ├── ui/                      # Toast, BottomSheet, StarRating, BackButton…
+│   │   ├── auth/                    # AuthForm, UnauthCTA
+│   │   ├── social/                  # FollowButton, ProfileActionsMenu
+│   │   ├── admin/                   # AdminSpotifyEdit, AdminRefreshCover
+│   │   ├── legal/                   # LegalSection, LegalPageShell
+│   │   ├── background/              # NavigationTracker, ServiceWorkerRegistration…
+│   │   ├── onboarding/              # OnboardingFlow
+│   │   ├── avatars/                 # 12 avatars SVG
+│   │   └── icons/                   # Icônes custom
 │   ├── lib/
-│   │   ├── supabase/           # Clients Supabase (client + server)
-│   │   ├── searchRanking.ts    # computeRank + mergeAndRank (partagé overlay/page)
-│   │   ├── recentSearches.ts   # localStorage recent searches
-│   │   ├── AuthContext.tsx     # Contexte auth global
-│   │   └── ...
+│   │   ├── supabase/                # Clients Supabase (client + server + admin)
+│   │   ├── AuthContext.tsx          # Contexte auth global
+│   │   ├── searchRanking.ts         # computeRank + mergeAndRank
+│   │   └── …
+│   ├── hooks/                       # React hooks personnalisés
 │   ├── types/
-│   │   └── database.ts         # Types générés depuis Supabase
+│   │   └── database.ts              # Types générés depuis Supabase
 │   └── public/
-│       ├── robots.txt
-│       └── sitemap.xml
-├── supabase_migrations/        # Migrations SQL à appliquer via le dashboard Supabase
-│   ├── supabase_schema.sql     # Schéma de référence complet + RLS
-│   ├── supabase_migration_fulltext_search.sql   # Colonnes tsvector (simple + unaccent)
-│   ├── supabase_migration_trgm.sql              # pg_trgm + RPCs fuzzy search
-│   ├── supabase_migration_search_cache.sql      # Cache MB 24h
-│   └── ...                     # Autres migrations par feature
-├── scripts/
-│   └── generate-supabase-types.sh / .ps1   # Régénère frontend/types/database.ts
-├── ml/                         # Scripts Python (recommandations, ML)
-├── .gitignore
-└── README.md
+├── supabase_migrations/             # Migrations SQL (dashboard Supabase)
+│   ├── supabase_schema.sql          # Schéma complet + RLS
+│   └── …                            # Migrations par feature
+├── scripts/                         # generate-supabase-types.sh / .ps1
+├── design/                          # Maquettes HTML du design system
+├── ml/                              # Scripts Python (recommandations)
+└── docs/                            # Documentation interne
 ```
 
 ---
@@ -132,37 +141,31 @@ Le schéma complet est dans [`supabase_migrations/supabase_schema.sql`](supabase
 | `albums` | Catalogue albums, FK → `artists` |
 | `artists` | Artistes |
 | `tracks` | Pistes, FK → `albums` |
-| `diary_entries` | Écoutes/reviews d'un user pour un album |
-| `track_diary_entries` | Écoutes/reviews d'un user pour un titre |
-| `diary_likes` | Likes sur les entrées |
+| `diary_entries` | Écoutes/reviews album par user |
+| `track_diary_entries` | Écoutes/reviews titre par user |
 | `diary_comments` | Commentaires sur les entrées |
 | `follows` | Relations sociales |
 | `feed_events` | Fil d'activité (fan-out en écriture) |
-| `notifications` | Notifications (like, comment, follow, reco) |
-| `saved_albums` | Albums sauvegardés |
-| `user_favorite_albums` | Top 3 albums du profil (position 1–3) |
-| `lists` | Listes d'albums créées par les users |
-| `list_items` | Albums dans une liste |
+| `lists` | Listes d'albums |
+| `genres` | Genres musicaux (source MB + Last.fm + votes communauté) |
+| `album_metadata` | Descriptions, liens streaming, stats Last.fm |
 | `recommendations` | Recommandations entre users |
-| `discover_items` | Algo de découverte |
-| `search_cache` | Cache des résultats MusicBrainz (24h) |
+| `search_cache` | Cache résultats MusicBrainz (24h) |
 
 **Vue :** `album_stats` — listeners, reviews, note moyenne par album.
 
 ### RLS
 
-Activé sur toutes les tables. Les policies sont dans `supabase_schema.sql`. Les écritures système (fan-out feed, discover) utilisent la clé service role côté serveur uniquement.
+Activé sur toutes les tables. Les policies sont dans `supabase_schema.sql`. Les écritures système (fan-out feed, enrichissement) utilisent la clé service role côté serveur uniquement.
 
 ### Migrations
 
-Les migrations sont dans `supabase_migrations/` et s'appliquent manuellement via l'éditeur SQL du dashboard Supabase. Aucun outil de migration automatique n'est utilisé.
-
-Migrations à appliquer pour un nouveau projet (dans l'ordre) :
+Les migrations s'appliquent manuellement via l'éditeur SQL du dashboard Supabase, dans cet ordre :
 
 1. `supabase_schema.sql` — schéma de base
-2. `supabase_migration_fulltext_search.sql` — recherche plein texte (nécessite l'extension `unaccent`)
+2. `supabase_migration_fulltext_search.sql` — recherche plein texte (nécessite `unaccent`)
 3. `supabase_migration_trgm.sql` — fuzzy search via pg_trgm
-4. `supabase_migration_search_cache.sql` — cache des résultats MB
+4. `supabase_migration_search_cache.sql` — cache résultats MB
 5. Les autres migrations par ordre de dépendance feature
 
 ### Régénérer les types TypeScript
@@ -185,41 +188,43 @@ Supabase Auth (email/password). Côté serveur : `getAuthUser()` via cookies SSR
 
 ### Server Actions
 
-Toute la logique métier est dans `frontend/app/actions/`. Pas d'API REST custom.
+Toute la logique métier est dans `frontend/app/actions/` :
 
 ```
 actions/
-├── diary.ts            # upsertDiaryEntry, deleteDiaryEntry, toggleDiaryLike, addComment...
-├── track-diary.ts      # upsertTrackDiaryEntry, getTrackDiaryEntry...
+├── diary.ts            # upsertDiaryEntry, deleteDiaryEntry, toggleDiaryLike, addComment…
+├── track-diary.ts      # upsertTrackDiaryEntry, getTrackDiaryEntry…
 ├── feed.ts             # getMyFeed, fanoutEvent
-├── profile.ts          # ensureProfile, updateProfileSettings, changeUsername, deleteAccount
+├── profile.ts          # ensureProfile, updateProfileSettings, deleteAccount…
 ├── social.ts           # toggleFollow
-├── lists.ts            # createList, addAlbumToList...
-├── recommendations.ts  # createRecommendation
-├── musicbrainz.ts      # search, preview, import depuis MusicBrainz
-├── artists.ts          # getArtistMeta, getArtistReleases, getArtistImagesByMbids
+├── lists.ts            # createList, addAlbumToList…
+├── musicbrainz.ts      # search, import depuis MusicBrainz
+├── metadata.ts         # enrichAlbumMetadata (genres, descriptions, liens streaming)
+├── artists.ts          # getArtistMeta, getArtistReleases
 ├── search.ts           # searchInternal (Supabase FTS + ILIKE + fuzzy pg_trgm)
-└── explore.ts          # getTrendingThisWeek, getForYouSuggestions, getDiscoveryAlbums...
+└── explore.ts          # getTrendingThisWeek, getForYouSuggestions…
 ```
 
 ### Recherche
 
-Deux niveaux de recherche, toujours en deux phases (interne d'abord, MB en arrière-plan) :
+Deux niveaux, toujours en deux phases (interne d'abord, MB en arrière-plan) :
 
-- **Interne** (`searchInternal`) : Supabase full-text search (`tsvector`, config `simple` + `unaccent`), fallback ILIKE, fallback fuzzy pg_trgm en cas de 0 résultats
-- **MusicBrainz** : requêtes Lucene multi-clauses (phrase, per-term, split artist/title), cache L1 mémoire 5min + L2 Supabase 24h
-- **Ranking unifié** (`lib/searchRanking.ts`) : `computeRank` + `mergeAndRank` partagés entre l'overlay et la page `/search`
+- **Interne** (`searchInternal`) : full-text search Supabase (`tsvector` + `unaccent`), fallback ILIKE, fallback fuzzy pg_trgm
+- **MusicBrainz** : requêtes Lucene, cache L1 mémoire 5min + L2 Supabase 24h
+- **Ranking unifié** (`lib/searchRanking.ts`) : `computeRank` + `mergeAndRank` partagés entre l'overlay et `/search`
+
+### Enrichissement albums
+
+Déclenché via `POST /api/enrich` après import. Récupère en parallèle :
+- Genres + tags depuis MusicBrainz et Last.fm
+- Description depuis Last.fm, Wikipedia ou annotation MB
+- Liens streaming depuis MusicBrainz url-rels, puis fallback Spotify/iTunes/Deezer
 
 ### Fan-out du feed
 
 Modèle **fan-out en écriture** : chaque action (review, like, follow…) insère un événement dans `feed_events` pour chacun des followers. La lecture est une simple requête filtrée par `user_id`.
 
-### Storage avatars
-
-Upload signé vers Supabase Storage (bucket `avatars`). Chemin : `{user_id}/avatar_{timestamp}.jpg`.
-
 ---
-
 
 ## Déploiement (Vercel)
 
@@ -230,10 +235,8 @@ Upload signé vers Supabase Storage (bucket `avatars`). Chemin : `{user_id}/avat
 
 ---
 
-## Contribuer
+## Roadmap
 
-```bash
-git checkout -b feature/ma-feature
-cd frontend && npm run build   # vérifie que ça compile
-# PR sur main
-```
+La V1 web est en production. La prochaine étape est une **application mobile native** (React Native / Expo) qui partagera le même backend Supabase.
+
+Voir [`docs/ROADMAP.md`](docs/ROADMAP.md) pour le détail.
