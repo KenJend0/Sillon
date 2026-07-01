@@ -99,22 +99,14 @@ Ce qui rend l'app vraiment utilisable au quotidien.
 - [x] **Section "Pour toi" dans Explore** — collaborative filtering Jaccard : voisins de goût (>= 3 albums notés >= 8 en commun, toute la plateforme), suggestions hors journal, disparaît proprement si pas assez de données
 - [x] **Carousel "Découverte" dans Explore** — remplace "Récemment ajoutés" : albums bien notés globalement dont l'artiste est inconnu de l'utilisateur
 - [x] **Revoir les textes des cartes du feed** pour finaliser la refonte ligne uniforme
-- [ ] **Feedback après notation** — un retour qui montre que le profil évolue (pas juste un toast "ajouté")
-- [ ] **Notation rapide sur Explore** — noter un album directement depuis la carte, sans ouvrir la page album
-- [ ] **Critique minimale / tags "vibe"** — alternative au texte libre (sombre, nostalgique, énergique...)
-- [ ] **Collections implicites** — *"X/10 albums essentiels de cet artiste"*, *"albums des années 2010 explorés"* ; vérifier d'abord si les albums ont les métadonnées genre/décennie exploitables
+
 
 ### Profils & stats
-- [ ] **Stats sur le profil** — note moyenne globale, distribution des notes (histogramme), top artistes, top genres ; dans un onglet dédié ou accessible depuis le menu (desktop : accessible depuis le hamburger menu)
+- [x] **Stats sur le profil** — note moyenne globale, distribution des notes (histogramme), top artistes, top genres ; dans un onglet dédié ou accessible depuis le hamburger menu de /me. 
 
 
 ### Notifications
 - [x] **Centre de notifications** — icône cloche dans l'header ; types : like, commentaire, follow, recommandation
-- [ ] **Notifications contextuelles** (pas des notifs sociales classiques) :
-  - Reminder wishlist : *"X est dans ta liste depuis 3 semaines, tu l'as écouté ?"* (cron hebdo)
-  - Convergence sociale : *"3 personnes que tu suis ont écouté X cette semaine"*
-  - Suggestions de comptes périodiques
-  - Reminder d'écoute via streaming lié (Spotify/Deezer/Apple Music) : *"tu as écouté X récemment, tu veux le noter ?"* — voir recherche intégration streaming, V2 Découverte
 
 ### Recherche
 - [x] **Améliorer les scores de pertinence** — pondération par popularité (listeners_count, reviews_count), boost exact-match, dé-boost des entrées sans cover ou sans reviews
@@ -186,6 +178,15 @@ Une fois qu'il y a assez de données.
 - [ ] **listen_count sur les diary_entries** — migrer `re_listen BOOLEAN` vers `listen_count INT DEFAULT 1` ; signal implicite d'attachement plus fin pour le ML
 - [ ] **Listes thématiques UGC** — *"Best of 2024"*, *"Albums pluvieux"* (à la Letterboxd) — créer, partager, commenter
 - [ ] **Fork de liste** — dupliquer une liste sauvegardée (publique) en sa propre liste éditable ; actuellement impossible, seul le propriétaire peut modifier (RLS) — trop gros chantier pour le moment, à reprendre une fois les bases de la feature listes consolidées
+- [ ] **Notifications contextuelles** (pas des notifs sociales classiques) :
+  - Reminder wishlist : *"X est dans ta liste depuis 3 semaines, tu l'as écouté ?"* (cron hebdo)
+  - Convergence sociale : *"3 personnes que tu suis ont écouté X cette semaine"*
+  - Suggestions de comptes périodiques
+  - Reminder d'écoute via streaming lié (Spotify/Deezer/Apple Music) : *"tu as écouté X récemment, tu veux le noter ?"* — voir recherche intégration streaming, V2 Découverte
+- [ ] **Feedback après notation** — un retour qui montre que le profil évolue (pas juste un toast "ajouté")
+- [ ] **Notation rapide sur Explore** — noter un album directement depuis la carte, sans ouvrir la page album
+- [ ] **Critique minimale / tags "vibe"** — alternative au texte libre (sombre, nostalgique, énergique...)
+- [ ] **Collections implicites** — *"X/10 albums essentiels de cet artiste"*, *"albums des années 2010 explorés"* ; vérifier d'abord si les albums ont les métadonnées genre/décennie exploitables
 - [ ] **Stats avancées** — graphes par année / genre / artiste, distribution des notes, tendances temporelles
 - [ ] **Profils "critiques"** — score de crédibilité basé sur cohérence des notes et ancienneté
 - [ ] **Weekly recap** — genre dominant, album le plus clivant de la semaine ; demande de vraies agrégations, à activer une fois le volume de données suffisant
