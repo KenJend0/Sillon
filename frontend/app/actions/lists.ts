@@ -23,6 +23,7 @@ export type UserList = {
     created_at: string;
     item_count: number;
     cover_urls: (string | null)[];
+    custom_cover_url: string | null;
     saves_count: number;
     is_saved?: boolean;
     creator_username?: string;
@@ -97,7 +98,7 @@ function normalizeListDescription(description: string | undefined): string | nul
     return trimmed || null;
 }
 
-async function attachListMeta(listIds: string[], supabase: SupabaseDbClient): Promise<Map<string, { item_count: number; cover_urls: (string | null)[]; saves_count: number; preview_items: string[] }>> {
+async function attachListMeta(listIds: string[], supabase: SupabaseDbClient): Promise<Map<string, { item_count: number; cover_urls: (string | null)[]; custom_cover_url: string | null; saves_count: number; preview_items: string[] }>> {
     if (listIds.length === 0) return new Map();
 
     const [countResults, coverResults, savesResults, previewResults] = await Promise.all([
@@ -111,11 +112,10 @@ async function attachListMeta(listIds: string[], supabase: SupabaseDbClient): Pr
             .in('list_id', listIds)
             .not('album_id', 'is', null)
             .order('added_at', { ascending: false }),
-        // saves_count est dénormalisé sur user_lists (trigger sur saved_lists) —
-        // lecture directe au lieu de recompter saved_lists à chaque appel.
+        // saves_count et custom_cover_url sont dénormalisés/stockés sur user_lists
         supabase
             .from('user_lists')
-            .select('id, saves_count')
+            .select('id, saves_count, custom_cover_url')
             .in('id', listIds),
         supabase
             .from('list_items')
@@ -138,9 +138,10 @@ async function attachListMeta(listIds: string[], supabase: SupabaseDbClient): Pr
         }
     }
 
-    const savesMap = new Map<string, number>();
+    type SavesMeta = { saves_count: number; custom_cover_url: string | null };
+    const savesMap = new Map<string, SavesMeta>();
     for (const row of savesResults.data || []) {
-        savesMap.set(row.id, row.saves_count ?? 0);
+        savesMap.set(row.id, { saves_count: row.saves_count ?? 0, custom_cover_url: row.custom_cover_url ?? null });
     }
 
     const previewMap = new Map<string, string[]>();
@@ -159,12 +160,14 @@ async function attachListMeta(listIds: string[], supabase: SupabaseDbClient): Pr
         previewMap.set(row.list_id, existing);
     }
 
-    const meta = new Map<string, { item_count: number; cover_urls: (string | null)[]; saves_count: number; preview_items: string[] }>();
+    const meta = new Map<string, { item_count: number; cover_urls: (string | null)[]; custom_cover_url: string | null; saves_count: number; preview_items: string[] }>();
     for (const id of listIds) {
+        const saves = savesMap.get(id);
         meta.set(id, {
             item_count: countMap.get(id) ?? 0,
             cover_urls: coverMap.get(id) ?? [],
-            saves_count: savesMap.get(id) ?? 0,
+            custom_cover_url: saves?.custom_cover_url ?? null,
+            saves_count: saves?.saves_count ?? 0,
             preview_items: previewMap.get(id) ?? [],
         });
     }
@@ -192,7 +195,7 @@ export async function getUserLists(userId: string): Promise<UserList[]> {
 
     return lists.map((list) => ({
         ...list,
-        ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [], saves_count: 0, preview_items: [] }),
+        ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [], custom_cover_url: null, saves_count: 0, preview_items: [] }),
     }));
 }
 
@@ -229,7 +232,7 @@ export async function getUserSavedLists(userId: string): Promise<UserList[]> {
 
     return lists.map((list) => ({
         ...list,
-        ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [], saves_count: 0, preview_items: [] }),
+        ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [], custom_cover_url: null, saves_count: 0, preview_items: [] }),
         creator_username: list.profiles?.username ?? undefined,
         creator_avatar: list.profiles?.avatar_url ?? null,
         is_saved: true,
@@ -255,7 +258,7 @@ export async function getPublicUserLists(userId: string): Promise<UserList[]> {
 
     return lists.map((list) => ({
         ...list,
-        ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [], saves_count: 0, preview_items: [] }),
+        ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [], custom_cover_url: null, saves_count: 0, preview_items: [] }),
     }));
 }
 
@@ -296,7 +299,7 @@ export async function getPublicLists(limit = 6): Promise<UserList[]> {
     return lists
         .map((list) => ({
             ...list,
-            ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [], saves_count: 0, preview_items: [] }),
+            ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [], custom_cover_url: null, saves_count: 0, preview_items: [] }),
             creator_username: list.profiles?.username ?? undefined,
             creator_avatar: list.profiles?.avatar_url ?? null,
             is_saved: savedIds.has(list.id),
@@ -632,7 +635,7 @@ export async function getListWithItems(listId: string): Promise<{
 
     const { data: list } = await supabase
         .from('user_lists')
-        .select('id, user_id, title, description, is_public, is_default, created_at, saves_count, profiles(username, avatar_url)')
+        .select('id, user_id, title, description, is_public, is_default, created_at, saves_count, custom_cover_url, profiles(username, avatar_url)')
         .eq('id', listId)
         .maybeSingle();
 
@@ -682,6 +685,7 @@ export async function getListWithItems(listId: string): Promise<{
             created_at: list.created_at,
             item_count: items?.length ?? 0,
             cover_urls: coverUrls,
+            custom_cover_url: list.custom_cover_url ?? null,
             preview_items: [],
             saves_count: list.saves_count ?? 0,
             is_saved: !!saveStatus.data,

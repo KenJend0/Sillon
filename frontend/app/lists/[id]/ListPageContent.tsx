@@ -8,6 +8,7 @@ import { X, Plus, ArrowUpDown, Info, Trash2 } from "lucide-react";
 import { CoverImage } from "@/components/CoverImage";
 import BottomSheet from "@/components/BottomSheet";
 import { updateList, deleteList, removeListItem, toggleListItem, reorderListItems } from "@/app/actions/lists";
+import { uploadListCover, removeListCover } from "@/app/actions/listCoverActions";
 import { showToast } from "@/components/Toast";
 import { toastErrorMessage } from "@/lib/toastErrors";
 import { useDismissOnOutsideOrScroll } from "@/lib/useDismissOnOutsideOrScroll";
@@ -109,16 +110,21 @@ function EditListForm({
     list,
     isOpen,
     onClose,
+    customCoverUrl,
+    onCoverRemoved,
 }: {
     list: UserList & { creator_username: string; creator_avatar: string | null };
     isOpen: boolean;
     onClose: () => void;
+    customCoverUrl: string | null;
+    onCoverRemoved: () => void;
 }) {
     const router = useRouter();
     const [title, setTitle] = useState(list.title);
     const [description, setDescription] = useState(list.description ?? "");
     const [isPublic, setIsPublic] = useState(list.is_public);
     const [saving, setSaving] = useState(false);
+    const [removingCover, setRemovingCover] = useState(false);
 
     const handleSave = async () => {
         if (!title.trim()) return;
@@ -132,6 +138,20 @@ function EditListForm({
             showToast(toastErrorMessage(err, "Erreur lors de la mise à jour"), "error");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleRemoveCover = async () => {
+        setRemovingCover(true);
+        try {
+            const result = await removeListCover(list.id);
+            if (!result.ok) throw new Error(result.error);
+            onCoverRemoved();
+            showToast("Couverture supprimée", "success");
+        } catch (err) {
+            showToast(toastErrorMessage(err, "Erreur lors de la suppression"), "error");
+        } finally {
+            setRemovingCover(false);
         }
     };
 
@@ -169,7 +189,7 @@ function EditListForm({
                 </button>
                 <span className="text-sm text-text-secondary">{isPublic ? "Publique" : "Privée"}</span>
             </div>
-            <div className="pt-1">
+            <div className="flex items-center justify-between pt-1">
                 <button
                     onClick={handleSave}
                     disabled={saving || !title.trim()}
@@ -177,6 +197,15 @@ function EditListForm({
                 >
                     {saving ? "Enregistrement…" : "Enregistrer"}
                 </button>
+                {customCoverUrl && (
+                    <button
+                        onClick={handleRemoveCover}
+                        disabled={removingCover}
+                        className="text-[12px] text-red-500 hover:opacity-75 disabled:opacity-40 transition-opacity"
+                    >
+                        {removingCover ? "Suppression…" : "Supprimer la couverture"}
+                    </button>
+                )}
             </div>
         </div>
         </BottomSheet>
@@ -388,6 +417,8 @@ export default function ListPageContent({ list, items, isOwner }: Props) {
     const [localItems, setLocalItems] = useState<ListItem[]>(items);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [localCustomCover, setLocalCustomCover] = useState(list.custom_cover_url ?? null);
+    const [coverUploading, setCoverUploading] = useState(false);
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
     const menuRef = useRef<HTMLDivElement>(null);
     useDismissOnOutsideOrScroll(menuRef, menuOpen, () => setMenuOpen(false));
@@ -418,6 +449,29 @@ export default function ListPageContent({ list, items, isOwner }: Props) {
         } catch (err) {
             setLocalItems(items); // revert
             showToast(toastErrorMessage(err, "Erreur lors de la suppression"), "error");
+        }
+    };
+
+    const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.currentTarget.value = "";
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+            showToast("Image trop lourde — max 5 MB", "error");
+            return;
+        }
+        setCoverUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const result = await uploadListCover(list.id, formData);
+            if (!result.ok) throw new Error(result.error);
+            setLocalCustomCover(result.coverUrl ?? null);
+            showToast("Couverture mise à jour", "success");
+        } catch (err) {
+            showToast(toastErrorMessage(err, "Erreur lors de l'upload"), "error");
+        } finally {
+            setCoverUploading(false);
         }
     };
 
@@ -458,8 +512,29 @@ export default function ListPageContent({ list, items, isOwner }: Props) {
             {/* Header */}
             <div className="mb-8">
                 <div className="flex items-start gap-4">
-                    <div className="w-20 sm:w-24 flex-shrink-0">
-                        <CoverCollage urls={list.cover_urls} />
+                    <div className={`w-20 sm:w-24 flex-shrink-0 relative ${isOwner ? "group" : ""}`}>
+                        <CoverCollage urls={list.cover_urls} customCoverUrl={localCustomCover} />
+                        {isOwner && (
+                            <label className={`absolute inset-0 flex items-center justify-center rounded-[8px] cursor-pointer transition-colors z-10 ${coverUploading ? "bg-black/40" : "bg-black/0 group-hover:bg-black/35"}`}>
+                                <span className={`transition-opacity text-white ${coverUploading ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                                    {coverUploading ? (
+                                        <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                            <circle cx="12" cy="13" r="4"/>
+                                        </svg>
+                                    )}
+                                </span>
+                                <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    className="hidden"
+                                    onChange={handleCoverChange}
+                                    disabled={coverUploading}
+                                />
+                            </label>
+                        )}
                     </div>
 
                     <div className="flex-1 min-w-0 pt-0.5">
@@ -569,7 +644,13 @@ export default function ListPageContent({ list, items, isOwner }: Props) {
                             onItemViewChange={setItemView}
                         />
                     )}
-                    <EditListForm list={list} isOpen={editing} onClose={() => setEditing(false)} />
+                    <EditListForm
+                        list={list}
+                        isOpen={editing}
+                        onClose={() => setEditing(false)}
+                        customCoverUrl={localCustomCover}
+                        onCoverRemoved={() => setLocalCustomCover(null)}
+                    />
                 </div>
             )}
 

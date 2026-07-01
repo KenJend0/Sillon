@@ -1359,6 +1359,7 @@ export type Database = {
       user_lists: {
         Row: {
           created_at: string
+          custom_cover_url: string | null
           description: string | null
           id: string
           is_default: boolean
@@ -1370,6 +1371,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custom_cover_url?: string | null
           description?: string | null
           id?: string
           is_default?: boolean
@@ -1381,6 +1383,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custom_cover_url?: string | null
           description?: string | null
           id?: string
           is_default?: boolean

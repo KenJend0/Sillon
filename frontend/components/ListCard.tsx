@@ -18,7 +18,21 @@ type Props = {
     href: string;
 };
 
-export function CoverCollage({ urls }: { urls: (string | null)[] }) {
+export function CoverCollage({ urls, customCoverUrl }: { urls: (string | null)[], customCoverUrl?: string | null }) {
+    if (customCoverUrl) {
+        return (
+            <div className="aspect-square rounded-[8px] overflow-hidden bg-background-secondary relative">
+                <CoverImage
+                    src={customCoverUrl}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    placeholder={<div className="w-full h-full bg-background-tertiary" />}
+                />
+            </div>
+        );
+    }
+
     const filled = [...urls, null, null, null, null].slice(0, 4);
     const hasCovers = filled.some((u) => u !== null);
 
@@ -77,7 +91,7 @@ export default function ListCard({ list, href }: Props) {
     return (
         <Link href={href} className="group block">
             <div className="relative">
-                <CoverCollage urls={list.cover_urls} />
+                <CoverCollage urls={list.cover_urls} customCoverUrl={list.custom_cover_url} />
                 {list.creator_username && (
                     <span className="absolute top-2 left-2 flex items-center gap-1.5 bg-paper-hi/90 border border-border rounded-full pl-0.5 pr-2 py-0.5 backdrop-blur-sm z-10">
                         <span className="rounded-full overflow-hidden border border-rule flex-shrink-0" style={{ width: 18, height: 18 }}>
