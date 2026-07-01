@@ -991,7 +991,7 @@ export async function updateList(
 
     const supabase = await createSupabaseServer();
 
-    const updates: Record<string, string | boolean | null> = { updated_at: new Date().toISOString() };
+    const updates: { updated_at: string; title?: string; description?: string | null; is_public?: boolean } = { updated_at: new Date().toISOString() };
     if (data.title !== undefined) updates.title = normalizeListTitle(data.title);
     if (data.description !== undefined) updates.description = normalizeListDescription(data.description);
     if (data.isPublic !== undefined) updates.is_public = data.isPublic;
