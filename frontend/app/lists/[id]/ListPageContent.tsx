@@ -238,7 +238,7 @@ function AddItemsForm({
                         }`}
                     >
                         {activePanel === "album" ? <X size={12} strokeWidth={2.5} /> : <Plus size={12} strokeWidth={2.5} />}
-                        Ajouter un album
+                        Album
                     </button>
                     <button
                         onClick={() => handleTabClick("track")}
@@ -247,7 +247,7 @@ function AddItemsForm({
                         }`}
                     >
                         {activePanel === "track" ? <X size={12} strokeWidth={2.5} /> : <Plus size={12} strokeWidth={2.5} />}
-                        Ajouter un titre
+                        Titre
                     </button>
                 </div>
                 {itemView && onItemViewChange && <ListViewToggle view={itemView} onChange={onItemViewChange} />}
