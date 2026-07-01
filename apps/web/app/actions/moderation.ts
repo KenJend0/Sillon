@@ -82,7 +82,8 @@ export async function adminDeleteContent(
     await supabase.from('feed_events').delete().eq('entry_id', contentId);
   }
 
-  const { error } = await supabase.from(table).delete().eq('id', contentId);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from(table) as any).delete().eq('id', contentId);
 
   if (error) {
     console.error('adminDeleteContent error:', error);
