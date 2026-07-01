@@ -195,7 +195,7 @@ def replace_recommendations(user_ids: list[str], rows: list[dict], method: str, 
         batch = user_ids[i : i + BATCH_SIZE]
         client.table("user_recommendations").delete().eq("method", method).in_("user_id", batch).execute()
     for i in range(0, len(rows), BATCH_SIZE):
-        client.table("user_recommendations").insert(rows[i : i + BATCH_SIZE]).execute()
+        client.table("user_recommendations").upsert(rows[i : i + BATCH_SIZE]).execute()
 
 
 def main(dry_run: bool, method: str, limit: int) -> None:
