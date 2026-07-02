@@ -48,25 +48,25 @@ Application mobile native (React Native / Expo) partageant le même backend Supa
 
 ## Phase 3 — Auth
 
-- [ ] Écran de login (email + password)
-- [ ] Écran de signup
-- [ ] Gestion de la session Supabase (persistance avec SecureStore)
-- [ ] Redirection automatique si connecté → home
-- [ ] Redirection automatique si déconnecté → login
-- [ ] Écran de reset de mot de passe
-- [ ] Layout authentifié vs non-authentifié
-- [ ] Tester le flow complet login → session persistante après fermeture de l'app
+- [x] Écran de login (email + password)
+- [x] Écran de signup
+- [x] Gestion de la session Supabase (persistance avec SecureStore)
+- [x] Redirection automatique si connecté → home
+- [x] Redirection automatique si déconnecté → login
+- [x] Écran de reset de mot de passe
+- [x] Layout authentifié vs non-authentifié
+- [x] Tester le flow complet login → session persistante après fermeture de l'app
 
 ---
 
 ## Phase 4 — Navigation et layout
 
-- [ ] Structure de navigation principale (tabs du bas) :
-  - [ ] Tab Home (feed)
-  - [ ] Tab Explore
-  - [ ] Tab Ajouter (bouton central)
-  - [ ] Tab Profil
-- [ ] Header réutilisable avec titre + actions contextuelles
+- [ ] Structure de navigation principale (tabs du bas) en reference de Bottom Navbar :
+  - [ ] Tab Decouvir (/explore du web)
+  - [ ] Tab Ajouter (/add du web)
+  - [ ] Tab Activité (/feed du web)
+  - [ ] Tab Moi (/me du web)
+- [ ] Ne pas autoriser la rotation d'ecran toujours verticale
 - [ ] Layout global (fond, couleurs, safe areas iOS/Android)
 - [ ] Navigation stack dans chaque tab (retour arrière)
 - [ ] Transitions entre pages
