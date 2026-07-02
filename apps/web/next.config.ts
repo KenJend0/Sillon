@@ -1,9 +1,11 @@
 import path from 'path';
 import { withSentryConfig } from "@sentry/nextjs";
 
+const monorepoRoot = path.join(__dirname, '../../');
+
 const nextConfig = {
   // Pointe vers la racine du monorepo pour que Next.js ne soit pas perdu
-  outputFileTracingRoot: path.join(__dirname, '../../'),
+  outputFileTracingRoot: monorepoRoot,
   experimental: {
     serverActions: {
       bodySizeLimit: '3mb',
