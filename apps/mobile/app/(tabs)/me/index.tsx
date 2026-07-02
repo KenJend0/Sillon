@@ -1,11 +1,19 @@
-import { Pressable, Text, View } from 'react-native';
-import { useAuth } from '../../lib/AuthContext';
+import { Pressable, Text } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useAuth } from '../../../lib/AuthContext';
+import { useNavScrollHandler } from '../../../lib/useNavScrollHandler';
 
-export default function HomeScreen() {
+export default function MeScreen() {
   const { user, signOut } = useAuth();
+  const scrollHandler = useNavScrollHandler();
 
   return (
-    <View className="flex-1 items-center justify-center bg-background px-6">
+    <Animated.ScrollView
+      onScroll={scrollHandler}
+      scrollEventThrottle={16}
+      className="flex-1 bg-background"
+      contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 100 }}
+    >
       <Text
         style={{ fontFamily: 'InstrumentSerif_400Regular' }}
         className="text-4xl text-text-warm"
@@ -24,6 +32,6 @@ export default function HomeScreen() {
           Se déconnecter
         </Text>
       </Pressable>
-    </View>
+    </Animated.ScrollView>
   );
 }

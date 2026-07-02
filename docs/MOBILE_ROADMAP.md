@@ -61,15 +61,15 @@ Application mobile native (React Native / Expo) partageant le même backend Supa
 
 ## Phase 4 — Navigation et layout
 
-- [ ] Structure de navigation principale (tabs du bas) en reference de Bottom Navbar :
-  - [ ] Tab Decouvir (/explore du web)
-  - [ ] Tab Ajouter (/add du web)
-  - [ ] Tab Activité (/feed du web)
-  - [ ] Tab Moi (/me du web)
-- [ ] Ne pas autoriser la rotation d'ecran toujours verticale
-- [ ] Layout global (fond, couleurs, safe areas iOS/Android)
-- [ ] Navigation stack dans chaque tab (retour arrière)
-- [ ] Transitions entre pages
+- [x] Structure de navigation principale (tabs du bas) en reference au Bottom Navbar du web :
+  - [x] Tab Decouvir (/explore du web)
+  - [x] Tab Ajouter (/add du web)
+  - [x] Tab Activité (/feed du web)
+  - [x] Tab Moi (/me du web)
+- [x] Ne pas autoriser la rotation d'ecran toujours verticale
+- [x] Layout global (fond, couleurs, safe areas iOS/Android)
+- [x] Navigation stack dans chaque tab (retour arrière)
+- [x] Transitions entre pages
 
 ---
 

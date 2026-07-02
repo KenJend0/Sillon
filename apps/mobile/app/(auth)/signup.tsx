@@ -52,7 +52,7 @@ export default function SignupScreen() {
     }
 
     if (data.user && data.session) {
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/explore');
       return;
     }
 

@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "scheme": "waveform",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.waveform.app",

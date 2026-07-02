@@ -1,0 +1,159 @@
+import type { ComponentProps, ComponentType } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { useRouter, usePathname } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+  type SharedValue,
+} from 'react-native-reanimated';
+import { Compass, Plus, Bell, User } from 'lucide-react-native';
+import { useScrollNav } from '../lib/ScrollNavContext';
+
+type NavRoute = 'explore' | 'add' | 'feed' | 'me';
+
+const NAV_ITEMS: { route: NavRoute; label: string; icon: ComponentType<ComponentProps<typeof Compass>> }[] = [
+  { route: 'explore', label: 'Découvrir', icon: Compass },
+  { route: 'add', label: 'Ajouter', icon: Plus },
+  { route: 'feed', label: 'Activité', icon: Bell },
+  { route: 'me', label: 'Moi', icon: User },
+];
+
+const COLOR_ACTIVE = '#2A2520';
+const COLOR_INACTIVE = '#9A9A9A';
+
+export default function BottomNav() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const pathname = usePathname();
+  const { navCompact } = useScrollNav();
+
+  const activeRoute = NAV_ITEMS.find((item) => pathname.startsWith(`/${item.route}`))?.route;
+
+  const navStyle = useAnimatedStyle(() => ({
+    width: interpolate(navCompact.value, [0, 1], [300, 232], Extrapolation.CLAMP),
+    borderRadius: interpolate(navCompact.value, [0, 1], [20, 999], Extrapolation.CLAMP),
+    paddingHorizontal: interpolate(navCompact.value, [0, 1], [10, 6], Extrapolation.CLAMP),
+  }));
+
+  return (
+    <View pointerEvents="box-none" style={[styles.wrapper, { bottom: insets.bottom + 4 }]}>
+      <Animated.View style={[styles.nav, navStyle]}>
+        {NAV_ITEMS.map((item) => (
+          <NavItem
+            key={item.route}
+            item={item}
+            active={activeRoute === item.route}
+            navCompact={navCompact}
+            onPress={() => router.push(`/(tabs)/${item.route}`)}
+          />
+        ))}
+      </Animated.View>
+    </View>
+  );
+}
+
+function NavItem({
+  item,
+  active,
+  navCompact,
+  onPress,
+}: {
+  item: (typeof NAV_ITEMS)[number];
+  active: boolean;
+  navCompact: SharedValue<number>;
+  onPress: () => void;
+}) {
+  const Icon = item.icon;
+  const isAdd = item.route === 'add';
+
+  const iconWrapStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: interpolate(navCompact.value, [0, 1], [-5, 0], Extrapolation.CLAMP) },
+      ...(isAdd ? [{ rotate: '-4deg' }] : []),
+    ],
+  }));
+
+  const labelStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(navCompact.value, [0, 1], [1, 0], Extrapolation.CLAMP),
+  }));
+
+  return (
+    <Pressable onPress={onPress} style={styles.item}>
+      {active && <View style={styles.activeIndicator} />}
+
+      <Animated.View style={[isAdd ? styles.addIconWrap : styles.iconWrap, iconWrapStyle]}>
+        <Icon color={isAdd ? '#FAF8F4' : active ? COLOR_ACTIVE : COLOR_INACTIVE} size={isAdd ? 18 : 22} />
+      </Animated.View>
+
+      <Animated.Text
+        style={[styles.label, labelStyle, { color: active ? COLOR_ACTIVE : COLOR_INACTIVE }]}
+      >
+        {item.label}
+      </Animated.Text>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 50,
+  },
+  nav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    minHeight: 44,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(250, 248, 244, 0.94)',
+    borderWidth: 1,
+    borderColor: '#D8D3CB',
+    shadowColor: '#3C2814',
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  item: {
+    flex: 1,
+    minHeight: 44,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  activeIndicator: {
+    position: 'absolute',
+    top: -1,
+    left: '50%',
+    marginLeft: -8,
+    width: 16,
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: '#8E6F5E',
+  },
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addIconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: '#2A2520',
+  },
+  label: {
+    position: 'absolute',
+    bottom: 1,
+    fontSize: 9,
+    lineHeight: 10,
+    fontFamily: 'Inter_500Medium',
+  },
+});
