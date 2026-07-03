@@ -115,12 +115,16 @@ Dans cet ordre, du plus important au moins important.
 - [x] Ajout de commentaire
 
 ### 6.2 Recherche
-- [ ] Barre de recherche globale (overlay ou page dédiée)
-- [ ] Recherche interne Supabase (albums, artistes, titres)
-- [ ] Recherche MusicBrainz en arrière-plan
-- [ ] Affichage des résultats unifiés
-- [ ] Recherches récentes (local)
-- [ ] Autocomplete
+- [x] Barre de recherche globale (SearchOverlay) sur decouverte
+- [x] Recherche interne Supabase (albums, artistes, titres)
+- [x] Recherche MusicBrainz en arrière-plan
+- [x] Affichage des résultats unifiés
+- [x] Recherches récentes (local)
+- [x] Autocomplete (recherche live au fil de la frappe, debounce 300ms — comme le web)
+
+Note : aucune page album/artiste/titre/profil n'existe encore côté mobile (6.3-6.5),
+donc le tap sur un résultat ne déclenche ni import MusicBrainz ni navigation pour
+l'instant (toast "Bientôt disponible") — à brancher quand ces pages existeront.
 
 ### 6.3 Page album
 - [ ] Cover + titre + artiste + année + type
