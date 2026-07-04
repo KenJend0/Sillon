@@ -155,10 +155,13 @@ Notes de scope (mises à jour après Phase 8 — Edge Functions `import-musicbra
   puis navigue directement vers la page créée. La page album elle-même reste atteignable
   uniquement pour des albums déjà en DB ou importés via cette section ou la recherche (pas
   d'`ImportButton` dédié en haut de la page pour un mbid passé en paramètre d'URL).
-- **Pas de fanout feed pour les écoutes** : créer/modifier une écoute (`upsertDiaryEntry`)
-  écrit directement dans `diary_entries` sous RLS mais n'écrit pas dans `feed_events` pour les
-  abonnés (nécessiterait une Edge Function comme `toggle-like`) — les écoutes ajoutées depuis
-  mobile n'apparaissent pas encore dans le feed réseau des autres utilisateurs.
+- **Fanout feed pour les écoutes** : `upsertDiaryEntry`/`deleteDiaryEntry` (albums) et
+  `upsertTrackDiaryEntry`/`deleteTrackDiaryEntry` (titres) passent désormais par l'Edge
+  Function `log-listen` (`supabase/functions/log-listen`, déployée), miroir de
+  `upsertDiaryEntry`/`upsertTrackDiaryEntry`/`deleteDiaryEntry`/`deleteTrackDiaryEntry`
+  (web) — écriture RLS + fanout `feed_events` vers les abonnés, même pattern que
+  `toggle-like`. `updateDiaryEntry` (modifier une note déjà enregistrée) reste un appel
+  direct : le web ne fanout pas non plus sur l'édition simple.
 - **Date d'écoute fixée à aujourd'hui** : pas de date picker natif installé ; modifier une
   écoute existante garde sa date d'origine (non éditable pour l'instant).
 - **Listes** : `lib/lists.ts` mobile n'est qu'un sous-ensemble minimal (get/toggle/liste par
@@ -214,8 +217,13 @@ Notes de scope (Phase 8 backend mobile non faite au moment de l'implémentation)
   `LASTFM_API_KEY`, un secret serveur jamais exposable côté mobile. Portée via la nouvelle
   Edge Function `similar-artists` (supabase/functions/similar-artists), qui reprend la même
   logique (matching DB par MBID/nom, max 6, DB en priorité) — appelée depuis
-  `lib/artists.ts` (`getSimilarArtists`). Seuls les artistes déjà en DB sont affichés/
-  cliquables, comme sur le web (pas d'import d'artiste depuis cette section).
+  `lib/artists.ts` (`getSimilarArtists`). **Divergence volontaire du web** : le web
+  n'affiche jamais un artiste similaire hors DB (`ArtistPageContent.tsx` filtre `id !== null`
+  avant rendu) ; le mobile les affiche aussi et les rend cliquables quand un mbid est
+  disponible (`ArtistSimilarSection` + `lib/useMusicBrainzImport.ts` — `useMusicBrainzArtistImport`),
+  déclenchant l'import via `import-musicbrainz` au tap puis la navigation vers la page créée.
+  Un artiste similaire sans mbid (Last.fm ne l'a pas fourni) reste masqué, faute de moyen de
+  l'importer.
 - Navigation `/artists/[id]` déjà référencée depuis AlbumHero, TrackHero, ArtistCard et la
   page titre (6.3/6.3bis) — ces liens menaient à un 404 jusqu'ici ; la route existe désormais.
   La recherche (SearchOverlay) navigue aussi vers `/artists/[id]` pour les résultats artiste
@@ -306,6 +314,28 @@ Les secrets (Spotify, Last.fm) ne peuvent pas être exposés dans l'app. Ils pas
   - [ ] Déployer : `supabase functions deploy similar-artists` — **LASTFM_API_KEY déjà
         configuré côté Supabase** (secret partagé avec `enrich-album`)
   - [ ] Tester depuis l'app mobile (page artiste → section "Artistes similaires" en bas)
+- [x] Créer la Edge Function `log-listen` (`supabase/functions/log-listen/`) :
+  - [x] Reprendre `upsertDiaryEntry`/`deleteDiaryEntry` (`apps/web/app/actions/diary.ts`) et
+        `upsertTrackDiaryEntry`/`deleteTrackDiaryEntry` (`apps/web/app/actions/track-diary.ts`)
+        à l'identique — validation (date, note, longueur, mots bannis), écriture RLS,
+        fanout `feed_events` vers les abonnés + l'acteur (même calcul que `fanoutEvent` web)
+  - [x] Une seule fonction pour albums et titres, discriminée par `kind: 'album' | 'track'`
+        et `action: 'upsert' | 'delete'` — même style que `toggle-like` (`kind: 'diary' | 'track'`)
+  - [x] Client user-scope (RLS) pour les écritures diary_entries/track_diary_entries, client
+        service_role uniquement pour le fanout `feed_events` (mêmes usages qu'en web)
+  - [x] Copié `findBannedContentWord` (`_shared/bannedWords.ts`) et
+        `parseListenedAt`/`parseDiaryRating` (`_shared/diaryInputValidation.ts`) depuis leurs
+        équivalents web — logique pure, portable telle quelle vers Deno
+  - [x] Branché `lib/diary.ts`/`lib/trackDiary.ts` mobile dessus (`upsertDiaryEntry`,
+        `deleteDiaryEntry`, `upsertTrackDiaryEntry`, `deleteTrackDiaryEntry` appellent
+        désormais `supabase.functions.invoke('log-listen', ...)`) ; `updateDiaryEntry`
+        (édition simple) reste un appel RLS direct, comme sur le web (pas de fanout à l'édition)
+  - [x] Déployé : `supabase functions deploy log-listen`
+  - [ ] Pas de rate-limiting (Upstash) ni de `logAuthedProductEvent` (analytics) côté Edge
+        Function — même simplification déjà acceptée pour `toggle-like`, à revoir si abus constaté
+  - [ ] Tester depuis l'app mobile (noter un album/titre, vérifier que l'écoute apparaît dans
+        le feed "Réseau" d'un compte qui suit l'auteur ; supprimer une écoute et vérifier que
+        l'event disparaît du feed)
 - [ ] Pas encore branché : `EnrichmentPoller` mobile (rafraîchir l'UI albums sans re-fetch
       manuel une fois l'enrichissement en tâche de fond terminé) — `enrich-album` est déjà
       invocable indépendamment pour ce futur usage.

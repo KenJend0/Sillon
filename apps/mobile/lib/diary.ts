@@ -1,14 +1,14 @@
 import { supabase } from './supabase';
 
 /**
- * Journal d'écoute (albums) — miroir de apps/web/app/actions/diary.ts, limité aux
- * opérations nécessaires à la page album (6.3). Contrairement au web, les écritures
- * ici NE font PAS de fanout vers feed_events pour les followers : ça demanderait
- * d'écrire dans des lignes appartenant à d'autres utilisateurs, impossible sous RLS
- * depuis le client sans clé service_role (voir toggleDiaryLike dans lib/feed.ts pour
- * le pattern Edge Function). Tant que Phase 8 ne fournit pas d'Edge Function dédiée,
- * les écoutes ajoutées depuis mobile n'apparaissent pas dans le feed des abonnés —
- * dégradation acceptée en miroir de l'enrichissement (voir EnrichmentPoller absent).
+ * Journal d'écoute (albums) — miroir de apps/web/app/actions/diary.ts. Créer/supprimer
+ * une écoute passe par l'Edge Function `log-listen` (supabase/functions/log-listen),
+ * qui fait l'écriture ET le fanout feed_events pour les abonnés — même pattern que
+ * toggleDiaryLike (lib/feed.ts) pour toggle-like : un client direct ne pourrait pas
+ * écrire feed_events pour d'autres utilisateurs sans la clé service_role, qui ne doit
+ * jamais être embarquée dans l'app mobile. `updateDiaryEntry` (modifier une écoute déjà
+ * enregistrée) reste un appel direct : le web ne fanout pas non plus sur l'édition, donc
+ * une écriture RLS classique (l'utilisateur ne modifie que sa propre ligne) suffit.
  */
 
 export type AlbumReview = {
@@ -54,8 +54,9 @@ export async function getMyDiaryEntries(albumId: string): Promise<MyDiaryEntry[]
 }
 
 /**
- * Crée une écoute (première fois) ou upsert sur (user_id, album_id, listened_at).
- * relisten=true force un INSERT (jamais d'écrasement d'une entrée existante).
+ * Crée une écoute (première fois) ou upsert sur (user_id, album_id, listened_at) —
+ * délègue à l'Edge Function `log-listen` (écriture + fanout feed_events).
+ * relisten=true force un INSERT côté fonction (jamais d'écrasement d'une entrée existante).
  */
 export async function upsertDiaryEntry(input: {
   albumId: string;
@@ -63,43 +64,26 @@ export async function upsertDiaryEntry(input: {
   rating: number;
   reviewBody?: string;
   relisten?: boolean;
+  source?: string;
 }): Promise<{ success: boolean; data?: { id: string }; error?: string }> {
-  const userId = await currentUserId();
-  if (!userId) return { success: false, error: 'Not authenticated' };
-
-  const rating = input.rating > 0 ? Math.min(10, Math.round(input.rating)) : null;
-  const entryPayload = {
-    user_id: userId,
-    album_id: input.albumId,
-    listened_at: input.listenedAt,
-    review_body: input.reviewBody || null,
-    rating,
-    re_listen: input.relisten ?? false,
-  };
-
-  if (input.relisten) {
-    const { data, error } = await supabase.from('diary_entries').insert(entryPayload).select('id').single();
-    if (error) {
-      if (error.code === '23505') {
-        return { success: false, error: 'Vous avez déjà une écoute à cette date. Choisissez une autre date.' };
-      }
-      console.error('upsertDiaryEntry insert error:', error.message);
-      return { success: false, error: 'Une erreur est survenue' };
-    }
-    return { success: true, data };
-  }
-
-  const { data, error } = await supabase
-    .from('diary_entries')
-    .upsert(entryPayload, { onConflict: 'user_id,album_id,listened_at' })
-    .select('id')
-    .single();
+  const { data, error } = await supabase.functions.invoke('log-listen', {
+    body: {
+      action: 'upsert',
+      kind: 'album',
+      albumId: input.albumId,
+      listenedAt: input.listenedAt,
+      rating: input.rating,
+      reviewBody: input.reviewBody,
+      relisten: input.relisten,
+      source: input.source,
+    },
+  });
 
   if (error) {
-    console.error('upsertDiaryEntry upsert error:', error.message);
+    console.error('upsertDiaryEntry error:', error.message);
     return { success: false, error: 'Une erreur est survenue' };
   }
-  return { success: true, data };
+  return data as { success: boolean; data?: { id: string }; error?: string };
 }
 
 export async function updateDiaryEntry(input: {
@@ -129,16 +113,15 @@ export async function updateDiaryEntry(input: {
 }
 
 export async function deleteDiaryEntry(entryId: string): Promise<{ success: boolean; error?: string }> {
-  const userId = await currentUserId();
-  if (!userId) return { success: false, error: 'Not authenticated' };
-
-  const { error } = await supabase.from('diary_entries').delete().eq('id', entryId).eq('user_id', userId);
+  const { data, error } = await supabase.functions.invoke('log-listen', {
+    body: { action: 'delete', kind: 'album', entryId },
+  });
 
   if (error) {
     console.error('deleteDiaryEntry error:', error.message);
     return { success: false, error: 'Une erreur est survenue' };
   }
-  return { success: true };
+  return data as { success: boolean; error?: string };
 }
 
 /** Aperçu des critiques (avec texte) d'un album — miroir de getAlbumReviewsPreview (web). */

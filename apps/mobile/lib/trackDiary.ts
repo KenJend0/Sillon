@@ -1,9 +1,10 @@
 import { supabase } from './supabase';
 
 /**
- * Journal d'écoute (titres) — miroir de apps/web/app/actions/track-diary.ts, limité aux
- * opérations nécessaires à la page titre. Même dégradation que lib/diary.ts (albums) :
- * pas de fanout feed_events depuis mobile (nécessiterait une Edge Function, Phase 8).
+ * Journal d'écoute (titres) — miroir de apps/web/app/actions/track-diary.ts. Créer/
+ * supprimer une écoute passe par l'Edge Function `log-listen` (même fonction que pour
+ * les albums, discriminée par `kind: 'track'`) — voir lib/diary.ts pour le détail du
+ * pattern (écriture + fanout feed_events, admin jamais exposé côté client).
  */
 
 export type TrackReview = {
@@ -75,56 +76,48 @@ export async function getMyTrackDiaryEntries(trackId: string): Promise<MyTrackDi
  * Crée ou met à jour une écoute — miroir de upsertTrackDiaryEntry (web). Le web n'a pas
  * de fonction "update" séparée : modifier une écoute réutilise cet upsert avec la même
  * date (onConflict user_id,track_id,listened_at), donc EditTrackDiaryEntryButton (web)
- * appelle exactement la même fonction. Le mobile fait pareil.
+ * appelle exactement la même fonction. Délègue à l'Edge Function `log-listen` (écriture +
+ * fanout feed_events, albumId/artistId résolus côté fonction depuis la DB — pas besoin
+ * de les fournir ici, mais gardés dans le type d'entrée pour compat avec les appelants).
  */
 export async function upsertTrackDiaryEntry(input: {
   trackId: string;
-  albumId: string;
-  artistId: string;
+  albumId?: string;
+  artistId?: string;
   listenedAt: string;
   rating: number;
   reviewBody?: string;
+  source?: string;
 }): Promise<{ success: boolean; data?: { id: string }; error?: string }> {
-  const userId = await currentUserId();
-  if (!userId) return { success: false, error: 'Not authenticated' };
-
-  const rating = input.rating > 0 ? Math.min(10, Math.round(input.rating)) : null;
-
-  const { data, error } = await supabase
-    .from('track_diary_entries')
-    .upsert(
-      {
-        user_id: userId,
-        track_id: input.trackId,
-        album_id: input.albumId,
-        artist_id: input.artistId,
-        listened_at: input.listenedAt,
-        rating,
-        review_body: input.reviewBody || null,
-      },
-      { onConflict: 'user_id,track_id,listened_at' }
-    )
-    .select('id')
-    .single();
+  const { data, error } = await supabase.functions.invoke('log-listen', {
+    body: {
+      action: 'upsert',
+      kind: 'track',
+      trackId: input.trackId,
+      listenedAt: input.listenedAt,
+      rating: input.rating,
+      reviewBody: input.reviewBody,
+      source: input.source,
+    },
+  });
 
   if (error) {
     console.error('upsertTrackDiaryEntry error:', error.message);
     return { success: false, error: 'Une erreur est survenue' };
   }
-  return { success: true, data };
+  return data as { success: boolean; data?: { id: string }; error?: string };
 }
 
 export async function deleteTrackDiaryEntry(entryId: string): Promise<{ success: boolean; error?: string }> {
-  const userId = await currentUserId();
-  if (!userId) return { success: false, error: 'Not authenticated' };
-
-  const { error } = await supabase.from('track_diary_entries').delete().eq('id', entryId).eq('user_id', userId);
+  const { data, error } = await supabase.functions.invoke('log-listen', {
+    body: { action: 'delete', kind: 'track', entryId },
+  });
 
   if (error) {
     console.error('deleteTrackDiaryEntry error:', error.message);
     return { success: false, error: 'Une erreur est survenue' };
   }
-  return { success: true };
+  return data as { success: boolean; error?: string };
 }
 
 export async function getTrackReviewsPreview(trackId: string, limit = 3): Promise<TrackReview[]> {

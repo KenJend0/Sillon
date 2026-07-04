@@ -3,10 +3,14 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
   PanResponder,
+  Platform,
   Pressable,
   Text,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 type Props = {
@@ -160,7 +164,14 @@ export function BottomSheet({ isOpen, onClose, title, children, snapPoint = '50%
               </Text>
             </View>
           </View>
-          <View style={{ flex: 1 }}>{children}</View>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View style={{ flex: 1 }}>{children}</View>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
         </Animated.View>
       </View>
     </Modal>

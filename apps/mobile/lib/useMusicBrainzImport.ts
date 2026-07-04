@@ -45,3 +45,43 @@ export function useMusicBrainzAlbumImport() {
 
   return { importingMbid, importAlbum };
 }
+
+/**
+ * Import d'un artiste MusicBrainz pas encore en DB — même Edge Function, `kind: 'artist'`.
+ * Contrairement au web (qui n'affiche jamais un artiste similaire hors DB, voir
+ * ArtistPageContent.tsx), le mobile choisit de les rendre cliquables via ce hook
+ * (ArtistSimilarSection) : import get-or-create (pas de tracklist à récupérer, plus léger
+ * qu'un import d'album) puis navigation directe vers la page créée.
+ */
+export function useMusicBrainzArtistImport() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [importingMbid, setImportingMbid] = useState<string | null>(null);
+
+  const importArtist = useCallback(
+    async (mbid: string, name: string) => {
+      if (!user) {
+        showToast('Connecte-toi pour accéder à cet artiste', 'error');
+        return;
+      }
+      setImportingMbid(mbid);
+      try {
+        const { data, error } = await supabase.functions.invoke('import-musicbrainz', {
+          body: { kind: 'artist', mbid, name },
+        });
+        if (!error && data?.success && data.artistId) {
+          router.push(`/artists/${data.artistId}` as any);
+        } else {
+          showToast(data?.error || "Erreur lors de l'import de l'artiste", 'error');
+        }
+      } catch {
+        showToast("Erreur lors de l'import de l'artiste", 'error');
+      } finally {
+        setImportingMbid(null);
+      }
+    },
+    [user, router]
+  );
+
+  return { importingMbid, importArtist };
+}
