@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   BackHandler,
   Pressable,
   ScrollView,
@@ -14,6 +15,7 @@ import { CoverImage } from '../album/CoverImage';
 import { showToast } from '../ui/Toast';
 import { useAuth } from '../../lib/AuthContext';
 import { useSearchOverlay } from '../../lib/SearchOverlayContext';
+import { supabase } from '../../lib/supabase';
 import { searchInternal, type SearchResultUI, type SearchTab } from '../../lib/search';
 import {
   searchMusicBrainzAlbums,
@@ -73,15 +75,26 @@ export function SearchTrigger() {
   );
 }
 
-function ResultRow({ item, onSelect }: { item: SearchResultUI; onSelect: (item: SearchResultUI) => void }) {
+function ResultRow({
+  item,
+  onSelect,
+  importing,
+  needsAuth,
+}: {
+  item: SearchResultUI;
+  onSelect: (item: SearchResultUI) => void;
+  importing: boolean;
+  needsAuth: boolean;
+}) {
   const isRound = item.kind === 'artist' || item.kind === 'user';
   const PlaceholderIcon =
     item.kind === 'album' || item.kind === 'track' ? Disc3 : item.kind === 'artist' || item.kind === 'user' ? User : Music;
 
   return (
     <Pressable
-      onPress={() => onSelect(item)}
+      onPress={() => !importing && onSelect(item)}
       className="flex-row items-center gap-3 px-3 py-2.5 rounded-button active:bg-background-secondary"
+      style={importing ? { opacity: 0.7 } : undefined}
     >
       <View
         className={`w-10 h-10 bg-background-tertiary items-center justify-center overflow-hidden ${
@@ -100,14 +113,32 @@ function ResultRow({ item, onSelect }: { item: SearchResultUI; onSelect: (item: 
       </View>
 
       <View className="flex-1 min-w-0">
-        <Text numberOfLines={1} style={{ fontFamily: 'Inter_500Medium' }} className="text-[14px] text-text-primary">
-          {item.title}
-        </Text>
-        {!!item.subtitle && (
-          <Text numberOfLines={1} style={{ fontFamily: 'Inter_400Regular' }} className="text-[12px] text-text-tertiary mt-0.5">
-            {item.subtitle}
-            {item.kind === 'album' && item.releaseDate ? ` · ${item.releaseDate.substring(0, 4)}` : ''}
-          </Text>
+        {importing ? (
+          <View className="flex-row items-center gap-2">
+            <ActivityIndicator size="small" color="#8E6F5E" />
+            <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-[13px] text-text-secondary">
+              Import en cours…
+            </Text>
+          </View>
+        ) : (
+          <>
+            <Text numberOfLines={1} style={{ fontFamily: 'Inter_500Medium' }} className="text-[14px] text-text-primary">
+              {item.title}
+            </Text>
+            {!!item.subtitle && (
+              <Text numberOfLines={1} style={{ fontFamily: 'Inter_400Regular' }} className="text-[12px] text-text-tertiary mt-0.5">
+                {item.subtitle}
+                {item.kind === 'album' && item.releaseDate ? ` · ${item.releaseDate.substring(0, 4)}` : ''}
+              </Text>
+            )}
+            {needsAuth && (
+              <View className="self-start mt-1 px-1.5 py-0.5 rounded-badge-sm bg-paper-hi" style={{ borderWidth: 1, borderColor: '#D8D3CB' }}>
+                <Text style={{ fontFamily: 'Inter_400Regular', color: '#8E6F5E' }} className="text-[10px]">
+                  Connecte-toi pour l&apos;ajouter
+                </Text>
+              </View>
+            )}
+          </>
         )}
       </View>
     </Pressable>
@@ -125,6 +156,7 @@ export function SearchOverlayHost() {
   const [loading, setLoading] = useState(false);
   const [loadingExtended, setLoadingExtended] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [importingId, setImportingId] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
@@ -270,10 +302,18 @@ export function SearchOverlayHost() {
 
   const handleSelect = useCallback(
     async (item: SearchResultUI) => {
+      const needsImport = item.source === 'musicbrainz' && (item.kind === 'album' || item.kind === 'track' || item.kind === 'artist');
+      if (needsImport && !user) {
+        showToast(
+          item.kind === 'artist' ? 'Connecte-toi pour accéder à cet artiste' : "Connecte-toi pour importer cet album ou ce titre",
+          'error'
+        );
+        return;
+      }
+
       if (q.trim()) saveRecentSearch(q.trim());
 
-      // Albums et titres déjà en DB → pages album/titre (6.3, existent désormais). Le
-      // reste (import MB, artiste/profil) n'a encore aucune destination côté mobile.
+      // Albums, titres et artistes déjà en DB → pages dédiées (6.3, 6.3bis, 6.5).
       if (item.kind === 'album' && item.source === 'internal') {
         close();
         router.push(`/albums/${item.id}`);
@@ -284,10 +324,83 @@ export function SearchOverlayHost() {
         router.push(`/tracks/${item.id}`);
         return;
       }
+      if (item.kind === 'artist' && item.source === 'internal') {
+        close();
+        router.push(`/artists/${item.id}` as any);
+        return;
+      }
+
+      // Résultats MusicBrainz non encore en DB → Edge Function import-musicbrainz,
+      // miroir exact du web (le clic déclenche l'import ET la navigation directement,
+      // pas d'étape de preview visible côté utilisateur).
+      if (item.kind === 'album' && item.source === 'musicbrainz') {
+        setImportingId(item.id);
+        try {
+          const { data, error } = await supabase.functions.invoke('import-musicbrainz', {
+            body: { kind: 'album', mbid: item.releaseId || item.id },
+          });
+          if (!error && data?.success && data.albumId) {
+            close();
+            router.push((data.redirectUrl ?? `/albums/${data.albumId}`) as any);
+          } else {
+            showToast(data?.error || "Erreur lors de l'import", 'error');
+          }
+        } catch {
+          showToast("Erreur lors de l'import", 'error');
+        } finally {
+          setImportingId(null);
+        }
+        return;
+      }
+
+      if (item.kind === 'track' && item.source === 'musicbrainz') {
+        setImportingId(item.id);
+        try {
+          const { data, error } = await supabase.functions.invoke('import-musicbrainz', {
+            body: {
+              kind: 'track',
+              recordingMbid: item.recordingMbid || item.id,
+              releaseId: item.releaseId || '',
+              trackTitle: item.title,
+            },
+          });
+          if (!error && data?.success && data.trackId) {
+            close();
+            router.push(`/tracks/${data.trackId}` as any);
+          } else {
+            showToast(data?.error || "Erreur lors de l'import du titre", 'error');
+          }
+        } catch {
+          showToast("Erreur lors de l'import du titre", 'error');
+        } finally {
+          setImportingId(null);
+        }
+        return;
+      }
+
+      if (item.kind === 'artist' && item.source === 'musicbrainz') {
+        setImportingId(item.id);
+        try {
+          const { data, error } = await supabase.functions.invoke('import-musicbrainz', {
+            body: { kind: 'artist', mbid: item.id, name: item.title },
+          });
+          if (!error && data?.success && data.artistId) {
+            close();
+            router.push(`/artists/${data.artistId}` as any);
+          } else {
+            showToast(data?.error || "Erreur lors de l'import de l'artiste", 'error');
+          }
+        } catch {
+          showToast("Erreur lors de l'import de l'artiste", 'error');
+        } finally {
+          setImportingId(null);
+        }
+        return;
+      }
 
       showToast('Bientôt disponible', 'info');
     },
-    [q, close, router]
+    [q, close, router, user]
   );
 
   const handleClearAll = useCallback(async () => {
@@ -464,7 +577,13 @@ export function SearchOverlayHost() {
             <>
               {hasResults ? (
                 results.map((item) => (
-                  <ResultRow key={`${item.source}-${item.id}`} item={item} onSelect={handleSelect} />
+                  <ResultRow
+                    key={`${item.source}-${item.id}`}
+                    item={item}
+                    onSelect={handleSelect}
+                    importing={importingId === item.id}
+                    needsAuth={!user && item.source === 'musicbrainz' && (item.kind === 'album' || item.kind === 'track')}
+                  />
                 ))
               ) : !loadingExtended ? (
                 <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-[14px] text-text-tertiary px-3 py-5">

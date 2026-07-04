@@ -1,4 +1,4 @@
-import { Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CoverImage } from './CoverImage';
 
@@ -13,13 +13,21 @@ type Props = {
   trackCount?: number;
   avgRating?: number | null;
   width?: number;
+  /** Remplace la navigation par défaut vers /albums/[id] — utilisé pour les releases
+   *  MusicBrainz pas encore en DB (déclenche l'import au lieu de naviguer). */
+  onPress?: () => void;
+  /** Affiche un spinner par-dessus la cover et désactive le tap (import en cours). */
+  importing?: boolean;
 };
 
-export function AlbumCard({ album, year, trackCount, avgRating, width = 160 }: Props) {
+export function AlbumCard({ album, year, trackCount, avgRating, width = 160, onPress, importing }: Props) {
   const router = useRouter();
 
   return (
-    <Pressable onPress={() => router.push(`/albums/${album.id}`)} style={{ width }}>
+    <Pressable
+      onPress={() => !importing && (onPress ? onPress() : router.push(`/albums/${album.id}`))}
+      style={{ width, opacity: importing ? 0.6 : 1 }}
+    >
       <View className="rounded-input overflow-hidden bg-background-secondary aspect-square">
         {album.coverSrc ? (
           <CoverImage
@@ -30,6 +38,11 @@ export function AlbumCard({ album, year, trackCount, avgRating, width = 160 }: P
           />
         ) : (
           <CoverPlaceholder />
+        )}
+        {importing && (
+          <View className="absolute inset-0 items-center justify-center bg-black/20">
+            <ActivityIndicator size="small" color="#F5F3EF" />
+          </View>
         )}
         {avgRating != null && (
           <View className="absolute top-2 right-2 bg-[#1C1C1C] rounded-button px-2 py-1">

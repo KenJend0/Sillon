@@ -18,6 +18,8 @@ import { coverSrcWithFallback } from '../../lib/cover';
 import { msToMMSS, msToDuration } from '../../lib/formatDate';
 import { getMyDiaryEntries, getAlbumReviewsPreview, type MyDiaryEntry, type AlbumReview } from '../../lib/diary';
 import { getUserLists, getUserListsContaining, getPublicListsContaining, type UserListSummary, type PublicListPreview } from '../../lib/lists';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import { getArtistReleases, type ArtistRelease } from '../../lib/musicbrainz';
 import { getSimilarAlbums, type SimilarAlbum } from '../../lib/album';
 import { parseFeaturedRows, type FeaturedCredit, type RawFeaturedRow } from '../../lib/creditedArtists';
 import { h2Style, smStyle, metaStyle, labelStyle } from '../../lib/typography';
@@ -85,15 +87,16 @@ export default function AlbumPage() {
   const [listsContaining, setListsContaining] = useState<string[]>([]);
   const [publicListsContaining, setPublicListsContaining] = useState<PublicListPreview[]>([]);
   const [artistAlbums, setArtistAlbums] = useState<AlbumData[]>([]);
+  const [artistMbReleases, setArtistMbReleases] = useState<ArtistRelease[]>([]);
   const [similarAlbums, setSimilarAlbums] = useState<SimilarAlbum[]>([]);
 
   const [diarySheetOpen, setDiarySheetOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<MyDiaryEntry | undefined>(undefined);
   const [listSheetOpen, setListSheetOpen] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
     if (!id) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
 
     const { data: albumRow } = await supabase
       .from('albums')
@@ -138,6 +141,7 @@ export default function AlbumPage() {
       listsContainingData,
       publicListsContainingData,
       artistAlbumsRes,
+      artistMbReleasesRes,
       similarAlbumsData,
       followsRes,
     ] = await Promise.all([
@@ -152,6 +156,7 @@ export default function AlbumPage() {
       albumRow.artist_id
         ? supabase.from('albums').select('id, title, cover_url, mbid, release_date').eq('artist_id', albumRow.artist_id).neq('id', id).limit(8)
         : Promise.resolve({ data: [] as AlbumData[] }),
+      artistRes.data?.mbid ? getArtistReleases(artistRes.data.mbid) : Promise.resolve(null),
       getSimilarAlbums(id),
       user ? supabase.from('follows').select('followee_id').eq('follower_id', user.id) : Promise.resolve({ data: null as any }),
     ]);
@@ -185,6 +190,7 @@ export default function AlbumPage() {
     setListsContaining(listsContainingData);
     setPublicListsContaining(publicListsContainingData);
     setArtistAlbums((artistAlbumsRes.data as AlbumData[]) ?? []);
+    setArtistMbReleases(artistMbReleasesRes?.success ? artistMbReleasesRes.releases ?? [] : []);
     setSimilarAlbums(similarAlbumsData);
 
     const followeeIds = ((followsRes.data ?? []) as Array<{ followee_id: string }>).map((f) => f.followee_id);
@@ -225,6 +231,64 @@ export default function AlbumPage() {
     load();
   }, [load]);
 
+  // L'enrichissement (genres/liens streaming) tourne en tâche de fond après l'import (Edge
+  // Function import-musicbrainz) et finit typiquement quelques secondes après le premier
+  // chargement de cette page. Pas de Realtime Supabase dans ce projet (nouvelle brique
+  // d'infra pour un besoin ponctuel) — un polling léger et borné dans le temps suffit : on
+  // ne réinterroge que le sous-ensemble genres/liens (pas tout `load()`), toutes les 3s,
+  // jusqu'à 5 tentatives, et on s'arrête dès qu'une donnée apparaît.
+  useEffect(() => {
+    if (!id || loading) return; // attend la fin du chargement initial avant de juger l'état
+    if (genres.length > 0 || hasSomeLinks) return; // déjà enrichi — rien à attendre
+
+    let cancelled = false;
+    let attempts = 0;
+
+    const poll = async () => {
+      attempts += 1;
+      const [genresRes, metaRes] = await Promise.all([
+        supabase.from('album_genres').select('weight, source, genres(name)').eq('album_id', id).order('weight', { ascending: false }).limit(3),
+        supabase.from('album_metadata').select('spotify_url, apple_music_url, deezer_url').eq('album_id', id).maybeSingle(),
+      ]);
+      if (cancelled) return;
+
+      const genresData = (genresRes.data ?? []) as Array<{ weight: number; source: string; genres: { name: string } | { name: string }[] | null }>;
+      const genreName = (g: { name: string } | { name: string }[] | null): string | null =>
+        g == null ? null : Array.isArray(g) ? g[0]?.name ?? null : g.name;
+      const names = genresData.flatMap((r) => {
+        const name = genreName(r.genres);
+        return name ? [name] : [];
+      });
+      const links = {
+        spotify: metaRes.data?.spotify_url ?? null,
+        appleMusic: metaRes.data?.apple_music_url ?? null,
+        deezer: metaRes.data?.deezer_url ?? null,
+      };
+      const found = names.length > 0 || !!(links.spotify || links.appleMusic || links.deezer);
+
+      if (found) {
+        setGenres(names);
+        setGenreWeights(Object.fromEntries(
+          genresData
+            .filter((r) => r.source === 'community' && genreName(r.genres))
+            .map((r) => [genreName(r.genres)!, r.weight ?? 1])
+        ));
+        setStreamingLinks(links);
+      } else if (attempts < 5) {
+        timeoutId = setTimeout(poll, 3000);
+      }
+    };
+
+    let timeoutId = setTimeout(poll, 3000);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, loading]);
+
+  const { refreshControl } = usePullToRefresh(() => load(true));
+
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
@@ -262,7 +326,10 @@ export default function AlbumPage() {
 
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 40 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 40 }}
+        refreshControl={refreshControl}
+      >
         <View style={{ paddingTop: 16 }}>
           <BackButton />
         </View>
@@ -372,9 +439,11 @@ export default function AlbumPage() {
 
         {publicListsContaining.length > 0 && <AppearsInLists lists={publicListsContaining} />}
 
-        {artistAlbums.length > 0 && (
+        {(artistAlbums.length > 0 || artistMbReleases.length > 0) && (
           <ArtistAlbumsSection
             albums={artistAlbums}
+            mbReleases={artistMbReleases}
+            artistName={artist?.name ?? ''}
             primaryArtistName={featuredArtists.length > 0 ? artist?.name : undefined}
           />
         )}

@@ -431,6 +431,66 @@ export async function searchMusicBrainzArtists(query: string, limit = 5): Promis
   }
 }
 
+export type ArtistRelease = { mbid: string; releaseGroupMbid: string; title: string; date: string | null; type: string | null };
+type ArtistReleasesResult = { success: boolean; releases?: ArtistRelease[]; error?: string };
+
+const _artistReleasesCache = new Map<string, { result: ArtistReleasesResult; expiresAt: number }>();
+const ARTIST_RELEASES_TTL_MS = 5 * 60 * 1000; // 5 min
+
+/**
+ * Discographie complète d'un artiste via l'endpoint browse /release-group?artist=
+ * — miroir de getArtistReleases (web, apps/web/app/actions/musicbrainz.ts).
+ * Browse (pas search) : exhaustif, pas de classement par pertinence. `inc=releases`
+ * non supporté par le browse endpoint — releaseGroupMbid = mbid (c'est déjà un
+ * release-group). Le filtre de type primaire (pipe-separated) est rejeté par MB
+ * avec un 400 — filtrage client-side comme côté web.
+ */
+export async function getArtistReleases(mbid: string): Promise<ArtistReleasesResult> {
+  if (!mbid) return { success: false, error: 'mbid is empty' };
+
+  const cached = _artistReleasesCache.get(mbid);
+  if (cached && Date.now() < cached.expiresAt) return cached.result;
+
+  try {
+    const browseUrl = `${MUSICBRAINZ_API}/release-group?artist=${encodeURIComponent(mbid)}&fmt=json&limit=100`;
+    const response = await fetchWithRetry(browseUrl, { headers: { 'User-Agent': USER_AGENT } }, 2, 5000);
+
+    if (!response.ok) return { success: true, releases: [] };
+
+    const raw: unknown = await response.json();
+    const releaseGroups = parseMbReleaseGroups(raw, 'musicbrainz.artistReleases');
+
+    const ARTIST_RELEASES_ALLOWED_PRIMARY_TYPES = new Set(['Album', 'EP', 'Single']);
+    const filtered = releaseGroups.filter((rg) =>
+      isAcceptableReleaseGroup(rg, { allowLive: true, allowedPrimaryTypes: ARTIST_RELEASES_ALLOWED_PRIMARY_TYPES })
+    );
+
+    const releases: ArtistRelease[] = filtered
+      .map((rg) => {
+        const isLive = (rg['secondary-types'] || []).includes('Live');
+        return {
+          mbid: rg.id,
+          releaseGroupMbid: rg.id,
+          title: rg.title,
+          date: rg['first-release-date'] || null,
+          type: isLive ? 'Live' : (rg['primary-type'] || null),
+        };
+      })
+      .sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return b.date.localeCompare(a.date);
+      });
+
+    const finalResult = { success: true, releases };
+    _artistReleasesCache.set(mbid, { result: finalResult, expiresAt: Date.now() + ARTIST_RELEASES_TTL_MS });
+    return finalResult;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: errorMsg };
+  }
+}
+
 /**
  * Recherche de titres via l'endpoint /recording — miroir de
  * searchMusicBrainzRecordings (web).

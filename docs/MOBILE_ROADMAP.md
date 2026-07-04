@@ -122,10 +122,12 @@ Dans cet ordre, du plus important au moins important.
 - [x] Recherches récentes (local)
 - [x] Autocomplete (recherche live au fil de la frappe, debounce 300ms — comme le web)
 
-Note : la page album (6.3) existe désormais — le tap sur un résultat de recherche
-interne (déjà en DB) navigue vers `/albums/[id]`. Pas encore de page artiste/titre/
-profil (6.5-6.7) et pas d'import MusicBrainz depuis mobile (voir notes de scope 6.3) :
-ces cas restent un toast "Bientôt disponible" — à brancher au fur et à mesure.
+Note : les pages album (6.3), titre (6.3bis) et artiste (6.5) existent désormais — le
+tap sur un résultat de recherche interne (déjà en DB) navigue vers `/albums/[id]`,
+`/tracks/[id]` ou `/artists/[id]`. Les résultats MusicBrainz non encore en DB déclenchent
+maintenant l'import via l'Edge Function `import-musicbrainz` (Phase 8) puis naviguent
+directement vers la page créée — même flux qu'en web. Reste en toast "Bientôt disponible" :
+les profils (6.7, pas de page).
 
 ### 6.3 Page album
 - [x] Hero (comme sur la version web mobile)
@@ -134,17 +136,25 @@ ces cas restent un toast "Bientôt disponible" — à brancher au fur et à mesu
 - [x] Critique
 - [x] Bouton "Ajouter à une liste"
 - [x] Albums similaires
-- [x] Du meme artiste (albums déjà en DB uniquement — voir note ci-dessous)
+- [x] Du meme artiste (albums en DB + releases MusicBrainz complémentaires, cliquables pour import)
 
-Notes de scope (Phase 8 backend mobile non faite au moment de l'implémentation) :
-- **Enrichissement dégradé** : genres/description/liens streaming affichés uniquement s'ils
-  sont déjà en DB ; pas d'`EnrichmentPoller`, pas de déclenchement d'enrichissement depuis
-  mobile (nécessite la Edge Function `enrich-album`, Phase 8).
-- **Pas d'import MusicBrainz depuis mobile** : `importAlbumFromMusicBrainz` (web) utilise le
-  client admin (service_role, upload cover, écriture `album_featured_artists`), jamais
-  exposable côté client. La section "Du même artiste" n'affiche donc que les albums déjà en
-  DB (pas de complément MusicBrainz cliquable comme sur le web) ; la page album elle-même
-  n'est atteignable que pour des albums déjà en DB (pas d'`ImportButton`).
+Notes de scope (mises à jour après Phase 8 — Edge Functions `import-musicbrainz` +
+`enrich-album` créées, voir Phase 8) :
+- **Enrichissement en tâche de fond** : `enrich-album` tourne en tâche de fond après import
+  (voir 6.2 et Phase 8). Si la page se charge avant que ça finisse (genres/liens absents), un
+  petit polling local (pas de Realtime Supabase — aucun usage existant dans ce projet, jugé
+  disproportionné pour ce besoin ponctuel) réinterroge `album_genres`/`album_metadata` toutes
+  les 3s pendant 15s max, et met à jour l'affichage dès qu'une donnée apparaît — sans action de
+  l'utilisateur. Le pull-to-refresh reste disponible en secours. La description
+  (`album_metadata.description`/`description_src`) n'est en revanche pas encore lue/affichée
+  sur cette page mobile (seuls genres + liens streaming le sont) — à ajouter séparément si besoin.
+- **"Du même artiste" cliquable pour import** : la section fusionne désormais albums DB +
+  releases MusicBrainz complémentaires (`getArtistReleases`, même dédup par mbid/clé
+  canonique que la page artiste) ; le tap sur une release MB déclenche l'import via
+  `import-musicbrainz` (`lib/useMusicBrainzImport.ts`, réutilisé par `ArtistDiscographySection`)
+  puis navigue directement vers la page créée. La page album elle-même reste atteignable
+  uniquement pour des albums déjà en DB ou importés via cette section ou la recherche (pas
+  d'`ImportButton` dédié en haut de la page pour un mbid passé en paramètre d'URL).
 - **Pas de fanout feed pour les écoutes** : créer/modifier une écoute (`upsertDiaryEntry`)
   écrit directement dans `diary_entries` sous RLS mais n'écrit pas dans `feed_events` pour les
   abonnés (nécessiterait une Edge Function comme `toggle-like`) — les écoutes ajoutées depuis
@@ -181,9 +191,36 @@ titres déjà en DB (miroir du branchement fait pour les albums en 6.3).
 - [ ] Ré-écoute (si déjà une entrée existante)
 
 ### 6.5 Page artiste
-- [ ] Photo + nom + bio
-- [ ] Discographie (albums en DB + albums MB non importés)
-- [ ] Stats (listeners, reviews)
+- [x] Photo + nom (photo lue en DB uniquement — voir note de scope)
+- [x] Activité réseau (qui dans mon réseau a écouté cet artiste — albums + titres)
+- [x] Stats (auditeurs uniques, note moyenne, critiques — albums + titres fusionnés)
+- [x] Populaires (top 3 albums par auditeurs)
+- [x] Discographie (albums en DB + albums MB non importés, cliquables pour import)
+- [x] Apparaît sur (albums crédités en featuring, album OU piste, dédupliqués par album)
+- [x] Artistes similaires (via l'Edge Function `similar-artists` — voir note de scope)
+
+Notes de scope (Phase 8 backend mobile non faite au moment de l'implémentation) :
+- **Photo en mode dégradé** : `getOrFetchArtistMeta` (web) fetch MusicBrainz/Wikidata et écrit
+  le cache via le client admin (service_role) si l'artiste n'a pas encore de photo — jamais
+  exposable côté mobile. La page mobile lit `artists.image_url` tel quel, avec fallback sur
+  la première cover d'album trouvée en DB (lecture seule), sans déclencher de nouvelle
+  recherche ni écriture. Même dégradation que 6.3/6.3bis.
+- **Discographie cliquable pour import** : les releases MusicBrainz non encore en DB sont
+  affichées (API publique, comme le web) et déclenchent désormais l'import via l'Edge Function
+  `import-musicbrainz` au tap (`lib/useMusicBrainzImport.ts`), avec spinner sur la cover pendant
+  l'import puis navigation directe vers la page créée — même flux que la recherche globale (6.2)
+  et "Du même artiste" (6.3).
+- **Artistes similaires** : `getSimilarArtists` (web) appelle l'API Last.fm avec
+  `LASTFM_API_KEY`, un secret serveur jamais exposable côté mobile. Portée via la nouvelle
+  Edge Function `similar-artists` (supabase/functions/similar-artists), qui reprend la même
+  logique (matching DB par MBID/nom, max 6, DB en priorité) — appelée depuis
+  `lib/artists.ts` (`getSimilarArtists`). Seuls les artistes déjà en DB sont affichés/
+  cliquables, comme sur le web (pas d'import d'artiste depuis cette section).
+- Navigation `/artists/[id]` déjà référencée depuis AlbumHero, TrackHero, ArtistCard et la
+  page titre (6.3/6.3bis) — ces liens menaient à un 404 jusqu'ici ; la route existe désormais.
+  La recherche (SearchOverlay) navigue aussi vers `/artists/[id]` pour les résultats artiste
+  déjà en DB (miroir du branchement fait pour albums/titres en 6.2).
+
 
 ### 6.6 Profil utilisateur (soi-même)
 - [ ] Avatar + username + bio
@@ -239,12 +276,39 @@ titres déjà en DB (miroir du branchement fait pour les albums en 6.3).
 
 Les secrets (Spotify, Last.fm) ne peuvent pas être exposés dans l'app. Ils passent par **Supabase Edge Functions** (remplaçant de `/api/enrich`).
 
-- [ ] Créer la Edge Function `enrich-album` :
-  - [ ] Reprendre la logique de `frontend/app/api/enrich/route.ts` + `actions/metadata.ts`
-  - [ ] Gérer les secrets via les variables d'env Supabase
-  - [ ] Tester depuis l'app mobile
-- [ ] Brancher `EnrichmentPoller` mobile sur la Edge Function
-- [ ] Vérifier que l'enrichissement (genres, description, liens streaming) fonctionne après import
+- [x] Créer la Edge Function `import-musicbrainz` (`supabase/functions/import-musicbrainz/`) :
+  - [x] Reprendre `importAlbumFromMusicBrainz` / `importArtistFromMusicBrainz` /
+        `importTrackFromMusicBrainz` (`apps/web/app/actions/musicbrainz.ts`) à l'identique
+  - [x] Client user-scope (RLS) pour les écritures albums/artistes/tracks, client service_role
+        uniquement pour l'upload cover + `album_featured_artists`/`track_featured_artists`
+        (mêmes usages qu'en web, rien de plus exposé)
+  - [x] Brancher `SearchOverlay` mobile dessus (clic sur un résultat MusicBrainz non importé →
+        import → navigation directe, comme le web)
+- [x] Créer la Edge Function `enrich-album` (`supabase/functions/enrich-album/`) :
+  - [x] Reprendre la logique de `apps/web/app/api/enrich/route.ts` + `actions/metadata.ts`
+        (liens streaming + genres/tags + description — le mobile peut se permettre le pipeline
+        complet à chaque import, contrairement au web qui ne déclenche que les liens pour ne
+        pas exploser le quota CPU Vercel)
+  - [x] `import-musicbrainz` déclenche automatiquement l'enrichissement en tâche de fond
+        (`EdgeRuntime.waitUntil`) après chaque import d'album réussi
+  - [ ] Gérer les secrets via les variables d'env Supabase — **à faire manuellement** :
+        `supabase secrets set SPOTIFY_CLIENT_ID=... SPOTIFY_CLIENT_SECRET=... LASTFM_API_KEY=...`
+  - [ ] Déployer les deux fonctions : `supabase functions deploy import-musicbrainz` et
+        `supabase functions deploy enrich-album`
+  - [ ] Tester depuis l'app mobile (import d'un album/titre/artiste pas encore en DB, vérifier
+        que `album_metadata`/`genres`/`album_genres` se remplissent après quelques secondes)
+- [x] Créer la Edge Function `similar-artists` (`supabase/functions/similar-artists/`) :
+  - [x] Reprendre `getSimilarArtists` (`apps/web/app/actions/artists.ts`) à l'identique
+        (Last.fm `artist.getSimilar` + matching DB par MBID/nom, DB en priorité, max 6)
+  - [x] Client user-scope (RLS) uniquement, aucune écriture — pas besoin de service_role
+  - [x] Brancher la page artiste mobile dessus (`lib/artists.ts` → `getSimilarArtists`,
+        section "Artistes similaires" affichée pour les résultats déjà en DB)
+  - [ ] Déployer : `supabase functions deploy similar-artists` — **LASTFM_API_KEY déjà
+        configuré côté Supabase** (secret partagé avec `enrich-album`)
+  - [ ] Tester depuis l'app mobile (page artiste → section "Artistes similaires" en bas)
+- [ ] Pas encore branché : `EnrichmentPoller` mobile (rafraîchir l'UI albums sans re-fetch
+      manuel une fois l'enrichissement en tâche de fond terminé) — `enrich-album` est déjà
+      invocable indépendamment pour ce futur usage.
 
 ---
 
