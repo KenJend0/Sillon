@@ -14,10 +14,16 @@ type NetworkListener = {
   hasReview: boolean;
 };
 
-type Props = { listeners: NetworkListener[] };
+type Props = {
+  listeners: NetworkListener[];
+  /** "cet album" (défaut) ou "ce titre" — miroir de NetworkListenersSection/TrackNetworkListeners (web). */
+  itemLabel?: string;
+  /** "/diary/" (défaut) ou "/track-diary/" — préfixe de route pour l'entrée d'écoute. */
+  entryPrefix?: string;
+};
 
-/** Miroir de NetworkListenersSection + NetworkListenersBottomSheet (web). */
-export function NetworkListenersSection({ listeners }: Props) {
+/** Miroir de NetworkListenersSection + NetworkListenersBottomSheet (web) — partagé albums/titres. */
+export function NetworkListenersSection({ listeners, itemLabel = 'cet album', entryPrefix = '/diary/' }: Props) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   if (listeners.length === 0) return null;
@@ -27,11 +33,11 @@ export function NetworkListenersSection({ listeners }: Props) {
   const tokens = shown.map((l) => l.username);
   let label: string;
   if (tokens.length === 1) {
-    label = `${tokens[0]} a écouté cet album`;
+    label = `${tokens[0]} a écouté ${itemLabel}`;
   } else if (rest === 0) {
-    label = `${tokens.slice(0, -1).join(', ')} et ${tokens[tokens.length - 1]} ont écouté cet album`;
+    label = `${tokens.slice(0, -1).join(', ')} et ${tokens[tokens.length - 1]} ont écouté ${itemLabel}`;
   } else {
-    label = `${tokens.join(', ')} et ${rest} autre${rest > 1 ? 's' : ''} ont écouté cet album`;
+    label = `${tokens.join(', ')} et ${rest} autre${rest > 1 ? 's' : ''} ont écouté ${itemLabel}`;
   }
 
   return (
@@ -47,14 +53,14 @@ export function NetworkListenersSection({ listeners }: Props) {
         <Text className="flex-1 text-text-tertiary" style={[labelStyle, { lineHeight: 16.8 }]}>{label}</Text>
       </Pressable>
 
-      <BottomSheet isOpen={open} onClose={() => setOpen(false)} title="Ont écouté cet album" snapPoint="50%">
+      <BottomSheet isOpen={open} onClose={() => setOpen(false)} title={`Ont écouté ${itemLabel}`} snapPoint="50%">
         <View className="px-6 py-2">
           {listeners.map((l) => (
             <Pressable
               key={l.userId}
               onPress={() => {
                 setOpen(false);
-                router.push((l.entryId ? `/diary/${l.entryId}` : `/u/${l.username}`) as any);
+                router.push((l.entryId ? `${entryPrefix}${l.entryId}` : `/u/${l.username}`) as any);
               }}
               className="flex-row items-center gap-3 py-3 border-b border-border-divider"
             >

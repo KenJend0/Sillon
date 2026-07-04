@@ -9,21 +9,23 @@ import { smStyle } from '../../lib/typography';
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  albumId: string;
+  /** Exactement l'un des deux — album OU titre. */
+  albumId?: string;
+  trackId?: string;
   userLists: UserListSummary[];
   listsContaining: string[];
   onChanged: (listsContaining: string[]) => void;
 };
 
 /** Miroir simplifié de AddToListButton (web) — pas de création de liste depuis cette bottom sheet (Phase 7). */
-export function AddToListBottomSheet({ isOpen, onClose, albumId, userLists, listsContaining, onChanged }: Props) {
+export function AddToListBottomSheet({ isOpen, onClose, albumId, trackId, userLists, listsContaining, onChanged }: Props) {
   const [pending, setPending] = useState<string | null>(null);
 
   async function handleToggle(listId: string) {
     if (pending) return;
     setPending(listId);
     try {
-      const { added } = await toggleListItem(listId, albumId);
+      const { added } = await toggleListItem(listId, { albumId, trackId });
       const next = added ? [...listsContaining, listId] : listsContaining.filter((id) => id !== listId);
       onChanged(next);
       showToast(added ? 'Ajouté' : 'Retiré', 'success');

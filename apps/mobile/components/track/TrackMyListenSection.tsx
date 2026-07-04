@@ -1,18 +1,18 @@
 import { Pressable, Text, View } from 'react-native';
-import { AlbumEntryMenu } from './AlbumEntryMenu';
-import { h2Style, metaStyle, labelStyle } from '../../lib/typography';
-import type { MyDiaryEntry } from '../../lib/diary';
+import { TrackEntryMenu } from './TrackEntryMenu';
+import { h2Style, labelStyle } from '../../lib/typography';
+import type { MyTrackDiaryEntry } from '../../lib/trackDiary';
 
 type Props = {
-  entry: MyDiaryEntry;
+  entry: MyTrackDiaryEntry;
   entriesCount: number;
   onEdit: () => void;
   onAddReview: () => void;
   onDeleted: () => void;
 };
 
-/** Miroir de MyListenSection (web) — la modale "voir toutes les écoutes" (MyActivitiesModal) n'est pas portée dans cette passe. */
-export function MyListenSection({ entry, entriesCount, onEdit, onAddReview, onDeleted }: Props) {
+/** Miroir de TrackMyListenSection (web) — voir MyListenSection (mobile, albums) pour le pattern. */
+export function TrackMyListenSection({ entry, entriesCount, onEdit, onAddReview, onDeleted }: Props) {
   return (
     <View className="border-b border-border-divider pb-12">
       <Text className="text-text-primary mb-4" style={h2Style}>Mon écoute</Text>
@@ -26,22 +26,16 @@ export function MyListenSection({ entry, entriesCount, onEdit, onAddReview, onDe
               <Text className="text-accent" style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 18, lineHeight: 18 }}>
                 {entry.rating}
               </Text>
-              <Text
-                className="uppercase text-accent"
-                style={{ fontFamily: 'Inter_400Regular', fontSize: 9, letterSpacing: 1.44, opacity: 0.7 }}
-              >
+              <Text className="uppercase text-accent" style={{ fontFamily: 'Inter_400Regular', fontSize: 9, letterSpacing: 1.44, opacity: 0.7 }}>
                 /10
               </Text>
             </View>
           ) : <View />}
-          <AlbumEntryMenu entryId={entry.id} onEdit={onEdit} onDeleted={onDeleted} />
+          <TrackEntryMenu entryId={entry.id} onEdit={onEdit} onDeleted={onDeleted} />
         </View>
 
         {entry.review_body ? (
-          <Text
-            className="text-accent-deep mb-3"
-            style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 14, lineHeight: 24.5 }}
-          >
+          <Text className="text-accent-deep mb-3" style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 14, lineHeight: 24.5 }}>
             «{' '}{entry.review_body}{' '}»
           </Text>
         ) : (

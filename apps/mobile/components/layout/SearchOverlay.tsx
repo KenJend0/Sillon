@@ -272,11 +272,16 @@ export function SearchOverlayHost() {
     async (item: SearchResultUI) => {
       if (q.trim()) saveRecentSearch(q.trim());
 
-      // Albums déjà en DB → page album (6.3, existe désormais). Le reste (import MB,
-      // artiste/titre/profil) n'a encore aucune destination côté mobile (6.4-6.7).
+      // Albums et titres déjà en DB → pages album/titre (6.3, existent désormais). Le
+      // reste (import MB, artiste/profil) n'a encore aucune destination côté mobile.
       if (item.kind === 'album' && item.source === 'internal') {
         close();
         router.push(`/albums/${item.id}`);
+        return;
+      }
+      if (item.kind === 'track' && item.source === 'internal') {
+        close();
+        router.push(`/tracks/${item.id}`);
         return;
       }
 

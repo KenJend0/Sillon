@@ -59,6 +59,23 @@ export async function getUserListsContaining(albumId: string): Promise<string[]>
   return (items ?? []).map((i) => i.list_id);
 }
 
+/** IDs des listes de l'utilisateur courant contenant ce titre. */
+export async function getUserListsContainingTrack(trackId: string): Promise<string[]> {
+  const userId = await currentUserId();
+  if (!userId) return [];
+
+  const { data: lists } = await supabase.from('user_lists').select('id').eq('user_id', userId);
+  if (!lists || lists.length === 0) return [];
+
+  const { data: items } = await supabase
+    .from('list_items')
+    .select('list_id')
+    .eq('track_id', trackId)
+    .in('list_id', lists.map((l) => l.id));
+
+  return (items ?? []).map((i) => i.list_id);
+}
+
 /** Listes publiques contenant cet album — pour "Apparaît dans X listes". */
 export async function getPublicListsContaining(albumId: string, limit = 5): Promise<PublicListPreview[]> {
   const { data: items, error } = await supabase
@@ -112,20 +129,17 @@ export async function getOrCreateDefaultList(): Promise<string> {
   return created.id;
 }
 
-/** Ajoute ou retire un album d'une liste (toggle). */
-export async function toggleListItem(listId: string, albumId: string): Promise<{ added: boolean }> {
+/** Ajoute ou retire un album OU un titre d'une liste (toggle) — exactement l'un des deux. */
+export async function toggleListItem(listId: string, item: { albumId?: string; trackId?: string }): Promise<{ added: boolean }> {
   const userId = await currentUserId();
   if (!userId) throw new Error('Not authenticated');
 
   const { data: list } = await supabase.from('user_lists').select('id').eq('id', listId).eq('user_id', userId).maybeSingle();
   if (!list) throw new Error('List not found');
 
-  const { data: existing } = await supabase
-    .from('list_items')
-    .select('id')
-    .eq('list_id', listId)
-    .eq('album_id', albumId)
-    .maybeSingle();
+  let query = supabase.from('list_items').select('id').eq('list_id', listId);
+  query = item.albumId ? query.eq('album_id', item.albumId) : query.eq('track_id', item.trackId!);
+  const { data: existing } = await query.maybeSingle();
 
   if (existing) {
     const { error } = await supabase.from('list_items').delete().eq('id', existing.id);
@@ -133,7 +147,9 @@ export async function toggleListItem(listId: string, albumId: string): Promise<{
     return { added: false };
   }
 
-  const { error } = await supabase.from('list_items').insert({ list_id: listId, album_id: albumId });
+  const { error } = await supabase
+    .from('list_items')
+    .insert({ list_id: listId, album_id: item.albumId ?? null, track_id: item.trackId ?? null });
   if (error) throw new Error('Une erreur est survenue');
   return { added: true };
 }

@@ -258,6 +258,7 @@ export default function AlbumPage() {
   const myLatestEntry = myEntries[0];
 
   const hasSomeLinks = !!(streamingLinks.spotify || streamingLinks.appleMusic || streamingLinks.deezer);
+  const hasStatsRow = stats.avg_rating !== null || stats.listeners_count > 0 || stats.reviews_count > 0;
 
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
@@ -297,7 +298,7 @@ export default function AlbumPage() {
 
         {networkListeners.length > 0 && <NetworkListenersSection listeners={networkListeners} />}
 
-        {(stats.avg_rating !== null || stats.listeners_count > 0 || stats.reviews_count > 0) && (
+        {hasStatsRow && (
           <View className="flex-row border-t border-b border-rule py-3 mb-8">
             {stats.avg_rating !== null && (
               <View className="flex-1 pr-4 border-r border-rule">
@@ -328,19 +329,17 @@ export default function AlbumPage() {
         )}
 
         {myLatestEntry && (
-          <View className="mb-10">
-            <MyListenSection
-              entry={myLatestEntry}
-              entriesCount={myEntries.length}
-              onEdit={() => { setEditingEntry(myLatestEntry); setDiarySheetOpen(true); }}
-              onAddReview={() => { setEditingEntry(myLatestEntry); setDiarySheetOpen(true); }}
-              onDeleted={load}
-            />
-          </View>
+          <MyListenSection
+            entry={myLatestEntry}
+            entriesCount={myEntries.length}
+            onEdit={() => { setEditingEntry(myLatestEntry); setDiarySheetOpen(true); }}
+            onAddReview={() => { setEditingEntry(myLatestEntry); setDiarySheetOpen(true); }}
+            onDeleted={load}
+          />
         )}
 
         {tracks.length > 0 && (
-          <View className="border-t border-border-divider pt-8 mb-12">
+          <View className={`${(hasStatsRow || !!myLatestEntry) ? 'pt-8' : 'border-t border-border-divider pt-8'} mb-12`}>
             <Text className="text-text-primary mb-1" style={h2Style}>Morceaux</Text>
             {(trackCount > 0 || totalDurationMs > 0) && (
               <Text className="text-text-tertiary mb-5" style={smStyle}>
@@ -380,7 +379,7 @@ export default function AlbumPage() {
           />
         )}
 
-        <View className="border-t border-border-divider pt-8 mb-8">
+        <View className="border-t border-border-divider pt-8 mb-12">
           <Text className="text-text-primary mb-5" style={h2Style}>Albums similaires</Text>
           {similarAlbums.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>

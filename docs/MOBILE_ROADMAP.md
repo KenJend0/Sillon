@@ -158,6 +158,18 @@ Notes de scope (Phase 8 backend mobile non faite au moment de l'implémentation)
   cette page n'existent pas encore (Phases 6.5–6.7, 7) — les liens vers ces pages 404 pour
   l'instant, comme documenté en 6.2.
 
+### 6.3bis Page titre (non prévue initialement — ajoutée car quasi identique à 6.3)
+- [x] Hero (cover album, titre, artiste(s), lien album · année, genres hérités de l'album)
+- [x] Section "Mon écoute"
+- [x] Bouton "Ajouter à une liste"
+- [x] Autres titres de l'album
+- [x] Critiques
+- [x] Plus de cet artiste (albums)
+
+Mêmes notes de scope que 6.3 (mode dégradé Phase 8) : `lib/trackDiary.ts` n'a pas de
+fanout feed, `lib/tracks.ts`/`lib/trackDiary.ts` n'importent rien depuis MusicBrainz. La
+recherche (SearchOverlay) navigue désormais aussi vers `/tracks/[id]` pour les résultats
+titres déjà en DB (miroir du branchement fait pour les albums en 6.3).
 
 ### 6.4 Ajouter une écoute
 - [ ] Rechercher un album ou titre
