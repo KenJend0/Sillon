@@ -122,22 +122,42 @@ Dans cet ordre, du plus important au moins important.
 - [x] Recherches récentes (local)
 - [x] Autocomplete (recherche live au fil de la frappe, debounce 300ms — comme le web)
 
-Note : aucune page album/artiste/titre/profil n'existe encore côté mobile (6.3-6.5),
-donc le tap sur un résultat ne déclenche ni import MusicBrainz ni navigation pour
-l'instant (toast "Bientôt disponible") — à brancher quand ces pages existeront.
+Note : la page album (6.3) existe désormais — le tap sur un résultat de recherche
+interne (déjà en DB) navigue vers `/albums/[id]`. Pas encore de page artiste/titre/
+profil (6.5-6.7) et pas d'import MusicBrainz depuis mobile (voir notes de scope 6.3) :
+ces cas restent un toast "Bientôt disponible" — à brancher au fur et à mesure.
 
 ### 6.3 Page album
-- [ ] Cover + titre + artiste + année + type
-- [ ] Note moyenne + nombre de reviews
-- [ ] Tracklist
-- [ ] Section "Ma review" (noter + écrire)
-- [ ] Reviews du réseau
-- [ ] Genres
-- [ ] Description (Last.fm / Wikipedia)
-- [ ] Liens streaming (Spotify, Apple Music, Deezer)
-- [ ] Bouton "Ajouter à une liste"
-- [ ] Albums similaires
-- [ ] Lien vers la page artiste
+- [x] Hero (comme sur la version web mobile)
+- [x] Section "Mon ecoute"
+- [x] Tracklist
+- [x] Critique
+- [x] Bouton "Ajouter à une liste"
+- [x] Albums similaires
+- [x] Du meme artiste (albums déjà en DB uniquement — voir note ci-dessous)
+
+Notes de scope (Phase 8 backend mobile non faite au moment de l'implémentation) :
+- **Enrichissement dégradé** : genres/description/liens streaming affichés uniquement s'ils
+  sont déjà en DB ; pas d'`EnrichmentPoller`, pas de déclenchement d'enrichissement depuis
+  mobile (nécessite la Edge Function `enrich-album`, Phase 8).
+- **Pas d'import MusicBrainz depuis mobile** : `importAlbumFromMusicBrainz` (web) utilise le
+  client admin (service_role, upload cover, écriture `album_featured_artists`), jamais
+  exposable côté client. La section "Du même artiste" n'affiche donc que les albums déjà en
+  DB (pas de complément MusicBrainz cliquable comme sur le web) ; la page album elle-même
+  n'est atteignable que pour des albums déjà en DB (pas d'`ImportButton`).
+- **Pas de fanout feed pour les écoutes** : créer/modifier une écoute (`upsertDiaryEntry`)
+  écrit directement dans `diary_entries` sous RLS mais n'écrit pas dans `feed_events` pour les
+  abonnés (nécessiterait une Edge Function comme `toggle-like`) — les écoutes ajoutées depuis
+  mobile n'apparaissent pas encore dans le feed réseau des autres utilisateurs.
+- **Date d'écoute fixée à aujourd'hui** : pas de date picker natif installé ; modifier une
+  écoute existante garde sa date d'origine (non éditable pour l'instant).
+- **Listes** : `lib/lists.ts` mobile n'est qu'un sous-ensemble minimal (get/toggle/liste par
+  défaut) pour le bouton "Ajouter à une liste" — la Phase 7 (créer une liste, réordonner,
+  couverture personnalisée) reste à faire.
+- Routes `/artists/[id]`, `/diary/[id]`, `/lists/[id]`, `/u/[username]` référencées depuis
+  cette page n'existent pas encore (Phases 6.5–6.7, 7) — les liens vers ces pages 404 pour
+  l'instant, comme documenté en 6.2.
+
 
 ### 6.4 Ajouter une écoute
 - [ ] Rechercher un album ou titre

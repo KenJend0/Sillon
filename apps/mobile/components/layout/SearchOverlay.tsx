@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { usePathname } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { Clock, Disc3, Music, Search, User, X } from 'lucide-react-native';
 import { CoverImage } from '../album/CoverImage';
 import { showToast } from '../ui/Toast';
@@ -128,6 +128,7 @@ export function SearchOverlayHost() {
   const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
+  const router = useRouter();
 
   const close = useCallback(() => {
     closeOverlay();
@@ -270,11 +271,18 @@ export function SearchOverlayHost() {
   const handleSelect = useCallback(
     async (item: SearchResultUI) => {
       if (q.trim()) saveRecentSearch(q.trim());
-      // Aucune page album/artiste/titre/profil n'existe encore côté mobile — pas
-      // d'import MusicBrainz ni de navigation pour cette phase (voir roadmap 6.2).
+
+      // Albums déjà en DB → page album (6.3, existe désormais). Le reste (import MB,
+      // artiste/titre/profil) n'a encore aucune destination côté mobile (6.4-6.7).
+      if (item.kind === 'album' && item.source === 'internal') {
+        close();
+        router.push(`/albums/${item.id}`);
+        return;
+      }
+
       showToast('Bientôt disponible', 'info');
     },
-    [q]
+    [q, close, router]
   );
 
   const handleClearAll = useCallback(async () => {

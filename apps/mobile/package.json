@@ -5,7 +5,7 @@
   "dependencies": {
     "@expo-google-fonts/instrument-serif": "^0.4.1",
     "@expo-google-fonts/inter": "^0.4.2",
-    "@gorhom/bottom-sheet": "^5.2.14",
+    "@expo/ui": "~57.0.3",
     "@supabase/supabase-js": "^2.110.0",
     "expo": "~57.0.1",
     "expo-constants": "~57.0.2",
