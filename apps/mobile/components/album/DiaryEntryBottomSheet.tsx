@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { BottomSheet } from '../ui/BottomSheet';
 import { StarRating } from '../ui/StarRating';
+import { DatePickerField } from '../ui/DatePickerField';
 import { showToast } from '../ui/Toast';
 import { upsertDiaryEntry, updateDiaryEntry, type MyDiaryEntry } from '../../lib/diary';
 import { metaStyle, metaMediumStyle } from '../../lib/typography';
@@ -17,16 +18,17 @@ type Props = {
   onSaved: () => void;
 };
 
+const today = new Date().toISOString().split('T')[0];
+
 /**
  * Formulaire noter/écrire une écoute — fusion de AddToDiaryButton + EditDiaryEntryButton
  * (web) en un seul composant réutilisé pour créer ET modifier, les deux formulaires étant
- * identiques à l'exception de l'appel réseau final. Contrairement au web, la date d'écoute
- * n'est pas modifiable ici (pas de date picker natif installé côté mobile pour l'instant) —
- * les nouvelles écoutes sont datées d'aujourd'hui, les modifications gardent leur date.
+ * identiques à l'exception de l'appel réseau final.
  */
 export function DiaryEntryBottomSheet({ isOpen, onClose, albumId, editingEntry, hasExistingEntry, onSaved }: Props) {
   const [rating, setRating] = useState<number | null>(editingEntry?.rating ?? null);
   const [body, setBody] = useState(editingEntry?.review_body ?? '');
+  const [listenedAt, setListenedAt] = useState(editingEntry?.listened_at ?? today);
   const [saving, setSaving] = useState(false);
   const isEdit = !!editingEntry;
 
@@ -34,10 +36,9 @@ export function DiaryEntryBottomSheet({ isOpen, onClose, albumId, editingEntry, 
     if (isOpen) {
       setRating(editingEntry?.rating ?? null);
       setBody(editingEntry?.review_body ?? '');
+      setListenedAt(editingEntry?.listened_at ?? today);
     }
   }, [isOpen, editingEntry]);
-
-  const today = new Date().toISOString().split('T')[0];
 
   async function handleSubmit() {
     if (saving) return;
@@ -46,7 +47,7 @@ export function DiaryEntryBottomSheet({ isOpen, onClose, albumId, editingEntry, 
       if (isEdit) {
         const result = await updateDiaryEntry({
           entryId: editingEntry.id,
-          listenedAt: editingEntry.listened_at,
+          listenedAt,
           rating,
           reviewBody: body || undefined,
         });
@@ -58,7 +59,7 @@ export function DiaryEntryBottomSheet({ isOpen, onClose, albumId, editingEntry, 
       } else {
         const result = await upsertDiaryEntry({
           albumId,
-          listenedAt: today,
+          listenedAt,
           rating: rating ?? 0,
           reviewBody: body || undefined,
           relisten: hasExistingEntry,
@@ -92,6 +93,11 @@ export function DiaryEntryBottomSheet({ isOpen, onClose, albumId, editingEntry, 
             </Text>
           </View>
           <StarRating value={rating} onChange={setRating} />
+        </View>
+
+        <View>
+          <Text className="text-text-secondary mb-2" style={metaStyle}>Date d'écoute</Text>
+          <DatePickerField value={listenedAt} onChange={setListenedAt} maxDate={new Date()} />
         </View>
 
         <View>

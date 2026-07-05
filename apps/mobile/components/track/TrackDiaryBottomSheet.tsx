@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { BottomSheet } from '../ui/BottomSheet';
 import { StarRating } from '../ui/StarRating';
+import { DatePickerField } from '../ui/DatePickerField';
 import { showToast } from '../ui/Toast';
 import { upsertTrackDiaryEntry, type MyTrackDiaryEntry } from '../../lib/trackDiary';
 import { metaStyle, metaMediumStyle } from '../../lib/typography';
@@ -18,15 +19,18 @@ type Props = {
   onSaved: () => void;
 };
 
+const today = new Date().toISOString().split('T')[0];
+
 /**
  * Formulaire noter/écrire une écoute de titre — fusion de TrackDiaryInline +
  * EditTrackDiaryEntryButton (web), même pattern que DiaryEntryBottomSheet (albums). Le
  * web réutilise upsertTrackDiaryEntry pour l'édition aussi (onConflict sur la même
- * date) — ce composant fait pareil : en édition on renvoie la date existante.
+ * date) — ce composant fait pareil.
  */
 export function TrackDiaryBottomSheet({ isOpen, onClose, trackId, albumId, artistId, editingEntry, hasExistingEntry, onSaved }: Props) {
   const [rating, setRating] = useState<number | null>(editingEntry?.rating ?? null);
   const [body, setBody] = useState(editingEntry?.review_body ?? '');
+  const [listenedAt, setListenedAt] = useState(editingEntry?.listened_at ?? today);
   const [saving, setSaving] = useState(false);
   const isEdit = !!editingEntry;
 
@@ -34,10 +38,9 @@ export function TrackDiaryBottomSheet({ isOpen, onClose, trackId, albumId, artis
     if (isOpen) {
       setRating(editingEntry?.rating ?? null);
       setBody(editingEntry?.review_body ?? '');
+      setListenedAt(editingEntry?.listened_at ?? today);
     }
   }, [isOpen, editingEntry]);
-
-  const today = new Date().toISOString().split('T')[0];
 
   async function handleSubmit() {
     if (saving) return;
@@ -47,7 +50,7 @@ export function TrackDiaryBottomSheet({ isOpen, onClose, trackId, albumId, artis
         trackId,
         albumId,
         artistId,
-        listenedAt: isEdit ? editingEntry.listened_at : today,
+        listenedAt,
         rating: rating ?? 0,
         reviewBody: body || undefined,
       });
@@ -79,6 +82,11 @@ export function TrackDiaryBottomSheet({ isOpen, onClose, trackId, albumId, artis
             </Text>
           </View>
           <StarRating value={rating} onChange={setRating} />
+        </View>
+
+        <View>
+          <Text className="text-text-secondary mb-2" style={metaStyle}>Date d'écoute</Text>
+          <DatePickerField value={listenedAt} onChange={setListenedAt} maxDate={new Date()} />
         </View>
 
         <View>

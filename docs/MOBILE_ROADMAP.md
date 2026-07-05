@@ -162,8 +162,12 @@ Notes de scope (mises à jour après Phase 8 — Edge Functions `import-musicbra
   (web) — écriture RLS + fanout `feed_events` vers les abonnés, même pattern que
   `toggle-like`. `updateDiaryEntry` (modifier une note déjà enregistrée) reste un appel
   direct : le web ne fanout pas non plus sur l'édition simple.
-- **Date d'écoute fixée à aujourd'hui** : pas de date picker natif installé ; modifier une
-  écoute existante garde sa date d'origine (non éditable pour l'instant).
+- **Date d'écoute éditable** : `DatePickerField` (`components/ui/DatePickerField.tsx`) branché
+  sur `@react-native-community/datetimepicker` (picker natif, pas `@expo/ui/community/
+  datetime-picker` — crash Android confirmé sur ce composant, github.com/expo/expo/issues/39424,
+  même prudence que pour le BottomSheet). Utilisé dans `DiaryEntryBottomSheet` et
+  `TrackDiaryBottomSheet` — création ET édition permettent maintenant de choisir la date,
+  comme sur le web (max = aujourd'hui).
 - **Listes** : `lib/lists.ts` mobile n'est qu'un sous-ensemble minimal (get/toggle/liste par
   défaut) pour le bouton "Ajouter à une liste" — la Phase 7 (créer une liste, réordonner,
   couverture personnalisée) reste à faire.
@@ -268,9 +272,6 @@ Notes de scope (Phase 8 backend mobile non faite au moment de l'implémentation)
   - [ ] Distribution des notes
   - [ ] Genres les plus écoutés
   - [ ] Angles morts (artistes peu explorés)
-- [ ] **Social** :
-  - [ ] Recommander un album à un ami
-  - [ ] Notifications (like, commentaire, follow, reco)
 - [ ] **Settings** :
   - [ ] Modifier bio / username
   - [ ] Changer d'avatar
@@ -299,11 +300,11 @@ Les secrets (Spotify, Last.fm) ne peuvent pas être exposés dans l'app. Ils pas
         pas exploser le quota CPU Vercel)
   - [x] `import-musicbrainz` déclenche automatiquement l'enrichissement en tâche de fond
         (`EdgeRuntime.waitUntil`) après chaque import d'album réussi
-  - [ ] Gérer les secrets via les variables d'env Supabase — **à faire manuellement** :
+  - [x] Gérer les secrets via les variables d'env Supabase — **à faire manuellement** :
         `supabase secrets set SPOTIFY_CLIENT_ID=... SPOTIFY_CLIENT_SECRET=... LASTFM_API_KEY=...`
-  - [ ] Déployer les deux fonctions : `supabase functions deploy import-musicbrainz` et
+  - [x] Déployer les deux fonctions : `supabase functions deploy import-musicbrainz` et
         `supabase functions deploy enrich-album`
-  - [ ] Tester depuis l'app mobile (import d'un album/titre/artiste pas encore en DB, vérifier
+  - [x] Tester depuis l'app mobile (import d'un album/titre/artiste pas encore en DB, vérifier
         que `album_metadata`/`genres`/`album_genres` se remplissent après quelques secondes)
 - [x] Créer la Edge Function `similar-artists` (`supabase/functions/similar-artists/`) :
   - [x] Reprendre `getSimilarArtists` (`apps/web/app/actions/artists.ts`) à l'identique
@@ -311,7 +312,7 @@ Les secrets (Spotify, Last.fm) ne peuvent pas être exposés dans l'app. Ils pas
   - [x] Client user-scope (RLS) uniquement, aucune écriture — pas besoin de service_role
   - [x] Brancher la page artiste mobile dessus (`lib/artists.ts` → `getSimilarArtists`,
         section "Artistes similaires" affichée pour les résultats déjà en DB)
-  - [ ] Déployer : `supabase functions deploy similar-artists` — **LASTFM_API_KEY déjà
+  - [x] Déployer : `supabase functions deploy similar-artists` — **LASTFM_API_KEY déjà
         configuré côté Supabase** (secret partagé avec `enrich-album`)
   - [ ] Tester depuis l'app mobile (page artiste → section "Artistes similaires" en bas)
 - [x] Créer la Edge Function `log-listen` (`supabase/functions/log-listen/`) :
@@ -333,10 +334,10 @@ Les secrets (Spotify, Last.fm) ne peuvent pas être exposés dans l'app. Ils pas
   - [x] Déployé : `supabase functions deploy log-listen`
   - [ ] Pas de rate-limiting (Upstash) ni de `logAuthedProductEvent` (analytics) côté Edge
         Function — même simplification déjà acceptée pour `toggle-like`, à revoir si abus constaté
-  - [ ] Tester depuis l'app mobile (noter un album/titre, vérifier que l'écoute apparaît dans
+  - [x] Tester depuis l'app mobile (noter un album/titre, vérifier que l'écoute apparaît dans
         le feed "Réseau" d'un compte qui suit l'auteur ; supprimer une écoute et vérifier que
         l'event disparaît du feed)
-- [ ] Pas encore branché : `EnrichmentPoller` mobile (rafraîchir l'UI albums sans re-fetch
+- [x] Pas encore branché : `EnrichmentPoller` mobile (rafraîchir l'UI albums sans re-fetch
       manuel une fois l'enrichissement en tâche de fond terminé) — `enrich-album` est déjà
       invocable indépendamment pour ce futur usage.
 
