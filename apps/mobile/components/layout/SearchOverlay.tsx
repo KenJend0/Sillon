@@ -315,7 +315,7 @@ export function SearchOverlayHost() {
 
       if (q.trim()) saveRecentSearch(q.trim());
 
-      // Albums, titres et artistes déjà en DB → pages dédiées (6.3, 6.3bis, 6.5).
+      // Albums, titres, artistes et profils déjà en DB → pages dédiées (6.3, 6.3bis, 6.5, 6.7).
       if (item.kind === 'album' && item.source === 'internal') {
         close();
         router.push(`/albums/${item.id}`);
@@ -329,6 +329,14 @@ export function SearchOverlayHost() {
       if (item.kind === 'artist' && item.source === 'internal') {
         close();
         router.push(`/artists/${item.id}` as any);
+        return;
+      }
+      if (item.kind === 'user') {
+        // Pas de profils MusicBrainz — la recherche de profils est Supabase-only
+        // (voir lib/search.ts), donc pas de branche import ici, contrairement aux
+        // trois autres kinds.
+        close();
+        router.push(`/u/${item.slug ?? item.title}` as any);
         return;
       }
 

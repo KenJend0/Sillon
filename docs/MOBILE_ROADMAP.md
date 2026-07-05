@@ -122,12 +122,13 @@ Dans cet ordre, du plus important au moins important.
 - [x] Recherches récentes (local)
 - [x] Autocomplete (recherche live au fil de la frappe, debounce 300ms — comme le web)
 
-Note : les pages album (6.3), titre (6.3bis) et artiste (6.5) existent désormais — le
-tap sur un résultat de recherche interne (déjà en DB) navigue vers `/albums/[id]`,
-`/tracks/[id]` ou `/artists/[id]`. Les résultats MusicBrainz non encore en DB déclenchent
-maintenant l'import via l'Edge Function `import-musicbrainz` (Phase 8) puis naviguent
-directement vers la page créée — même flux qu'en web. Reste en toast "Bientôt disponible" :
-les profils (6.7, pas de page).
+Note : les pages album (6.3), titre (6.3bis), artiste (6.5) et profil (6.7, `/u/[username]`)
+existent désormais — le tap sur un résultat de recherche interne (déjà en DB) navigue vers
+`/albums/[id]`, `/tracks/[id]`, `/artists/[id]` ou `/u/[username]`. Les résultats MusicBrainz
+non encore en DB (albums/titres/artistes) déclenchent l'import via l'Edge Function
+`import-musicbrainz` (Phase 8) puis naviguent directement vers la page créée — même flux
+qu'en web. Pas de branche import pour les profils : la recherche de profils est
+Supabase-only (pas de source MusicBrainz pour un compte utilisateur).
 
 ### 6.3 Page album
 - [x] Hero (comme sur la version web mobile)
