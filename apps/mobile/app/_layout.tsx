@@ -43,6 +43,11 @@ export default function RootLayout() {
               <Stack.Screen name="albums/[id]" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="tracks/[id]" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="artists/[id]" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="diary/[entry_id]" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="track-diary/[entry_id]" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="u/[username]/index" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="u/[username]/followers" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="u/[username]/following" options={{ animation: 'slide_from_right' }} />
             </Stack>
             <ToastHost />
           </AuthProvider>

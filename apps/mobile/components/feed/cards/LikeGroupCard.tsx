@@ -6,7 +6,8 @@ import { getTimeAgo } from '../../../lib/formatDate';
 import { ActorLink } from './ActorLink';
 import { CoverImage } from '../../album/CoverImage';
 import { FeedAvatarCluster } from './FeedAvatarCluster';
-import { GroupCoverStack, GroupRatingBadge } from './GroupCoverStack';
+import { GroupCoverStack } from './GroupCoverStack';
+import { RatingBadge } from '../../ui/RatingBadge';
 import { formatPreviewTitles, type LikeGroup } from '../groupFeedEvents';
 
 type Props = { group: LikeGroup; currentUserId?: string };
@@ -102,7 +103,7 @@ export function LikeGroupCard({ group, currentUserId }: Props) {
                   </Text>
                 )}
               </View>
-              <GroupRatingBadge rating={item.rating} />
+              <RatingBadge rating={item.rating} />
             </Pressable>
           ))}
         </View>

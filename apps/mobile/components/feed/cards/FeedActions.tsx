@@ -13,9 +13,12 @@ type Props = {
   commentsCount?: number;
   onCommentPress?: () => void;
   time?: string;
+  /** Marge gauche pour aligner sous le texte des cartes du feed (après l'avatar). Désactiver
+   *  hors contexte feed (ex. ReviewsList du profil, qui n'a pas cet avatar en tête de ligne). */
+  indent?: boolean;
 };
 
-export function FeedActions({ entryId, type = 'album', currentUserId, isLiked = false, likesCount = 0, commentsCount = 0, onCommentPress, time }: Props) {
+export function FeedActions({ entryId, type = 'album', currentUserId, isLiked = false, likesCount = 0, commentsCount = 0, onCommentPress, time, indent = true }: Props) {
   const [liked, setLiked] = useState(isLiked);
   const [count, setCount] = useState(likesCount);
   const [pending, setPending] = useState(false);
@@ -53,7 +56,7 @@ export function FeedActions({ entryId, type = 'album', currentUserId, isLiked = 
   };
 
   return (
-    <View className="flex-row items-center mt-1.5 ml-11">
+    <View className={`flex-row items-center mt-1.5 ${indent ? 'ml-11' : ''}`}>
       <View className="flex-row items-center gap-5">
         <Pressable onPress={handleLike} disabled={pending} className="flex-row items-center gap-1.5">
           <Heart size={14} color={liked ? '#C86C6C' : '#9A9A9A'} fill={liked ? '#C86C6C' : 'transparent'} />

@@ -6,7 +6,8 @@ import { getTimeAgo } from '../../../lib/formatDate';
 import { Avatar } from '../../avatars/Avatar';
 import { ActorLink } from './ActorLink';
 import { CoverImage } from '../../album/CoverImage';
-import { GroupCoverStack, GroupRatingBadge } from './GroupCoverStack';
+import { GroupCoverStack } from './GroupCoverStack';
+import { RatingBadge } from '../../ui/RatingBadge';
 import { formatPreviewTitles, type ListenGroup } from '../groupFeedEvents';
 
 type Props = { group: ListenGroup; currentUserId?: string };
@@ -112,7 +113,7 @@ export function ListenGroupCard({ group, currentUserId }: Props) {
                   </Text>
                 )}
               </View>
-              <GroupRatingBadge rating={item.rating} />
+              <RatingBadge rating={item.rating} />
             </Pressable>
           ))}
         </View>

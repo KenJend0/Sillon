@@ -172,9 +172,10 @@ Notes de scope (mises à jour après Phase 8 — Edge Functions `import-musicbra
 - **Listes** : `lib/lists.ts` mobile n'est qu'un sous-ensemble minimal (get/toggle/liste par
   défaut) pour le bouton "Ajouter à une liste" — la Phase 7 (créer une liste, réordonner,
   couverture personnalisée) reste à faire.
-- Routes `/artists/[id]`, `/diary/[id]`, `/lists/[id]`, `/u/[username]` référencées depuis
-  cette page n'existent pas encore (Phases 6.5–6.7, 7) — les liens vers ces pages 404 pour
-  l'instant, comme documenté en 6.2.
+- Seule `/lists/[id]` référencée depuis cette page n'existe pas encore (Phase 7) — les
+  liens vers cette page affichent "Bientôt disponible", comme documenté en 6.2.
+  `/artists/[id]`, `/diary/[id]`/`/track-diary/[id]`, `/u/[username]` existent désormais
+  (6.5, 6.7bis, 6.7).
 
 ### 6.3bis Page titre (non prévue initialement — ajoutée car quasi identique à 6.3)
 - [x] Hero (cover album, titre, artiste(s), lien album · année, genres hérités de l'album)
@@ -189,14 +190,65 @@ fanout feed, `lib/tracks.ts`/`lib/trackDiary.ts` n'importent rien depuis MusicBr
 recherche (SearchOverlay) navigue désormais aussi vers `/tracks/[id]` pour les résultats
 titres déjà en DB (miroir du branchement fait pour les albums en 6.3).
 
-### 6.4 Ajouter une écoute
-- [ ] Rechercher un album ou titre
-- [ ] Sélectionner l'album/titre
-- [ ] Choisir une note (0–10)
-- [ ] Écrire une review (optionnel)
-- [ ] Sélectionner une liste (optionnel)
-- [ ] Soumettre → import depuis MB si nécessaire + fan-out feed
-- [ ] Ré-écoute (si déjà une entrée existante)
+### 6.4 Page Ajouter
+- [x] Pile de cartes swipeable (`AddQueueMobile`, miroir de la version mobile web
+      `AddQueueMobile.tsx` — pas le layout desktop de `/add`, qui a un formulaire
+      classique + file latérale distincts et hors scope ici)
+- [x] Note (StarRating 0–10) + bouton "Écrire une critique" (déplie un textarea
+      inline sur la carte)
+- [x] Swipe horizontal (seuil 120px, react-native-gesture-handler + Reanimated) ou
+      bouton Suivant/Passer pour avancer — la note n'est envoyée qu'à l'avancée
+      (fire-and-forget, jamais bloquant), comme le web
+- [x] Recherche compacte inline ("Chercher un album"/"Chercher un titre") qui
+      réduit la carte courante en mini-carte ; sélection insère l'item en tête de
+      file sans notation immédiate
+- [x] État de fin de file (éventail des dernières pochettes notées + lien vers
+      Découvrir)
+- [x] Toujours `listenedAt = aujourd'hui` (pas de date picker sur cette page,
+      comme le web)
+
+Notes de scope :
+- **Mode dégradé Phase 7** : `buildAddQueue.ts` (mirroré tel quel dans
+  `lib/buildAddQueue.ts`) fusionne 4 tiers en tourniquet ; les tiers "Suggestion
+  pour toi" et "À découvrir" (`getForYouSuggestions`/`getForYouTracks`/
+  `getDiscoveryAlbums`, Phase 7 "Explore" — pas commencée côté mobile) sont
+  passés en tableaux vides depuis `app/(tabs)/add/index.tsx`. La file ne
+  contient donc pour l'instant que les tiers "Ajouté jamais noté" (`lib/lists.ts`
+  → `getUnratedSavedItems`, nouvellement porté), "Depuis ta liste"
+  (`getDefaultListAlbums`/`getDefaultListTracks`, nouvellement portés) et
+  "Pour démarrer" (`lib/classicAlbums.ts`, copié tel quel). `buildAddQueue`
+  n'aura rien à changer quand Phase 7 branchera les vraies données — il suffira
+  de remplacer les tableaux vides.
+- **Import MusicBrainz sans navigation** : la recherche inline de la queue
+  n'utilise pas les hooks `useMusicBrainzAlbumImport`/`useMusicBrainzArtistImport`
+  (`lib/useMusicBrainzImport.ts`, 6.5) car ceux-ci naviguent systématiquement vers
+  la page créée après import — ici on veut au contraire insérer l'item dans la
+  file et rester sur l'écran. Le composant appelle donc directement l'Edge
+  Function `import-musicbrainz` (même endpoint, mêmes payloads `kind: 'album'`/
+  `kind: 'track'` que `SearchOverlay`), sans redévelopper la logique d'import.
+- **File reconstruite une fois par visite** : comme le web (RSC, un seul fetch
+  par chargement de page), `app/(tabs)/add/index.tsx` construit la file une
+  seule fois au montage de l'écran, pas à chaque retour sur l'onglet — l'état
+  de progression dans la pile (index, pochettes notées) vit ensuite entièrement
+  dans `AddQueueMobile`.
+- **Animations simplifiées** : le swipe (translateX + rotation, seuil 120px) et
+  la pile de peek-cards (offsets fixes, miroir de `PEEK_STYLES`/`FAN_STYLES` du
+  web) sont portés avec `react-native-gesture-handler` + `Reanimated`, déjà
+  utilisés ailleurs (BottomNav). Certaines transitions du web reposant sur
+  `framer-motion` (`AnimatePresence mode="wait"`, layout crossfade entre les
+  vues carte/commentaire/recherche, flou d'arrière-plan des badges) sont
+  simplifiées en changements d'état directs (pas de lib d'équivalent élégant
+  installée) — fonctionnellement identique, visuellement plus abrupt.
+- **Risque de conflit de geste à vérifier sur device** : l'onglet Ajouter vit
+  dans le `TopTabs` swipeable de `(tabs)/_layout.tsx` (navigation horizontale
+  entre onglets). Le geste de swipe de carte utilise `activeOffsetX` pour capter
+  le pan horizontal en priorité, ce qui devrait suffire (résolution de gestes
+  imbriqués de RNGH), mais n'a pas été testé sur appareil physique — à valider
+  qu'un swipe sur la carte ne déclenche pas accidentellement un changement
+  d'onglet (ou l'inverse).
+- Pas de `KeyboardAvoidingView` testé en conditions réelles avec le textarea de
+  critique inline — comportement à valider sur device (iOS `padding` / Android
+  `height`, même pattern que `BottomSheet.tsx`).
 
 ### 6.5 Page artiste
 - [x] Photo + nom (photo lue en DB uniquement — voir note de scope)
@@ -236,21 +288,139 @@ Notes de scope (Phase 8 backend mobile non faite au moment de l'implémentation)
 
 
 ### 6.6 Profil utilisateur (soi-même)
-- [ ] Avatar + username + bio
-- [ ] Tabs : Journal / Reviews / Titres / Listes / Stats
-- [ ] Journal d'écoutes (albums)
-- [ ] Journal d'écoutes (titres)
-- [ ] Reviews
-- [ ] Top 3 albums favoris
-- [ ] Listes créées
-- [ ] Stats d'écoute
+- [x] Avatar + username + bio
+- [x] Top 3 albums favoris (affichage seul — voir note de scope)
+- [x] Stats d'écoute (mini-ligne critiques/abonnés/suivis + histogramme des notes)
+- [x] Tabs : Mon journal / Critiques / Listes (3 onglets réels, comme le web — "Titres" n'est
+      pas un onglet séparé, c'est un toggle Albums/Titres à l'intérieur de l'onglet journal)
+- [x] Journal d'écoutes (albums)
+- [x] Journal d'écoutes (titres)
+- [x] Critiques (unifiées albums + titres, like fonctionnel)
+- [x] Listes (affichage seul — voir note de scope)
 
 ### 6.7 Profil public
-- [ ] Même structure que le profil perso mais en lecture
-- [ ] Bouton Follow / Unfollow
-- [ ] Nombre de followers / following
-- [ ] Page followers
-- [ ] Page following
+- [x] Même structure que le profil perso mais en lecture (3 mêmes onglets — PublicProfileTabs
+      web a aussi un onglet Listes, contrairement à ce que laissait supposer le nom)
+- [x] Bouton Follow / Unfollow
+- [x] Nombre de followers / following
+- [x] Page followers
+- [x] Page following
+- [x] Menu 3 points (bloquer/débloquer) — ProfileActionsMenu
+- [x] Écran "utilisateur bloqué" (contenu masqué, mêmes conditions que le web)
+
+Notes de scope (6.6 + 6.7) :
+- **Follow/unfollow avec fanout** : `toggleFollow` (web) écrit `feed_events` (fanout vers
+  l'acteur + backfill des écoutes récentes du suivi) via `createSupabaseAdmin()` — même
+  famille que `toggle-like`/`log-listen` (Phase 8), jamais exposable côté mobile. Portée
+  via une nouvelle Edge Function `toggle-follow` (`supabase/functions/toggle-follow`),
+  qui reprend exactement la même logique (insert/delete `follows`, purge + insert
+  `feed_events`, backfill des dernières écoutes du suivi) — appelée depuis
+  `lib/social.ts` (`toggleFollow`). Déployée : `supabase functions deploy toggle-follow`
+  (pas de nouveau secret requis).
+- **Bloquer/débloquer en mode dégradé** : `toggleBlock` (web) nettoie aussi les
+  `feed_events` de l'utilisateur bloqué via le client admin. Ce nettoyage est ignoré côté
+  mobile (`lib/social.ts`) — sans conséquence visible puisque `getMyFeed` (`lib/feed.ts`)
+  filtre déjà les acteurs bloqués à la lecture. L'insert/delete sur `follows`/`user_blocks`
+  reste un appel RLS direct (permis par les policies existantes, comme côté web).
+- **Top 3 albums favoris** : affichage seul (`components/profile/Top3Albums.tsx`).
+  L'édition/réordonnancement (`SortableAlbumItem`, `SearchAlbumModal` côté web) reste
+  Phase 7 Settings ("Modifier les 3 albums favoris") — jugé hors scope de cette passe,
+  pas de valeur ajoutée à le faire en avance sans le reste des Settings.
+- **Histogramme des notes avec filtre** : `RatingDistribution` mobile est cliquable et
+  filtre le Journal/les Critiques, comme le web — porté via `lib/RatingFilterContext.tsx`
+  (mirroir de `RatingFilterContext.tsx` web), fourni par un `RatingFilterProvider`
+  englobant l'histogramme + `ProfileTabs` dans `/me` et `/u/[username]`. `DiaryList`
+  reprend le même pattern optimiste que le web (filtre immédiat sur ce qui est déjà
+  chargé, puis complète via une requête `getUserDiary`/`getUserTrackDiary` avec
+  `ratingFilter` si l'histogramme indique qu'il manque des résultats) ; `ReviewsList`
+  filtre simplement côté client (comme le web, qui charge déjà tout jusqu'à 100 par
+  type sans pagination serveur).
+- **Listes en lecture seule (mais y compris les sauvegardées)** : `ListsTab`/`ListCard`
+  mobile n'affichent que les listes existantes (miennes + sauvegardées pour /me — via
+  `getUserSavedLists`, avec le filtre Tout/Mes listes/Sauvegardées comme le web dès qu'il
+  y a au moins une liste sauvegardée —, publiques uniquement pour /u/[username], le web
+  ne montre pas les sauvegardées d'un autre utilisateur) avec compteur d'albums,
+  couvertures et badge créateur (@username + avatar) sur les listes sauvegardées.
+  Créer/renommer/supprimer une liste (`CreateListForm`/`ListCardWithMenu` côté web), la
+  cover personnalisée et la page détail `/lists/[id]` restent Phase 7 ("Listes" y figure
+  déjà comme non fait) — taper une liste affiche "Bientôt disponible", comme les autres
+  routes manquantes déjà documentées en 6.2/6.3.
+- **Page d'entrée de journal** : `/diary/[entry_id]` et `/track-diary/[entry_id]` existent
+  désormais (voir 6.7bis) — mais `DiaryList`/`ReviewsList` (grilles Journal/Critiques de
+  *cet* onglet Profil) naviguent encore vers `/albums/[id]`/`/tracks/[id]` plutôt que vers
+  le détail d'écoute ; les repointer vers `/diary/[entry_id]`/`/track-diary/[entry_id]`
+  reste à faire (hors scope de la passe 6.7bis, qui ne portait que la page de détail et le
+  branchement des liens qui l'attendaient déjà — `NetworkListenersSection`, le feed,
+  `ReviewsSection`/`TrackReviewsSection` sur les pages album/titre). Les cartes de
+  Critiques continuent d'utiliser `FeedActions`/`CommentSheet` pour like/commentaire
+  rapide en `BottomSheet` sans quitter la grille.
+- **Menu hamburger (soi)** : "Éditer profil", "Albums favoris", "Mes stats", "Aide &
+  support" affichent tous "Bientôt disponible" (aucun de ces écrans n'existe encore côté
+  mobile) ; seule la déconnexion est fonctionnelle. Pas d'entrée "Admin" (pas de notion
+  d'admin établie côté mobile pour l'instant).
+- **`ensureProfile`/`getCurrentStreak`/`getOrCreateDefaultList`** portés tels quels
+  (100% RLS, déjà confirmé sans usage admin caché) — `apps/mobile/lib/profile.ts`.
+- Navigation `/u/[username]` déjà référencée depuis `UserCard` (mobile) et
+  `NetworkListenersSection` (6.3/6.5) — ces liens menaient à un 404 jusqu'ici ; la route
+  existe désormais (`app/u/[username]/index.tsx` + `followers.tsx` + `following.tsx`).
+
+### 6.7bis Page détail d'une écoute (non prévue initialement — ajoutée car de nombreux
+liens déjà posés côté mobile pointaient dessus sans destination)
+- [x] `/diary/[entry_id]` — détail d'une écoute album (hero, bloc critique, like, fil de
+      réponses)
+- [x] `/track-diary/[entry_id]` — détail d'une écoute titre (quasi identique, comme
+      6.3/6.3bis pour album/titre)
+- [x] Hero (cover, titre album/titre, artiste(s) + featuring, année ; titre lien vers
+      `/albums/[id]` ou `/tracks/[id]`)
+- [x] Bloc critique (auteur, note /10 en grand, texte de review, badge "ré-écoute" sur
+      les albums)
+- [x] Like + `LikesBottomSheet` (liste des personnes ayant aimé)
+- [x] Partager (`Share.share` natif) / Copier le lien (`expo-clipboard`)
+- [x] Menu "···" Modifier/Supprimer pour l'auteur (réutilise `AlbumEntryMenu`/
+      `TrackEntryMenu` + `DiaryEntryBottomSheet`/`TrackDiaryBottomSheet`, déjà construits
+      en 6.3/6.3bis — aucun nouveau champ d'édition)
+- [x] Signaler pour un non-auteur (`lib/moderation.ts`, nouveau)
+- [x] Fil de réponses avec réponses imbriquées (1 niveau, comme le web) — nouveau
+      composant `components/social/CommentThread.tsx`
+- [x] CTA "Continuer la lecture" vers les critiques de l'album/du titre (navigue vers
+      `/albums/[id]`/`/tracks/[id]` — pas d'ancre `#reviews`, qui n'a pas de sens en
+      navigation native)
+
+Notes de scope :
+- **RLS vérifiée avant de coder** : `diary_comments`/`track_diary_comments` ont bien une
+  policy `DELETE` `auth.uid() = user_id` (confirmé via `supabase db query` sur le projet
+  lié) — `deleteComment`/`deleteTrackComment` (`lib/feed.ts`) sont donc de simples appels
+  RLS directs, pas d'Edge Function ni de client admin nécessaires (contrairement à
+  `deleteComment` côté web, qui utilise `createSupabaseAdmin()` par commodité plutôt que
+  par nécessité RLS réelle).
+- **Réponses aux commentaires en mode dégradé (comme l'ajout de premier niveau, déjà
+  acté en Phase 8)** : `addComment`/`addTrackComment` (`lib/feed.ts`) acceptent
+  désormais un `parentCommentId` optionnel (1 seul niveau de nesting, comme le web) mais
+  ne fanoutent aucune notification — même dégradation déjà documentée pour l'ajout de
+  premier niveau, simplement étendue aux réponses.
+- **Lecture d'une entrée + ses commentaires** : `getDiaryEntry`/`getEntryComments`
+  (`lib/diary.ts`) et `getTrackDiaryEntry`/`getTrackEntryComments` (`lib/trackDiary.ts`)
+  sont 100% RLS (confirmé, comme le web) — la policy `SELECT` de `diary_entries`/
+  `track_diary_entries` filtre déjà public/propriétaire, donc pas besoin de revérifier la
+  visibilité côté client comme le fait le web par défense en profondeur.
+- **Signalement (`reportContent`, `lib/moderation.ts`, nouveau)** : écriture directe RLS
+  (`content_reports` a une policy `INSERT` `reporter_id = auth.uid()`, confirmée) — pas
+  de rate-limit ici, ce garde-fou reste côté serveur tant que la mobile n'a pas d'Edge
+  Function équivalente (Phase 8).
+- **`LikesBottomSheet` mobile (nouveau)** : `getEntryLikes`/`getTrackEntryLikes`
+  (nouveaux, `lib/diary.ts`/`lib/trackDiary.ts`) lisent `diary_likes`/`track_diary_likes`
+  directement (policy `SELECT` déjà scoping visible/owner) puis les profils associés —
+  même pattern que `NetworkListenersSection`.
+- **Menu "···" étendu plutôt que recréé** : Partager/Copier le lien/Signaler sont des
+  boutons icône séparés à côté du menu Modifier/Supprimer existant (`AlbumEntryMenu`/
+  `TrackEntryMenu`, inchangés) plutôt que fusionnés dans un seul dropdown comme le web —
+  ces composants sont déjà utilisés ailleurs (`MyListenSection`/`TrackMyListenSection`)
+  uniquement pour l'auteur, les y ajouter aurait changé leur contrat pour un besoin qui
+  ne concerne que cette page.
+- **`expo-clipboard` ajouté** aux dépendances (`npx expo install expo-clipboard`) — la
+  seule nouvelle dépendance de cette passe.
+- Voir la note mise à jour en 6.6/6.7 : les grilles Journal/Critiques du Profil ne
+  pointent pas encore vers ces nouvelles pages (scope non demandé pour cette passe).
 
 ---
 
