@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,10 +34,14 @@ type NetworkListener = {
  * album (voir docs/MOBILE_ROADMAP.md 6.3) : pas d'enrichissement/import MB déclenché
  * depuis mobile, pas de fanout feed pour les nouvelles écoutes. */
 export default function TrackPage() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, scrollTo } = useLocalSearchParams<{ id: string; scrollTo?: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+
+  const scrollRef = useRef<ScrollView>(null);
+  const reviewsY = useRef(0);
+  const scrolledToReviews = useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -185,7 +189,7 @@ export default function TrackPage() {
 
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 40 }}>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 40 }}>
         <View style={{ paddingTop: 16 }}>
           <BackButton />
         </View>
@@ -291,7 +295,17 @@ export default function TrackPage() {
           </View>
         )}
 
-        <TrackReviewsSection trackId={track.id} reviewsCount={stats?.reviews_count ?? 0} initialReviews={reviewsPreview} />
+        <View
+          onLayout={(e) => {
+            reviewsY.current = e.nativeEvent.layout.y;
+            if (scrollTo === 'reviews' && !scrolledToReviews.current) {
+              scrolledToReviews.current = true;
+              scrollRef.current?.scrollTo({ y: reviewsY.current - 16, animated: true });
+            }
+          }}
+        >
+          <TrackReviewsSection trackId={track.id} reviewsCount={stats?.reviews_count ?? 0} initialReviews={reviewsPreview} />
+        </View>
 
         {artistAlbums.length > 0 && (
           <View className="border-t border-border-divider pt-8 mb-12">

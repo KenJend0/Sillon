@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -64,10 +64,14 @@ type NetworkListener = {
  * docs/MOBILE_ROADMAP.md (6.3) : enrichissement (genres/description/streaming ajoutés
  * après import) et import MusicBrainz sont en mode dégradé (Phase 8 non faite). */
 export default function AlbumPage() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, scrollTo } = useLocalSearchParams<{ id: string; scrollTo?: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+
+  const scrollRef = useRef<ScrollView>(null);
+  const reviewsY = useRef(0);
+  const scrolledToReviews = useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -327,6 +331,7 @@ export default function AlbumPage() {
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 40 }}
         refreshControl={refreshControl}
       >
@@ -435,7 +440,17 @@ export default function AlbumPage() {
           </View>
         )}
 
-        <ReviewsSection albumId={album.id} reviewsCount={stats.reviews_count} initialReviews={reviewsPreview} />
+        <View
+          onLayout={(e) => {
+            reviewsY.current = e.nativeEvent.layout.y;
+            if (scrollTo === 'reviews' && !scrolledToReviews.current) {
+              scrolledToReviews.current = true;
+              scrollRef.current?.scrollTo({ y: reviewsY.current - 16, animated: true });
+            }
+          }}
+        >
+          <ReviewsSection albumId={album.id} reviewsCount={stats.reviews_count} initialReviews={reviewsPreview} />
+        </View>
 
         {publicListsContaining.length > 0 && <AppearsInLists lists={publicListsContaining} />}
 

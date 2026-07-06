@@ -346,14 +346,12 @@ Notes de scope (6.6 + 6.7) :
   déjà comme non fait) — taper une liste affiche "Bientôt disponible", comme les autres
   routes manquantes déjà documentées en 6.2/6.3.
 - **Page d'entrée de journal** : `/diary/[entry_id]` et `/track-diary/[entry_id]` existent
-  désormais (voir 6.7bis) — mais `DiaryList`/`ReviewsList` (grilles Journal/Critiques de
-  *cet* onglet Profil) naviguent encore vers `/albums/[id]`/`/tracks/[id]` plutôt que vers
-  le détail d'écoute ; les repointer vers `/diary/[entry_id]`/`/track-diary/[entry_id]`
-  reste à faire (hors scope de la passe 6.7bis, qui ne portait que la page de détail et le
-  branchement des liens qui l'attendaient déjà — `NetworkListenersSection`, le feed,
-  `ReviewsSection`/`TrackReviewsSection` sur les pages album/titre). Les cartes de
-  Critiques continuent d'utiliser `FeedActions`/`CommentSheet` pour like/commentaire
-  rapide en `BottomSheet` sans quitter la grille.
+  désormais (voir 6.7bis). `DiaryList`/`ReviewsList` (grilles Journal/Critiques de *cet*
+  onglet Profil) naviguent maintenant vers ces pages (`entry.id`) plutôt que vers
+  `/albums/[id]`/`/tracks/[id]`, comme le web. Les cartes de Critiques continuent
+  d'utiliser `FeedActions`/`CommentSheet` pour like/commentaire rapide en `BottomSheet`
+  sans quitter la grille (le web ouvre `${href}#comments`, une ancre sans équivalent
+  direct en navigation native) ; le tap sur la carte navigue vers le détail complet.
 - **Menu hamburger (soi)** : "Éditer profil", "Albums favoris", "Mes stats", "Aide &
   support" affichent tous "Bientôt disponible" (aucun de ces écrans n'existe encore côté
   mobile) ; seule la déconnexion est fonctionnelle. Pas d'entrée "Admin" (pas de notion
@@ -419,8 +417,9 @@ Notes de scope :
   ne concerne que cette page.
 - **`expo-clipboard` ajouté** aux dépendances (`npx expo install expo-clipboard`) — la
   seule nouvelle dépendance de cette passe.
-- Voir la note mise à jour en 6.6/6.7 : les grilles Journal/Critiques du Profil ne
-  pointent pas encore vers ces nouvelles pages (scope non demandé pour cette passe).
+- **`DiaryList`/`ReviewsList` (grilles Journal/Critiques du Profil, 6.6/6.7) repointées** :
+  navigation mise à jour vers `/diary/[entry_id]`/`/track-diary/[entry_id]` (`entry.id`)
+  au lieu de `/albums/[id]`/`/tracks/[id]`, comme le web — voir note mise à jour en 6.6/6.7.
 
 ---
 

@@ -16,10 +16,12 @@ type Props = {
 
 /**
  * Miroir de ReviewsList (web) — cartes de critiques (album + titre unifiés), filtrables
- * par note via RatingFilterContext (piloté par l'histogramme du header). Like + commentaire
- * réutilisent FeedActions/CommentSheet (déjà créés pour le feed) plutôt que de dupliquer ce
- * pattern. Navigue vers /albums/[id] ou /tracks/[id] (pas de page /diary ou /track-diary
- * dédiée côté mobile, donc pas de deep-link direct vers le fil de commentaires).
+ * par note via RatingFilterContext (piloté par l'histogramme du header). Le tap sur la
+ * carte navigue vers /diary/[entry_id] ou /track-diary/[entry_id] (détail d'écoute + fil
+ * de commentaires), comme le web. Like + accès rapide au commentaire restent portés par
+ * FeedActions/CommentSheet (BottomSheet, déjà créés pour le feed) plutôt que de dupliquer
+ * ce pattern — le web ouvre lui `${review.href}#comments` (ancre), sans équivalent direct
+ * en navigation native.
  */
 export function ReviewsList({ reviews, currentUserId }: Props) {
   const router = useRouter();
@@ -45,7 +47,7 @@ export function ReviewsList({ reviews, currentUserId }: Props) {
   return (
     <View style={{ gap: 12 }}>
       {filtered.map((review) => {
-        const href = review.type === 'track' ? `/tracks/${review.trackId}` : `/albums/${review.albumId}`;
+        const href = review.type === 'track' ? `/track-diary/${review.id}` : `/diary/${review.id}`;
         return (
           <View key={`${review.type}-${review.id}`} className="p-4 border border-border bg-background-secondary rounded-input flex-row gap-4 overflow-hidden">
             {review.cover_url && (

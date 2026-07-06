@@ -677,12 +677,13 @@ export async function toggleDiaryLike(entryId: string): Promise<void> {
 }
 
 /**
- * Ajoute un commentaire de premier niveau (pas de réponses depuis mobile pour l'instant).
- * Contrairement au web, pas de fanout de notification / rate-limit / filtre de contenu ici —
- * ces garde-fous restent côté serveur (Server Actions web) tant que la mobile n'a pas
- * d'Edge Function équivalente (Phase 8).
+ * Ajoute un commentaire (ou une réponse si parentCommentId est fourni, 1 seul niveau de
+ * nesting comme le web). Contrairement au web, pas de fanout de notification / rate-limit /
+ * filtre de contenu ici — ces garde-fous restent côté serveur (Server Actions web) tant que
+ * la mobile n'a pas d'Edge Function équivalente (Phase 8) ; en attendant, une réponse ne
+ * notifie donc pas son destinataire côté mobile.
  */
-export async function addComment(entryId: string, body: string): Promise<void> {
+export async function addComment(entryId: string, body: string, parentCommentId?: string): Promise<void> {
   const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData.session?.user;
   if (!user) throw new Error('Not authenticated');
@@ -691,12 +692,36 @@ export async function addComment(entryId: string, body: string): Promise<void> {
   if (!trimmed) throw new Error('Comment body cannot be empty');
   if (trimmed.length > 1000) throw new Error('Comment too long');
 
+  if (parentCommentId) {
+    const { data: parent } = await supabase
+      .from('diary_comments')
+      .select('id, entry_id, parent_comment_id')
+      .eq('id', parentCommentId)
+      .maybeSingle();
+    if (!parent || parent.entry_id !== entryId) throw new Error('Commentaire parent introuvable');
+    if (parent.parent_comment_id) throw new Error('Impossible de répondre à une réponse');
+  }
+
   const { error } = await supabase
     .from('diary_comments')
-    .insert({ entry_id: entryId, user_id: user.id, body: trimmed });
+    .insert({
+      entry_id: entryId,
+      user_id: user.id,
+      body: trimmed,
+      ...(parentCommentId ? { parent_comment_id: parentCommentId } : {}),
+    });
 
   if (error) {
     console.error('addComment error:', error.message, error.code);
+    throw new Error('An error occurred');
+  }
+}
+
+/** Supprime un commentaire (le sien uniquement — policy RLS `diary_comments_delete_self`). */
+export async function deleteComment(commentId: string): Promise<void> {
+  const { error } = await supabase.from('diary_comments').delete().eq('id', commentId);
+  if (error) {
+    console.error('deleteComment error:', error.message, error.code);
     throw new Error('An error occurred');
   }
 }
@@ -713,7 +738,7 @@ export async function toggleTrackDiaryLike(entryId: string): Promise<void> {
 }
 
 /** Équivalent de addComment pour les écoutes de titres (track_diary_comments). */
-export async function addTrackComment(entryId: string, body: string): Promise<void> {
+export async function addTrackComment(entryId: string, body: string, parentCommentId?: string): Promise<void> {
   const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData.session?.user;
   if (!user) throw new Error('Not authenticated');
@@ -722,12 +747,36 @@ export async function addTrackComment(entryId: string, body: string): Promise<vo
   if (!trimmed) throw new Error('Comment body cannot be empty');
   if (trimmed.length > 1000) throw new Error('Comment too long');
 
+  if (parentCommentId) {
+    const { data: parent } = await supabase
+      .from('track_diary_comments')
+      .select('id, entry_id, parent_comment_id')
+      .eq('id', parentCommentId)
+      .maybeSingle();
+    if (!parent || parent.entry_id !== entryId) throw new Error('Commentaire parent introuvable');
+    if (parent.parent_comment_id) throw new Error('Impossible de répondre à une réponse');
+  }
+
   const { error } = await supabase
     .from('track_diary_comments')
-    .insert({ entry_id: entryId, user_id: user.id, body: trimmed });
+    .insert({
+      entry_id: entryId,
+      user_id: user.id,
+      body: trimmed,
+      ...(parentCommentId ? { parent_comment_id: parentCommentId } : {}),
+    });
 
   if (error) {
     console.error('addTrackComment error:', error.message, error.code);
+    throw new Error('An error occurred');
+  }
+}
+
+/** Supprime un commentaire de titre (le sien uniquement — policy RLS `track_diary_comments_delete`). */
+export async function deleteTrackComment(commentId: string): Promise<void> {
+  const { error } = await supabase.from('track_diary_comments').delete().eq('id', commentId);
+  if (error) {
+    console.error('deleteTrackComment error:', error.message, error.code);
     throw new Error('An error occurred');
   }
 }

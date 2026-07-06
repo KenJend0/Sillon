@@ -54,8 +54,8 @@ type Props = {
 /**
  * Miroir de DiaryList (web) — toggle Albums/Titres + tri + pagination "Charger plus" +
  * filtre par note (piloté par RatingDistribution via RatingFilterContext). Les entrées
- * naviguent vers /albums/[id] et /tracks/[id] plutôt que /diary/[id]/track-diary/[id] :
- * ces pages détail d'écoute (avec fil de commentaires dédié) n'existent pas côté mobile.
+ * naviguent vers /diary/[entry_id] et /track-diary/[entry_id] (détail d'écoute + fil de
+ * commentaires), comme le web.
  */
 export function DiaryList({ userId, initialAlbumEntries, initialTrackEntries, ratingLabel = 'Ma note' }: Props) {
   const router = useRouter();
@@ -221,7 +221,7 @@ export function DiaryList({ userId, initialAlbumEntries, initialTrackEntries, ra
           <>
             <View className="flex-row flex-wrap" style={{ gap: 10 }}>
               {sortedAlbums.map((entry) => (
-                <Pressable key={entry.id} onPress={() => router.push(`/albums/${entry.album_id}`)} style={{ width: '31%' }}>
+                <Pressable key={entry.id} onPress={() => router.push(`/diary/${entry.id}` as any)} style={{ width: '31%' }}>
                   <View className="aspect-square rounded-input overflow-hidden bg-background-tertiary relative">
                     {entry.cover_url ? (
                       <CoverImage src={entry.cover_url} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
@@ -252,7 +252,7 @@ export function DiaryList({ userId, initialAlbumEntries, initialTrackEntries, ra
         <>
           <View className="flex-row flex-wrap" style={{ gap: 10 }}>
             {sortedTracks.map((entry) => (
-              <Pressable key={entry.id} onPress={() => router.push(`/tracks/${entry.track_id}`)} style={{ width: '31%' }}>
+              <Pressable key={entry.id} onPress={() => router.push(`/track-diary/${entry.id}` as any)} style={{ width: '31%' }}>
                 <View className="aspect-square rounded-input overflow-hidden bg-background-tertiary relative">
                   {entry.cover_url ? (
                     <CoverImage src={entry.cover_url} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
