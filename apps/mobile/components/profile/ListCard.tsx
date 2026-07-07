@@ -1,25 +1,31 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Lock } from 'lucide-react-native';
+import { Lock, Bookmark } from 'lucide-react-native';
 import { CoverImage } from '../album/CoverImage';
 import type { ProfileListUI } from '../../lib/lists';
-import { showToast } from '../ui/Toast';
+import { useListSave } from '../../lib/useListSave';
 import { labelStyle } from '../../lib/typography';
 
-type Props = { list: ProfileListUI };
+type Props = {
+  list: ProfileListUI;
+  /** Remplace la largeur par défaut (48%, grille 2 colonnes) — utilisé par
+   * ListCardWithMenu qui gère lui-même la largeur sur son conteneur englobant. */
+  style?: StyleProp<ViewStyle>;
+};
 
 /**
- * Miroir simplifié de ListCard (web) — affichage seul (grille de couvertures + titre).
- * La page /lists/[id] n'existe pas encore côté mobile (Phase 7) : le tap montre un toast
- * "Bientôt disponible" au lieu de naviguer, comme pour les autres routes manquantes.
+ * Miroir de ListCard (web) — grille de couvertures + titre, bouton sauvegarder (visible
+ * seulement si list.is_public && !isOwnList, comme le web) et navigation vers /lists/[id]
+ * (Phase 7 — remplace l'ancien toast "Bientôt disponible").
  */
-export function ListCard({ list }: Props) {
+export function ListCard({ list, style }: Props) {
   const router = useRouter();
   const covers = list.cover_urls.slice(0, 4);
+  const { saved, isOwnList, toggleSave } = useListSave(list);
 
   return (
-    <Pressable onPress={() => showToast('Bientôt disponible', 'info')} style={{ width: '48%' }}>
+    <Pressable onPress={() => router.push(`/lists/${list.id}`)} style={style ?? { width: '48%' }}>
       <View className="aspect-square rounded-input overflow-hidden bg-background-tertiary flex-row flex-wrap">
         {covers.length === 0 ? (
           <View className="w-full h-full items-center justify-center">
@@ -47,6 +53,15 @@ export function ListCard({ list }: Props) {
               @{list.creator_username}
             </Text>
           </View>
+        )}
+        {list.is_public && !isOwnList && (
+          <Pressable
+            onPress={toggleSave}
+            hitSlop={8}
+            className="absolute top-2 right-2 w-7 h-7 rounded-full items-center justify-center bg-paper-hi/90 border border-border"
+          >
+            <Bookmark size={13} color={saved ? '#8E6F5E' : '#9A9A9A'} fill={saved ? '#8E6F5E' : 'transparent'} />
+          </Pressable>
         )}
       </View>
       <View className="flex-row items-center gap-1 mt-2">

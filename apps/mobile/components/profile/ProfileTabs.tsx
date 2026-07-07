@@ -44,11 +44,20 @@ export function ProfileTabs({ isMe, userId, diaryEntries, trackEntries, unifiedR
         ))}
       </View>
 
-      {tab === 'diary' && (
+      {/* Les 3 onglets restent montés en permanence (display: none sur les inactifs) plutôt
+          que d'être démontés/remontés à chaque bascule : avec ~50-100 covers par onglet,
+          recréer tout l'arbre de vues natives à chaque tap est nettement plus coûteux en
+          React Native que sur le web (chaque vue traverse le bridge/Fabric). Cache la vue
+          au lieu de la détruire — les données sont de toute façon déjà chargées en amont. */}
+      <View style={tab === 'diary' ? undefined : { display: 'none' }}>
         <DiaryList userId={userId} initialAlbumEntries={diaryEntries} initialTrackEntries={trackEntries} ratingLabel={isMe ? 'Ma note' : 'Sa note'} />
-      )}
-      {tab === 'reviews' && <ReviewsList reviews={unifiedReviews} currentUserId={currentUserId} />}
-      {tab === 'lists' && <ListsTab lists={lists} savedLists={savedLists} isOwner={isMe} />}
+      </View>
+      <View style={tab === 'reviews' ? undefined : { display: 'none' }}>
+        <ReviewsList reviews={unifiedReviews} currentUserId={currentUserId} />
+      </View>
+      <View style={tab === 'lists' ? undefined : { display: 'none' }}>
+        <ListsTab lists={lists} savedLists={savedLists} isOwner={isMe} userId={userId} />
+      </View>
     </View>
   );
 }

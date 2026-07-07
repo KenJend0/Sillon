@@ -53,6 +53,47 @@ export type ProfileListUI = {
   cover_urls: (string | null)[];
   creator_username?: string;
   creator_avatar?: string | null;
+  /** Statut "sauvegardée par l'utilisateur courant" — absent (undefined) là où ce n'est
+   * pas pertinent (mes propres listes), false/true calculé pour les listes publiques
+   * d'autrui, cf. getPublicUserLists/getPublicLists (miroir de getPublicLists web). */
+  is_saved?: boolean;
+};
+
+export type ListItem = {
+  id: string;
+  list_id: string;
+  album_id: string | null;
+  track_id: string | null;
+  added_at: string;
+  position: number | null;
+  album?: {
+    id: string;
+    title: string;
+    cover_url: string | null;
+    artist: string;
+  };
+  track?: {
+    id: string;
+    title: string;
+    artist: string;
+    cover_url: string | null;
+    album_id: string;
+  };
+};
+
+export type ListDetail = {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  is_public: boolean;
+  is_default: boolean;
+  item_count: number;
+  cover_urls: (string | null)[];
+  saves_count: number;
+  is_saved: boolean;
+  creator_username: string;
+  creator_avatar: string | null;
 };
 
 async function attachListMeta(listIds: string[]): Promise<Map<string, { item_count: number; cover_urls: (string | null)[] }>> {
@@ -122,6 +163,7 @@ export async function getUserSavedLists(userId: string): Promise<ProfileListUI[]
     ...(meta.get(l.id) ?? { item_count: 0, cover_urls: [] }),
     creator_username: l.profiles?.username ?? undefined,
     creator_avatar: l.profiles?.avatar_url ?? null,
+    is_saved: true,
   }));
 }
 
@@ -135,7 +177,23 @@ export async function getPublicUserLists(userId: string): Promise<ProfileListUI[
 
   if (!lists || lists.length === 0) return [];
   const meta = await attachListMeta(lists.map((l) => l.id));
-  return lists.map((l) => ({ ...l, ...(meta.get(l.id) ?? { item_count: 0, cover_urls: [] }) }));
+
+  const viewerId = await currentUserId();
+  let savedIds = new Set<string>();
+  if (viewerId) {
+    const { data: saved } = await supabase
+      .from('saved_lists')
+      .select('list_id')
+      .eq('user_id', viewerId)
+      .in('list_id', lists.map((l) => l.id));
+    savedIds = new Set((saved ?? []).map((s) => s.list_id));
+  }
+
+  return lists.map((l) => ({
+    ...l,
+    ...(meta.get(l.id) ?? { item_count: 0, cover_urls: [] }),
+    is_saved: savedIds.has(l.id),
+  }));
 }
 
 /**
@@ -160,6 +218,17 @@ export async function getPublicLists(limit = 6): Promise<ProfileListUI[]> {
 
   const meta = await attachListMeta(lists.map((l) => l.id));
 
+  const viewerId = await currentUserId();
+  let savedIds = new Set<string>();
+  if (viewerId) {
+    const { data: saved } = await supabase
+      .from('saved_lists')
+      .select('list_id')
+      .eq('user_id', viewerId)
+      .in('list_id', lists.map((l) => l.id));
+    savedIds = new Set((saved ?? []).map((s) => s.list_id));
+  }
+
   return (lists as any[])
     .sort((a, b) => (b.saves_count ?? 0) - (a.saves_count ?? 0))
     .slice(0, limit)
@@ -171,6 +240,7 @@ export async function getPublicLists(limit = 6): Promise<ProfileListUI[]> {
       is_default: list.is_default,
       creator_username: list.profiles?.username ?? undefined,
       creator_avatar: list.profiles?.avatar_url ?? null,
+      is_saved: savedIds.has(list.id),
       ...(meta.get(list.id) ?? { item_count: 0, cover_urls: [] }),
     }));
 }
@@ -470,4 +540,217 @@ export async function toggleListItem(listId: string, item: { albumId?: string; t
     .insert({ list_id: listId, album_id: item.albumId ?? null, track_id: item.trackId ?? null });
   if (error) throw new Error('Une erreur est survenue');
   return { added: true };
+}
+
+// ── Phase 7 — page détail /lists/[id] ───────────────────────────────────────
+// Pas de Server Action côté mobile (comme le reste de ce fichier) : les écritures
+// tournent client-side sous RLS. Pas de rate-limiting client (checkActionRateLimit,
+// web) ni de logAuthedProductEvent — mêmes omissions que toggleListItem ci-dessus.
+
+/**
+ * Détail d'une liste avec ses items — miroir de getListWithItems (web), sans le
+ * check RLS serveur (la policy Supabase sur user_lists fait déjà foi ; ce check
+ * client-side sert juste à renvoyer `null` proprement plutôt qu'un tableau vide
+ * silencieux quand la liste est privée et qu'on n'en est pas propriétaire).
+ */
+export async function getListWithItems(listId: string): Promise<{ list: ListDetail; items: ListItem[] } | null> {
+  const userId = await currentUserId();
+
+  const { data: list } = await supabase
+    .from('user_lists')
+    .select('id, user_id, title, description, is_public, is_default, saves_count, profiles(username, avatar_url)')
+    .eq('id', listId)
+    .maybeSingle();
+
+  if (!list) return null;
+  const listRow = list as any;
+  if (!listRow.is_public && listRow.user_id !== userId) return null;
+
+  const { data: items } = await supabase
+    .from('list_items')
+    .select(
+      `id, list_id, album_id, track_id, added_at, position,
+       albums(id, title, cover_url, artists(name)),
+       tracks(id, title, album_id, artists(name), albums(cover_url))`
+    )
+    .eq('list_id', listId)
+    .order('position', { ascending: true, nullsFirst: false })
+    .order('added_at', { ascending: false });
+
+  const saveStatus = userId
+    ? await supabase.from('saved_lists').select('id').eq('list_id', listId).eq('user_id', userId).maybeSingle()
+    : { data: null };
+
+  const itemRows = (items ?? []) as any[];
+  const coverUrls = itemRows
+    .map((item) => item.albums?.cover_url ?? null)
+    .filter((u): u is string => !!u)
+    .slice(0, 4);
+
+  return {
+    list: {
+      id: listRow.id,
+      user_id: listRow.user_id,
+      title: listRow.title,
+      description: listRow.description,
+      is_public: listRow.is_public,
+      is_default: listRow.is_default,
+      item_count: itemRows.length,
+      cover_urls: coverUrls,
+      saves_count: listRow.saves_count ?? 0,
+      is_saved: !!saveStatus.data,
+      creator_username: listRow.profiles?.username || '',
+      creator_avatar: listRow.profiles?.avatar_url ?? null,
+    },
+    items: itemRows.map((item) => ({
+      id: item.id,
+      list_id: item.list_id,
+      album_id: item.album_id ?? null,
+      track_id: item.track_id ?? null,
+      added_at: item.added_at,
+      position: item.position ?? null,
+      album:
+        item.album_id && item.albums
+          ? {
+              id: item.albums.id,
+              title: item.albums.title,
+              cover_url: item.albums.cover_url ?? null,
+              artist: item.albums.artists?.name || 'Unknown',
+            }
+          : undefined,
+      track:
+        item.track_id && item.tracks
+          ? {
+              id: item.tracks.id,
+              title: item.tracks.title,
+              artist: item.tracks.artists?.name || 'Unknown',
+              cover_url: item.tracks.albums?.cover_url ?? null,
+              album_id: item.tracks.album_id,
+            }
+          : undefined,
+    })),
+  };
+}
+
+/** Crée une nouvelle liste — miroir de createList (web), sans cover/description avancées. */
+export async function createList(data: { title: string; description?: string; isPublic?: boolean }): Promise<{ id: string }> {
+  const userId = await currentUserId();
+  if (!userId) throw new Error('Not authenticated');
+
+  const title = data.title.trim();
+  if (!title) throw new Error('List title is required');
+  const description = data.description?.trim() || null;
+
+  const { data: created, error } = await supabase
+    .from('user_lists')
+    .insert({ user_id: userId, title, description, is_public: data.isPublic ?? false, is_default: false })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return { id: created.id };
+}
+
+/** Met à jour le titre, la description ou la visibilité d'une liste — miroir de updateList (web). */
+export async function updateList(
+  listId: string,
+  data: { title?: string; description?: string; isPublic?: boolean }
+): Promise<void> {
+  const userId = await currentUserId();
+  if (!userId) throw new Error('Not authenticated');
+
+  const updates: { updated_at: string; title?: string; description?: string | null; is_public?: boolean } = {
+    updated_at: new Date().toISOString(),
+  };
+  if (data.title !== undefined) {
+    const t = data.title.trim();
+    if (!t) throw new Error('List title is required');
+    updates.title = t;
+  }
+  if (data.description !== undefined) updates.description = data.description.trim() || null;
+  if (data.isPublic !== undefined) updates.is_public = data.isPublic;
+
+  const { error } = await supabase.from('user_lists').update(updates).eq('id', listId).eq('user_id', userId);
+  if (error) throw error;
+}
+
+/** Supprime une liste (impossible sur la liste par défaut) — miroir de deleteList (web). */
+export async function deleteList(listId: string): Promise<void> {
+  const userId = await currentUserId();
+  if (!userId) throw new Error('Not authenticated');
+
+  const { error } = await supabase
+    .from('user_lists')
+    .delete()
+    .eq('id', listId)
+    .eq('user_id', userId)
+    .eq('is_default', false);
+  if (error) throw error;
+}
+
+/** Supprime directement un item d'une liste par son ID — miroir de removeListItem (web). */
+export async function removeListItem(itemId: string): Promise<void> {
+  const userId = await currentUserId();
+  if (!userId) throw new Error('Not authenticated');
+
+  const { data: item } = await supabase.from('list_items').select('list_id').eq('id', itemId).maybeSingle();
+  if (!item) return;
+
+  const { data: list } = await supabase
+    .from('user_lists')
+    .select('id')
+    .eq('id', item.list_id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (!list) throw new Error('Not authorized');
+
+  const { error } = await supabase.from('list_items').delete().eq('id', itemId);
+  if (error) throw new Error('Une erreur est survenue');
+}
+
+/**
+ * Réordonne les items d'une liste — miroir de reorderListItems (web). Pas de drag-and-drop
+ * côté mobile (voir ListDetailReorder.tsx) : orderedItemIds vient d'un mode "Réorganiser"
+ * à flèches haut/bas, mais le contrat serveur est identique (position = index).
+ */
+export async function reorderListItems(listId: string, orderedItemIds: string[]): Promise<void> {
+  const userId = await currentUserId();
+  if (!userId) throw new Error('Not authenticated');
+
+  const { data: list } = await supabase.from('user_lists').select('id').eq('id', listId).eq('user_id', userId).maybeSingle();
+  if (!list) throw new Error('Not authorized');
+
+  const results = await Promise.all(
+    orderedItemIds.map((itemId, index) =>
+      supabase.from('list_items').update({ position: index }).eq('id', itemId).eq('list_id', listId)
+    )
+  );
+  if (results.some((r) => r.error)) throw new Error('Une erreur est survenue');
+}
+
+/**
+ * Sauvegarde ou retire une liste publique de sa collection — miroir de toggleSaveList (web).
+ */
+export async function toggleSaveList(listId: string): Promise<{ saved: boolean }> {
+  const userId = await currentUserId();
+  if (!userId) throw new Error('Not authenticated');
+
+  const { data: existing } = await supabase
+    .from('saved_lists')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('list_id', listId)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase.from('saved_lists').delete().eq('id', existing.id);
+    if (error) throw new Error('Une erreur est survenue');
+    return { saved: false };
+  }
+
+  const { data: list } = await supabase.from('user_lists').select('id').eq('id', listId).eq('is_public', true).maybeSingle();
+  if (!list) throw new Error('List not found');
+
+  const { error } = await supabase.from('saved_lists').insert({ user_id: userId, list_id: listId });
+  if (error) throw new Error('Une erreur est survenue');
+  return { saved: true };
 }

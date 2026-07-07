@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProfileHeader } from '../../../components/profile/ProfileHeader';
@@ -101,9 +101,16 @@ export default function MeScreen() {
     setLoading(false);
   }, [user]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Refetch à chaque prise de focus de l'onglet (pas juste au montage) — l'écran reste
+  // monté en arrière-plan en changeant d'onglet (bottom nav), donc un simple
+  // useEffect([user]) ne relirait jamais une liste sauvegardée depuis Découvrir tant
+  // qu'on ne revient pas ici (voir même pattern dans app/(tabs)/feed/index.tsx).
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [load])
+  );
 
   if (!user) {
     return (

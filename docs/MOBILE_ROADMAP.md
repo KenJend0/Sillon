@@ -477,12 +477,13 @@ Notes de scope :
   utilisés ailleurs sans lien avec les recos — `PourToiSection`/`DiscoverCard`
   définissent leur propre petite cellule de cover, comme `DiscoverCard`/`AlbumCard`
   (web) le font déjà séparément l'un de l'autre.
-- [ ] **Listes** :
-  - [ ] Créer une liste
-  - [ ] Ajouter / retirer un album
+- [x] **Listes** (voir note de scope) :
+  - [x] Créer une liste
+  - [x] Ajouter / retirer un album (ou un titre)
   - [ ] Cover personnalisée
-  - [ ] Page détail liste
-  - [ ] Likes sur les listes
+  - [x] Page détail liste
+  - [x] Likes sur les listes (implémenté comme "sauvegarder", identique au web —
+        il n'y a jamais eu de like distinct sur une liste, `saved_lists`/`saves_count`)
 - [x] **Aide & support** (`/legal`) — `app/(tabs)/me/legal/` (index + `cgu.tsx`,
       `confidentialite.tsx`, `mentions-legales.tsx`, `faq.tsx`) et
       `components/legal/LegalSection.tsx`. Contenu 100% statique (texte copié tel quel
@@ -536,6 +537,31 @@ Notes de scope :
 - [x] **Menu hamburger branché** — `ProfileHeader.tsx` (mobile) : les 4 items
       naviguent désormais vers ces écrans au lieu d'afficher "Bientôt disponible"
       (seule la déconnexion l'était déjà).
+
+### Reporté — Edge Functions pour débloquer Éditer profil (avatar, import, export, suppression)
+
+Les 4 points reportés ci-dessus dépendent tous du client admin Supabase (ou, pour
+l'avatar, de `sharp`) — inutilisables côté mobile. Plan pour les débloquer, par ordre
+de complexité croissante :
+
+- [ ] **Avatar** (upload + suppression) — Edge Function `upload-avatar`, mirroir de
+      `apps/web/app/actions/avatarActions.ts` mais sans `sharp` : `uploadCoverToSupabase`
+      (`supabase/functions/_shared/storage.ts`) prouve que l'upload admin vers Storage ne
+      dépend pas de `sharp`, qui ne sert au web qu'au redimensionnement serveur. Le crop
+      côté mobile se fait avec le crop natif d'`expo-image-picker` (pas d'équivalent à
+      `AvatarCropModal`, DOM canvas, à reconstruire). Le plus simple des 4.
+- [ ] **Suppression de compte** — Edge Function `delete-account`, mirroir de `deleteAccount`
+      (web) : nettoie le Storage puis appelle le RPC existant `delete_user_account`.
+      Point d'attention : l'utilisateur cible doit être dérivé du JWT de la requête
+      (jamais d'un `user_id` passé par le client) vu le caractère irréversible de l'action.
+- [ ] **Import Last.fm / RYM (CSV)** — `lastfm.ts`/`rym.ts` (web) utilisent aussi le
+      client admin (déclenchement du workflow GitHub Actions + écriture des lignes
+      d'import) : Edge Functions `start-lastfm-import`/`start-rym-import`, mirroir direct.
+      Contrairement aux deux précédents, ça ne suffit pas à débloquer l'écran : il faut
+      en plus le file picker CSV (`expo-document-picker`) côté mobile pour RYM.
+- [ ] **Export de données (JSON)** — `exportUserData` est déjà 100% RLS, aucune Edge
+      Function nécessaire. Le seul manque est le téléchargement/partage côté RN
+      (`expo-file-system` pour écrire le JSON + `expo-sharing` pour proposer le partage).
 
 
 ---
