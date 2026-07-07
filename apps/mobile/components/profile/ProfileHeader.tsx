@@ -35,9 +35,8 @@ type Props = {
 
 /**
  * Miroir de ProfileHeader (web) — hero du profil (avatar, nom, bio, streak, Top3, stats row).
- * Menu hamburger (soi) : la plupart des destinations (Éditer profil, Albums favoris, Mes
- * stats, Aide) n'ont pas encore d'écran mobile (Phase 7/Settings) — "Bientôt disponible",
- * comme ailleurs dans l'app. Seule la déconnexion est fonctionnelle.
+ * Menu hamburger (soi) : toutes les destinations (Éditer profil, Albums favoris, Mes
+ * stats, Aide & support) ont désormais un écran mobile — voir docs/MOBILE_ROADMAP.md.
  */
 export function ProfileHeader({
   user,
@@ -65,9 +64,9 @@ export function ProfileHeader({
     }
   };
 
-  const soonToast = () => {
+  const navigateTo = (href: string) => {
     setMenuOpen(false);
-    showToast('Bientôt disponible', 'info');
+    router.push(href as any);
   };
 
   return (
@@ -141,19 +140,19 @@ export function ProfileHeader({
       {user.isMe && (
         <BottomSheet isOpen={menuOpen} onClose={() => setMenuOpen(false)} title="Menu" snapPoint="45%">
           <View className="px-6 py-2">
-            <Pressable onPress={soonToast} className="flex-row items-center gap-3 py-3 border-b border-border-divider">
+            <Pressable onPress={() => navigateTo('/me/settings')} className="flex-row items-center gap-3 py-3 border-b border-border-divider">
               <Settings size={16} color="#6B6B6B" />
               <Text className="text-text-primary" style={metaStyle}>Éditer profil</Text>
             </Pressable>
-            <Pressable onPress={soonToast} className="flex-row items-center gap-3 py-3 border-b border-border-divider">
+            <Pressable onPress={() => navigateTo('/me/favorite-albums')} className="flex-row items-center gap-3 py-3 border-b border-border-divider">
               <Heart size={16} color="#6B6B6B" />
               <Text className="text-text-primary" style={metaStyle}>Albums favoris</Text>
             </Pressable>
-            <Pressable onPress={soonToast} className="flex-row items-center gap-3 py-3 border-b border-border-divider">
+            <Pressable onPress={() => navigateTo('/me/stats')} className="flex-row items-center gap-3 py-3 border-b border-border-divider">
               <BarChart2 size={16} color="#6B6B6B" />
               <Text className="text-text-primary" style={metaStyle}>Mes stats</Text>
             </Pressable>
-            <Pressable onPress={soonToast} className="flex-row items-center gap-3 py-3 border-b border-border-divider">
+            <Pressable onPress={() => navigateTo('/me/legal')} className="flex-row items-center gap-3 py-3 border-b border-border-divider">
               <LifeBuoy size={16} color="#6B6B6B" />
               <Text className="text-text-primary" style={metaStyle}>Aide & support</Text>
             </Pressable>

@@ -1,11 +1,124 @@
 import { supabase } from './supabase';
+import { findBannedUsernameWord } from './bannedWords';
 
 /**
  * Profil utilisateur — miroir des parties lecture-seule / RLS-only de
- * apps/web/app/actions/profile.ts. Le reste de ce fichier web (settings, changement de
- * username, suppression de compte) touche à des flux Settings (Phase 7) ou utilise le
- * client admin (deleteAccount) — hors scope ici.
+ * apps/web/app/actions/profile.ts. `deleteAccount` utilise le client admin
+ * (nettoyage Storage + RPC delete_user_account) — hors scope ici, voir
+ * docs/MOBILE_ROADMAP.md (Éditer profil) pour la décision de report.
  */
+
+const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{3,32}$/;
+
+export type ProfileSettings = {
+  id: string;
+  username: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  username_changed: boolean | null;
+  email: string;
+};
+
+export async function getMyProfileSettings(): Promise<{ ok: boolean; profile?: ProfileSettings; error?: string }> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData.session?.user;
+  if (!user) return { ok: false, error: 'not_authenticated' };
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, bio, avatar_url, username_changed')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (error && error.code !== 'PGRST116') {
+    return { ok: false, error: 'An error occurred' };
+  }
+
+  return {
+    ok: true,
+    profile: {
+      id: data?.id || user.id,
+      username: data?.username ?? null,
+      bio: data?.bio ?? null,
+      avatar_url: data?.avatar_url ?? null,
+      username_changed: data?.username_changed ?? null,
+      email: user.email || '',
+    },
+  };
+}
+
+export async function updateProfileSettings(input: { bio?: string | null }): Promise<{ ok: boolean; error?: string }> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData.session?.user;
+  if (!user) return { ok: false, error: 'not_authenticated' };
+
+  const bio = input.bio ?? null;
+  if (bio && bio.length > 500) return { ok: false, error: 'bio_too_long' };
+
+  const { error } = await supabase.from('profiles').update({ bio }).eq('id', user.id);
+  if (error) return { ok: false, error: 'An error occurred' };
+
+  return { ok: true };
+}
+
+export async function checkUsernameAvailability(username: string): Promise<{ ok: boolean; available?: boolean; error?: string }> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData.session?.user;
+  if (!user) return { ok: false, error: 'not_authenticated' };
+
+  if (!USERNAME_REGEX.test(username)) return { ok: true, available: false, error: 'invalid_username' };
+  if (findBannedUsernameWord(username)) return { ok: true, available: false, error: 'username_banned' };
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', username)
+    .neq('id', user.id)
+    .maybeSingle();
+
+  if (error && error.code !== 'PGRST116') return { ok: false, error: 'An error occurred' };
+
+  return { ok: true, available: !data };
+}
+
+export async function changeUsername(newUsername: string): Promise<{ ok: boolean; username?: string; error?: string }> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData.session?.user;
+  if (!user) return { ok: false, error: 'not_authenticated' };
+
+  const trimmed = newUsername.trim();
+  if (!USERNAME_REGEX.test(trimmed)) return { ok: false, error: 'invalid_username' };
+  if (findBannedUsernameWord(trimmed)) return { ok: false, error: 'Ce pseudo contient du contenu inapproprié.' };
+
+  const { data: current, error: currentError } = await supabase
+    .from('profiles')
+    .select('username, username_changed')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (currentError && currentError.code !== 'PGRST116') return { ok: false, error: 'An error occurred' };
+  if (current?.username_changed) return { ok: false, error: 'username_change_already_used' };
+  if (current?.username && current.username === trimmed) return { ok: false, error: 'username_same' };
+
+  const { data: existing, error: existingError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', trimmed)
+    .neq('id', user.id)
+    .maybeSingle();
+
+  if (existingError && existingError.code !== 'PGRST116') return { ok: false, error: 'An error occurred' };
+  if (existing) return { ok: false, error: 'username_taken' };
+
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ username: trimmed, username_changed: true })
+    .eq('id', user.id);
+
+  if (updateError) return { ok: false, error: 'An error occurred' };
+
+  return { ok: true, username: trimmed };
+}
 
 export type Profile = {
   id: string;

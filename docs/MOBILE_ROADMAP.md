@@ -483,17 +483,60 @@ Notes de scope :
   - [ ] Cover personnalisée
   - [ ] Page détail liste
   - [ ] Likes sur les listes
-- [ ] **Stats** (`/me/stats`) :
-  - [ ] Albums écoutés par mois
-  - [ ] Distribution des notes
-  - [ ] Genres les plus écoutés
-  - [ ] Angles morts (artistes peu explorés)
-- [ ] **Settings** :
-  - [ ] Modifier bio / username
-  - [ ] Changer d'avatar
-  - [ ] Modifier les 3 albums favoris
-  - [ ] Export des données
-  - [ ] Supprimer le compte
+- [x] **Aide & support** (`/legal`) — `app/(tabs)/me/legal/` (index + `cgu.tsx`,
+      `confidentialite.tsx`, `mentions-legales.tsx`, `faq.tsx`) et
+      `components/legal/LegalSection.tsx`. Contenu 100% statique (texte copié tel quel
+      depuis le web), lien mailto via `Linking.openURL`. La FAQ (`/faq`, pas dans le
+      scope initial mais liée depuis l'index "Ressources utiles") a été portée aussi —
+      même complexité (texte statique), sinon le lien n'aurait eu aucune destination.
+      "Supprimer mon compte" pointe vers `/me/settings` (zone dangereuse).
+- [x] **Albums favoris** (`/settings/favorite-albums`, "Top Albums" dans ce roadmap) —
+      `app/(tabs)/me/favorite-albums.tsx` + `components/profile/FavoriteAlbumSearchSheet.tsx`
+      (BottomSheet de recherche réutilisant `lib/search.ts` `searchInternal(q, 'albums')`,
+      déjà construit pour la queue d'ajout 6.4 — pas de nouveau composant de recherche).
+      3 emplacements, tap ouvre la recherche, "Enregistrer" appelle le RPC
+      `replace_favorite_albums` directement depuis le client (même RPC atomique que la
+      route API web `/api/me/favorite-albums`, appelable sous RLS sans service_role).
+      `Top3Albums.tsx` (affichage, 6.6/6.7) n'a pas de lien d'édition sur les tuiles côté
+      web non plus (seul le menu hamburger y mène) — aucun changement nécessaire là.
+- [x] **Mes stats** (`/me/stats`) — `app/(tabs)/me/stats.tsx`, `lib/profile-stats.ts`
+      (`getUserStatsData`, 100% RLS) et `components/profile/stats/` (`ProfileStatsPage`
+      + les 5 cartes : Empreinte, Trajectoire, Ancres & éclairs, Angles morts, Évolution).
+      Comme le web, aucune librairie de charting : radar (Empreinte) et scatter plot
+      (Trajectoire) faits à la main avec `react-native-svg` (déjà une dépendance du
+      projet) ; Évolution (barres) et Ancres/Angles morts en `View`/`ScrollView` stylées,
+      dans la continuité de `RatingDistribution.tsx` (6.6/6.7). Tooltip de la Trajectoire
+      au tap plutôt qu'au survol (pas de hover en tactile). `lib/genre-families.ts`,
+      `lib/stats-dimensions.ts` et `lib/bannedWords.ts` copiés tels quels depuis le web
+      (données/fonctions pures, aucune dépendance React ni serveur).
+- [x] **Éditer profil** (`/settings`, noyau) — `app/(tabs)/me/settings.tsx`, noyau
+      étendu dans `lib/profile.ts` (`getMyProfileSettings`, `updateProfileSettings`,
+      `checkUsernameAvailability`, `changeUsername` — 100% RLS, portés tels quels).
+      Bio (500 caractères), changement de username (une fois, avec vérification de
+      dispo en direct), e-mail en lecture seule. Reporté et documenté sur l'écran lui-même
+      (pas de blocage du reste de la page) :
+      - **Upload/suppression d'avatar** — bloqué comme la cover de liste (Phase 7) :
+        `uploadAvatar`/`deleteAvatar` (web) utilisent `sharp` (indisponible en edge/Deno)
+        et le client admin Supabase pour le bucket Storage. Nécessiterait une Edge
+        Function dédiée (mirroir de `supabase/functions/_shared/storage.ts` s'il existe)
+        — hors scope de cette passe. Le bouton "Changer la photo" affiche un toast
+        "Bientôt disponible" ; l'avatar existant reste affiché en lecture seule.
+      - **Import Last.fm / RYM (CSV)** — déclenchent un worker GitHub Actions externe,
+        mais nécessitent un file picker (`expo-document-picker`) et n'apportent de valeur
+        qu'aux utilisateurs migrant depuis un autre service ; message renvoyant vers le web.
+      - **Export de données (JSON)** — `exportUserData` est RLS pur et portable, mais le
+        téléchargement (`Blob`/`URL.createObjectURL` côté web) n'a pas d'équivalent direct
+        RN (`expo-file-system` + `expo-sharing` faisable mais pas prioritaire) ; message
+        renvoyant vers le web.
+      - **Suppression de compte** — `deleteAccount` utilise le client admin (nettoyage
+        Storage + RPC `delete_user_account`), nécessiterait une Edge Function ; action
+        irréversible, donc pas de contournement bricolé. La "Zone dangereuse" reste
+        visible mais désactivée et redirige vers Aide & support (contact) plutôt que
+        d'agir.
+- [x] **Menu hamburger branché** — `ProfileHeader.tsx` (mobile) : les 4 items
+      naviguent désormais vers ces écrans au lieu d'afficher "Bientôt disponible"
+      (seule la déconnexion l'était déjà).
+
 
 ---
 
