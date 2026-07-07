@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { useRef, useState, type RefObject } from 'react';
+import { findNodeHandle, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Flag, Trash2, CornerDownLeft } from 'lucide-react-native';
 import { Avatar } from '../avatars/Avatar';
@@ -25,6 +25,9 @@ type Props = {
   onAddReply: (parentCommentId: string, body: string) => Promise<void>;
   onDelete: (commentId: string) => Promise<void>;
   onReport: (commentId: string) => Promise<void>;
+  /** ScrollView parente (la page /diary ou /track-diary, qui affiche ce fil inline plutôt
+   * qu'en bottom sheet) — permet de remonter le TextInput au-dessus du clavier au focus. */
+  scrollViewRef?: RefObject<ScrollView | null>;
 };
 
 function shortDate(dateStr: string): string {
@@ -46,6 +49,7 @@ export function CommentThread({
   onAddReply,
   onDelete,
   onReport,
+  scrollViewRef,
 }: Props) {
   const router = useRouter();
   const [newComment, setNewComment] = useState('');
@@ -53,6 +57,25 @@ export function CommentThread({
   const [replyingTo, setReplyingTo] = useState<{ parentCommentId: string; mentionUsername: string } | null>(null);
   const [replyText, setReplyText] = useState('');
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
+  const composerInputRef = useRef<TextInput>(null);
+  const replyInputRef = useRef<TextInput>(null);
+
+  // Remonte le TextInput focus au-dessus du clavier — nécessaire ici car le composeur est
+  // inline dans la ScrollView de la page (pas un bottom sheet), qui ne se recale pas seule
+  // quand le clavier apparaît. scrollResponderScrollNativeHandleToKeyboard est l'API RN
+  // dédiée à ce calcul (même primitive qu'utilise KeyboardAvoidingView en interne).
+  const scrollInputAboveKeyboard = (inputRef: RefObject<TextInput | null>) => {
+    const scrollView = scrollViewRef?.current;
+    const input = inputRef.current;
+    if (!scrollView || !input) return;
+    const nodeHandle = findNodeHandle(input);
+    if (!nodeHandle) return;
+    setTimeout(() => {
+      // API interne RN (non exportée publiquement dans les types, mais stable) — même
+      // primitive qu'utilise KeyboardAvoidingView pour ce calcul.
+      (scrollView.getScrollResponder?.() as any)?.scrollResponderScrollNativeHandleToKeyboard(nodeHandle, 80, true);
+    }, 50);
+  };
 
   const totalComments = comments.reduce((acc, c) => acc + 1 + c.replies.length, 0);
 
@@ -130,8 +153,10 @@ export function CommentThread({
           <View className="flex-row gap-2.5 items-start">
             <Avatar src={composerAvatarUrl} size={28} />
             <TextInput
+              ref={composerInputRef}
               value={newComment}
               onChangeText={setNewComment}
+              onFocus={() => scrollInputAboveKeyboard(composerInputRef)}
               placeholder="Ajouter quelques mots…"
               placeholderTextColor="#9A9A9A"
               multiline
@@ -255,8 +280,10 @@ export function CommentThread({
                 {isReplyingHere && (
                   <View className="flex-row gap-2 mt-2 ml-9">
                     <TextInput
+                      ref={replyInputRef}
                       value={replyText}
                       onChangeText={setReplyText}
+                      onFocus={() => scrollInputAboveKeyboard(replyInputRef)}
                       placeholder={`Répondre à @${replyingTo.mentionUsername}…`}
                       placeholderTextColor="#9A9A9A"
                       autoFocus

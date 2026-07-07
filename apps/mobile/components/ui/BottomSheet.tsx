@@ -4,6 +4,7 @@ import {
   Dimensions,
   Easing,
   Keyboard,
+  type KeyboardEvent,
   KeyboardAvoidingView,
   Modal,
   PanResponder,
@@ -54,13 +55,20 @@ export function BottomSheet({ isOpen, onClose, title, children, snapPoint = '50%
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const currentY = useRef(closedY);
   const dragBaseY = useRef(closedY);
+  // Palier "au repos" courant (compact ou étendu), hors drag/fermeture — sert de référence
+  // pour recaler le sheet quand le clavier apparaît/disparaît (voir effet clavier plus bas).
+  const restingRef = useRef<'compact' | 'expanded'>('compact');
+  const keyboardHeightRef = useRef(0);
 
   useEffect(() => {
     const id = translateY.addListener(({ value }) => { currentY.current = value; });
     return () => translateY.removeListener(id);
   }, [translateY]);
 
-  const animateTo = (target: number, onDone?: () => void) => {
+  // N'anime que translateY/backdrop, sans toucher au palier de repos mémorisé — utilisé
+  // par la compensation clavier ci-dessous, qui décale temporairement le sheet sans que
+  // ça compte comme un nouveau palier "compact"/"étendu" choisi par l'utilisateur.
+  const animateRaw = (target: number, onDone?: () => void) => {
     Animated.parallel([
       Animated.timing(translateY, {
         toValue: target,
@@ -76,6 +84,43 @@ export function BottomSheet({ isOpen, onClose, title, children, snapPoint = '50%
       }),
     ]).start(() => onDone?.());
   };
+
+  const animateTo = (target: number, onDone?: () => void) => {
+    if (target === compactY) restingRef.current = 'compact';
+    else if (target === expandedY) restingRef.current = 'expanded';
+    animateRaw(target, onDone);
+  };
+
+  // Le clavier peut couvrir entièrement un TextInput quand le sheet est en position
+  // "compact" (souvent plus bas que la hauteur du clavier) — le KeyboardAvoidingView
+  // ci-dessous ne fait que rajouter du padding interne, il ne déplace pas le sheet
+  // lui-même. On remonte donc explicitement le sheet de la hauteur du clavier à
+  // l'ouverture, et on revient au palier de repos à la fermeture.
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = (e: KeyboardEvent) => {
+      if (!mounted) return;
+      const kbHeight = e.endCoordinates?.height ?? 0;
+      keyboardHeightRef.current = kbHeight;
+      const base = restingRef.current === 'expanded' ? expandedY : compactY;
+      animateRaw(Math.max(expandedY, base - kbHeight));
+    };
+    const onHide = () => {
+      keyboardHeightRef.current = 0;
+      if (!mounted) return;
+      animateRaw(restingRef.current === 'expanded' ? expandedY : compactY);
+    };
+
+    const showSub = Keyboard.addListener(showEvent, onShow);
+    const hideSub = Keyboard.addListener(hideEvent, onHide);
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, compactY, expandedY]);
 
   useEffect(() => {
     if (isOpen) {
