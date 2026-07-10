@@ -2,6 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { X } from 'lucide-react-native';
 import { CoverImage } from '../album/CoverImage';
+import { coverSrcWithFallback } from '../../lib/cover';
 import { labelStyle } from '../../lib/typography';
 import type { ListItem } from '../../lib/lists';
 
@@ -16,13 +17,14 @@ export function ListItemCard({ item, onRemove }: Props) {
   const isTrack = !!item.track_id && !!item.track;
   const data = isTrack ? item.track! : item.album!;
   const href = isTrack ? `/tracks/${data.id}` : `/albums/${data.id}`;
+  const { src, fallback } = coverSrcWithFallback(data.mbid, data.cover_url);
 
   return (
     <View style={{ width: '48%' }}>
       <Pressable onPress={() => router.push(href as any)}>
         <View className="aspect-square rounded-input overflow-hidden bg-background-tertiary relative mb-2">
-          {data.cover_url ? (
-            <CoverImage src={data.cover_url} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
+          {src ? (
+            <CoverImage src={src} fallback={fallback} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
           ) : (
             <View className="w-full h-full bg-background-tertiary items-center justify-center">
               {isTrack && <Text className="text-2xl text-text-disabled">♪</Text>}

@@ -41,6 +41,14 @@ export function CoverImage({ src, fallback, placeholder, style }: Props) {
     }
   };
 
+  // Repart de zéro si src/fallback changent (composant réutilisé avec de nouvelles props
+  // sans remonter) — sinon un `failed` resterait bloqué à `true` pour la nouvelle image.
+  useEffect(() => {
+    setCurrent(src);
+    setFailed(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, fallback]);
+
   useEffect(() => {
     settledRef.current = false;
     const timer = setTimeout(advance, LOAD_TIMEOUT_MS);

@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CoverImage } from '../album/CoverImage';
 import { RatingBadge } from '../ui/RatingBadge';
 import { FeedActions } from '../feed/cards/FeedActions';
 import { CommentSheet } from '../feed/CommentSheet';
+import { coverSrcWithFallback } from '../../lib/cover';
 import type { UnifiedReview } from '../../lib/diary';
 import { useRatingFilter } from '../../lib/RatingFilterContext';
 import { labelStyle, metaMediumStyle, smStyle } from '../../lib/typography';
@@ -23,7 +24,7 @@ type Props = {
  * ce pattern — le web ouvre lui `${review.href}#comments` (ancre), sans équivalent direct
  * en navigation native.
  */
-export function ReviewsList({ reviews, currentUserId }: Props) {
+export const ReviewsList = memo(function ReviewsList({ reviews, currentUserId }: Props) {
   const router = useRouter();
   const { selectedRating } = useRatingFilter();
   const ratingFilter = selectedRating !== null ? selectedRating + 1 : null;
@@ -48,11 +49,12 @@ export function ReviewsList({ reviews, currentUserId }: Props) {
     <View style={{ gap: 12 }}>
       {filtered.map((review) => {
         const href = review.type === 'track' ? `/track-diary/${review.id}` : `/diary/${review.id}`;
+        const { src: coverSrc, fallback: coverFallback } = coverSrcWithFallback(review.mbid, review.cover_url);
         return (
           <View key={`${review.type}-${review.id}`} className="p-4 border border-border bg-background-secondary rounded-input flex-row gap-4 overflow-hidden">
-            {review.cover_url && (
+            {coverSrc && (
               <Pressable onPress={() => router.push(href as any)} className="w-16 h-16 rounded-input overflow-hidden bg-background-secondary flex-shrink-0">
-                <CoverImage src={review.cover_url} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
+                <CoverImage src={coverSrc} fallback={coverFallback} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
               </Pressable>
             )}
             <View className="flex-1 min-w-0">
@@ -106,4 +108,4 @@ export function ReviewsList({ reviews, currentUserId }: Props) {
       />
     </View>
   );
-}
+});

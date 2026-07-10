@@ -25,6 +25,7 @@ import Animated, {
 import { ChevronDown, ChevronUp, ChevronRight, Search, X, Disc3, Music } from 'lucide-react-native';
 import { StarRating } from '../ui/StarRating';
 import { CoverImage } from '../album/CoverImage';
+import { coverSrcWithFallback } from '../../lib/cover';
 import { searchInternal, type SearchResultUI } from '../../lib/search';
 import { searchMusicBrainzAlbums, searchMusicBrainzRecordings } from '../../lib/musicbrainz';
 import { mergeAndRank } from '../../lib/searchRanking';
@@ -45,7 +46,7 @@ type Props = {
   initialQueue: AddQueueItem[];
 };
 
-type RatedCover = { key: string; coverUrl: string | null; title: string };
+type RatedCover = { key: string; coverUrl: string | null; mbid: string | null; title: string };
 type PanelMode = 'none' | 'search' | 'comment';
 
 // Cartes derrière l'active — offsets top/left/right/bottom fixes, comme le web
@@ -104,6 +105,9 @@ export default function AddQueueMobile({ initialQueue }: Props) {
   const current = queue[index] ?? null;
   const currentHref = current ? (current.kind === 'album' ? `/albums/${current.id}` : `/tracks/${current.id}`) : null;
   const currentSeeLabel = current?.kind === 'album' ? "voir l'album" : 'voir le titre';
+  const { src: currentCoverSrc, fallback: currentCoverFallback } = current
+    ? coverSrcWithFallback(current.mbid, current.coverUrl)
+    : { src: null as string | null, fallback: undefined as string | undefined };
   const upcoming = queue.slice(index + 1, index + 3);
   const remaining = queue.length - index;
   const peekCount = Math.min(upcoming.length, 2);
@@ -180,7 +184,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
     if (!current) return;
     if (rating !== null) {
       saveInBackground(current, rating, comment);
-      setRatedCovers((prev) => [...prev, { key: `${current.kind}-${current.id}`, coverUrl: current.coverUrl, title: current.title }]);
+      setRatedCovers((prev) => [...prev, { key: `${current.kind}-${current.id}`, coverUrl: current.coverUrl, mbid: current.mbid, title: current.title }]);
     }
     advance();
   };
@@ -328,6 +332,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
               title: item.title,
               artist: item.subtitle || 'Unknown Artist',
               coverUrl: item.coverUrl ?? null,
+              mbid: null,
               year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : undefined,
               source: 'search',
             });
@@ -351,6 +356,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
               title: item.title,
               artist: parts[0] || '',
               coverUrl: item.coverUrl ?? null,
+              mbid: null,
               albumId: data.albumId || '',
               albumTitle: parts[1] || '',
               artistId: data.artistId || '',
@@ -375,6 +381,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
         title: item.title,
         artist: item.subtitle || 'Unknown Artist',
         coverUrl: item.coverUrl ?? null,
+        mbid: null,
         year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : undefined,
         source: 'search',
       });
@@ -386,6 +393,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
         title: item.title,
         artist: parts[0] || 'Unknown',
         coverUrl: item.coverUrl ?? null,
+        mbid: null,
         albumId: item.trackAlbumId || '',
         albumTitle: parts[1] || '',
         artistId: item.trackArtistId || '',
@@ -612,6 +620,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
                     <View style={{ height: 112, marginBottom: 32, width: 200 }}>
                       {ratedCovers.slice(-3).map((c, i, arr) => {
                         const fan = FAN_STYLES[i + (3 - arr.length)];
+                        const { src, fallback } = coverSrcWithFallback(c.mbid, c.coverUrl);
                         return (
                           <View
                             key={c.key}
@@ -631,8 +640,8 @@ export default function AddQueueMobile({ initialQueue }: Props) {
                               borderColor: '#FAF8F4',
                             }}
                           >
-                            {c.coverUrl ? (
-                              <CoverImage key={c.coverUrl} src={c.coverUrl} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
+                            {src ? (
+                              <CoverImage key={src} src={src} fallback={fallback} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
                             ) : (
                               <View className="w-full h-full bg-background-tertiary" />
                             )}
@@ -673,6 +682,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
                     const depth = peekCount - i; // 2 puis 1
                     const peek = PEEK_STYLES[depth - 1];
                     const peekItem = upcoming[depth - 1];
+                    const peekCover = peekItem ? coverSrcWithFallback(peekItem.mbid, peekItem.coverUrl) : null;
                     return (
                       <View
                         key={`peek-${depth}`}
@@ -690,8 +700,8 @@ export default function AddQueueMobile({ initialQueue }: Props) {
                           borderColor: '#D8D3CB',
                         }}
                       >
-                        {peekItem?.coverUrl && (
-                          <CoverImage key={peekItem.coverUrl} src={peekItem.coverUrl} style={{ width: '100%', height: '100%', opacity: 0.7 }} placeholder={<View className="w-full h-full" />} />
+                        {peekCover?.src && (
+                          <CoverImage key={peekCover.src} src={peekCover.src} fallback={peekCover.fallback} style={{ width: '100%', height: '100%', opacity: 0.7 }} placeholder={<View className="w-full h-full" />} />
                         )}
                         <View style={{ position: 'absolute', inset: 0, backgroundColor: `rgba(28,28,28,${0.05 * depth})` }} />
                       </View>
@@ -718,8 +728,8 @@ export default function AddQueueMobile({ initialQueue }: Props) {
                       <View style={{ flex: 1, padding: 16 }}>
                         <View className="flex-row items-center gap-4 mb-3">
                           <View className="w-20 h-20 rounded-cover-sm overflow-hidden bg-background-tertiary">
-                            {current.coverUrl ? (
-                              <CoverImage key={current.coverUrl} src={current.coverUrl} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
+                            {currentCoverSrc ? (
+                              <CoverImage key={currentCoverSrc} src={currentCoverSrc} fallback={currentCoverFallback} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
                             ) : (
                               <View className="w-full h-full bg-background-tertiary" />
                             )}
@@ -785,8 +795,8 @@ export default function AddQueueMobile({ initialQueue }: Props) {
                       <View style={{ flex: 1, justifyContent: 'center', padding: 12 }}>
                         <View className="flex-row items-center gap-3 mb-2">
                           <View className="w-12 h-12 rounded-cover-sm overflow-hidden bg-background-tertiary">
-                            {current.coverUrl ? (
-                              <CoverImage key={current.coverUrl} src={current.coverUrl} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
+                            {currentCoverSrc ? (
+                              <CoverImage key={currentCoverSrc} src={currentCoverSrc} fallback={currentCoverFallback} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
                             ) : (
                               <View className="w-full h-full bg-background-tertiary" />
                             )}
@@ -813,8 +823,8 @@ export default function AddQueueMobile({ initialQueue }: Props) {
                     ) : (
                       <>
                         <View style={{ flex: 1, backgroundColor: '#E4DFD6' }}>
-                          {current.coverUrl ? (
-                            <CoverImage key={current.coverUrl} src={current.coverUrl} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
+                          {currentCoverSrc ? (
+                            <CoverImage key={currentCoverSrc} src={currentCoverSrc} fallback={currentCoverFallback} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
                           ) : (
                             <View className="w-full h-full bg-background-tertiary" />
                           )}

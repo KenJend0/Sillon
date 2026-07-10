@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Plus } from 'lucide-react-native';
 import { ListCard } from './ListCard';
@@ -24,7 +24,7 @@ type ListFilter = 'mine' | 'saved' | 'all';
  * router.refresh() côté mobile) : create/rename/delete/visibilité mettent donc à jour
  * une copie locale en state, comme le reste des écrans profil mobile (voir DiaryList).
  */
-export function ListsTab({ lists: initialLists, savedLists: initialSavedLists = [], isOwner, userId }: Props) {
+export const ListsTab = memo(function ListsTab({ lists: initialLists, savedLists: initialSavedLists = [], isOwner, userId }: Props) {
   const [lists, setLists] = useState(initialLists);
   const savedLists = initialSavedLists;
   const [filter, setFilter] = useState<ListFilter>('all');
@@ -105,4 +105,4 @@ export function ListsTab({ lists: initialLists, savedLists: initialSavedLists = 
       )}
     </View>
   );
-}
+});

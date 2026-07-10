@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CoverImage } from '../album/CoverImage';
+import { coverSrcWithFallback } from '../../lib/cover';
 import type { FavoriteAlbum } from '../../lib/profile';
 
 type Props = {
@@ -35,11 +36,13 @@ export function Top3Albums({ albums, hideIfEmpty }: Props) {
 
 function AlbumTile({ album }: { album: FavoriteAlbum }) {
   const router = useRouter();
+  const { src, fallback } = coverSrcWithFallback(album.mbid, album.cover_url);
   return (
     <Pressable onPress={() => router.push(`/albums/${album.id}`)} className="flex-1 aspect-square rounded-input overflow-hidden bg-background-tertiary">
-      {album.cover_url ? (
+      {src ? (
         <CoverImage
-          src={album.cover_url}
+          src={src}
+          fallback={fallback}
           style={{ width: '100%', height: '100%' }}
           placeholder={<PlaceholderNote />}
         />

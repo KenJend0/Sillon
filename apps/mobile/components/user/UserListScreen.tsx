@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '../ui/BackButton';
+import { LoadingScreen } from '../ui/LoadingScreen';
 import { UserCard } from './UserCard';
 import { getFollowersList, getFollowingList, toggleFollow, type SocialUser } from '../../lib/social';
 
@@ -68,7 +69,9 @@ export function UserListScreen({ username, mode }: Props) {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#1C1C1C" style={{ marginTop: 40 }} />
+        <View style={{ marginTop: 40 }}>
+          <LoadingScreen fullScreen={false} />
+        </View>
       ) : error ? (
         <Text className="text-text-tertiary px-4" style={{ fontFamily: 'Inter_400Regular', fontSize: 14 }}>
           Impossible de charger {mode === 'followers' ? 'les abonnés' : 'les abonnements'}.

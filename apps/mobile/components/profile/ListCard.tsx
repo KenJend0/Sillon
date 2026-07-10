@@ -1,8 +1,10 @@
+import { memo } from 'react';
 import { Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Lock, Bookmark } from 'lucide-react-native';
 import { CoverImage } from '../album/CoverImage';
+import { coverSrcWithFallback } from '../../lib/cover';
 import type { ProfileListUI } from '../../lib/lists';
 import { useListSave } from '../../lib/useListSave';
 import { labelStyle } from '../../lib/typography';
@@ -19,7 +21,7 @@ type Props = {
  * seulement si list.is_public && !isOwnList, comme le web) et navigation vers /lists/[id]
  * (Phase 7 — remplace l'ancien toast "Bientôt disponible").
  */
-export function ListCard({ list, style }: Props) {
+export const ListCard = memo(function ListCard({ list, style }: Props) {
   const router = useRouter();
   const covers = list.cover_urls.slice(0, 4);
   const { saved, isOwnList, toggleSave } = useListSave(list);
@@ -32,15 +34,18 @@ export function ListCard({ list, style }: Props) {
             <Text className="text-2xl text-text-tertiary">♪</Text>
           </View>
         ) : (
-          covers.map((url, i) => (
-            <View key={i} style={{ width: covers.length > 1 ? '50%' : '100%', height: covers.length > 2 ? '50%' : '100%' }}>
-              {url ? (
-                <CoverImage src={url} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
-              ) : (
-                <View className="w-full h-full bg-background-tertiary" />
-              )}
-            </View>
-          ))
+          covers.map((cover, i) => {
+            const { src, fallback } = coverSrcWithFallback(cover.mbid, cover.url);
+            return (
+              <View key={i} style={{ width: covers.length > 1 ? '50%' : '100%', height: covers.length > 2 ? '50%' : '100%' }}>
+                {src ? (
+                  <CoverImage src={src} fallback={fallback} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
+                ) : (
+                  <View className="w-full h-full bg-background-tertiary" />
+                )}
+              </View>
+            );
+          })
         )}
         {list.creator_username && (
           <View className="absolute top-2 left-2 flex-row items-center gap-1.5 bg-paper-hi/90 border border-border rounded-full pl-0.5 pr-2 py-0.5">
@@ -75,4 +80,4 @@ export function ListCard({ list, style }: Props) {
       </Text>
     </Pressable>
   );
-}
+});

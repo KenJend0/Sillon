@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CoverImage } from '../album/CoverImage';
 import { RatingBadge } from '../ui/RatingBadge';
+import { coverSrcWithFallback } from '../../lib/cover';
 import { getUserDiary, type DiaryEntryUI, type DiarySort } from '../../lib/diary';
 import { getUserTrackDiary, type TrackDiaryEntryUI, type TrackDiarySort } from '../../lib/trackDiary';
 import { useRatingFilter } from '../../lib/RatingFilterContext';
@@ -57,7 +58,7 @@ type Props = {
  * naviguent vers /diary/[entry_id] et /track-diary/[entry_id] (détail d'écoute + fil de
  * commentaires), comme le web.
  */
-export function DiaryList({ userId, initialAlbumEntries, initialTrackEntries, ratingLabel = 'Ma note' }: Props) {
+export const DiaryList = memo(function DiaryList({ userId, initialAlbumEntries, initialTrackEntries, ratingLabel = 'Ma note' }: Props) {
   const router = useRouter();
   const [media, setMedia] = useState<MediaFilter>(
     initialAlbumEntries.length === 0 && initialTrackEntries.length > 0 ? 'titres' : 'albums'
@@ -220,11 +221,13 @@ export function DiaryList({ userId, initialAlbumEntries, initialTrackEntries, ra
         ) : (
           <>
             <View className="flex-row flex-wrap" style={{ gap: 10 }}>
-              {sortedAlbums.map((entry) => (
+              {sortedAlbums.map((entry) => {
+                const { src, fallback } = coverSrcWithFallback(entry.mbid, entry.cover_url);
+                return (
                 <Pressable key={entry.id} onPress={() => router.push(`/diary/${entry.id}` as any)} style={{ width: '31%' }}>
                   <View className="aspect-square rounded-input overflow-hidden bg-background-tertiary relative">
-                    {entry.cover_url ? (
-                      <CoverImage src={entry.cover_url} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
+                    {src ? (
+                      <CoverImage src={src} fallback={fallback} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
                     ) : null}
                     {entry.rating != null && (
                       <View className="absolute top-1.5 right-1.5">
@@ -235,7 +238,8 @@ export function DiaryList({ userId, initialAlbumEntries, initialTrackEntries, ra
                   <Text numberOfLines={2} className="mt-2 text-text-warm" style={{ fontFamily: 'InstrumentSerif_400Regular', fontSize: 13 }}>{entry.album_title}</Text>
                   <Text numberOfLines={1} className="text-text-tertiary mt-0.5" style={labelStyle}>{entry.artist_name}</Text>
                 </Pressable>
-              ))}
+                );
+              })}
             </View>
             {ratingFilter === null && albumHasMore && (
               <Pressable onPress={loadMoreAlbums} disabled={albumLoadingMore} className="mt-6 items-center">
@@ -251,11 +255,13 @@ export function DiaryList({ userId, initialAlbumEntries, initialTrackEntries, ra
       ) : (
         <>
           <View className="flex-row flex-wrap" style={{ gap: 10 }}>
-            {sortedTracks.map((entry) => (
+            {sortedTracks.map((entry) => {
+              const { src, fallback } = coverSrcWithFallback(entry.mbid, entry.cover_url);
+              return (
               <Pressable key={entry.id} onPress={() => router.push(`/track-diary/${entry.id}` as any)} style={{ width: '31%' }}>
                 <View className="aspect-square rounded-input overflow-hidden bg-background-tertiary relative">
-                  {entry.cover_url ? (
-                    <CoverImage src={entry.cover_url} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
+                  {src ? (
+                    <CoverImage src={src} fallback={fallback} style={{ width: '100%', height: '100%' }} placeholder={<View className="w-full h-full bg-background-tertiary" />} />
                   ) : null}
                   {entry.rating != null && (
                     <View className="absolute top-1.5 right-1.5">
@@ -266,7 +272,8 @@ export function DiaryList({ userId, initialAlbumEntries, initialTrackEntries, ra
                 <Text numberOfLines={2} className="mt-2 text-text-warm" style={{ fontFamily: 'InstrumentSerif_400Regular', fontSize: 13 }}>{entry.track_title}</Text>
                 <Text numberOfLines={1} className="text-text-tertiary mt-0.5" style={labelStyle}>{entry.artist_name}</Text>
               </Pressable>
-            ))}
+              );
+            })}
           </View>
           {ratingFilter === null && trackHasMore && (
             <Pressable onPress={loadMoreTracks} disabled={trackLoadingMore} className="mt-6 items-center">
@@ -277,4 +284,4 @@ export function DiaryList({ userId, initialAlbumEntries, initialTrackEntries, ra
       )}
     </View>
   );
-}
+});
