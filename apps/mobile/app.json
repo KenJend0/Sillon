@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "scheme": "waveform",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.waveform.app",
@@ -35,7 +35,10 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font",
+      "expo-image",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "router": {},

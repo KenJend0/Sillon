@@ -1,7 +1,8 @@
 import { Suspense } from 'react';
 import { createSupabaseServer, getAuthUser } from "@/lib/supabase/server";
 import { ensureProfile, getCurrentStreak } from "@/app/actions/profile";
-import UnauthCTA from "@/components/auth/UnauthCTA";
+import { getTrendingThisWeek } from "@/app/actions/explore";
+import UnauthTeaser from "@/components/auth/UnauthTeaser";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileTabs from "@/components/profile/ProfileTabs";
 import RatingDistribution from "@/components/profile/RatingDistribution";
@@ -9,25 +10,89 @@ import { RatingFilterProvider } from "@/components/profile/RatingFilterContext";
 import { getUserDiary, getUserReviewsUnified } from "@/app/actions/diary";
 import { getUserLists, getUserSavedLists, getOrCreateDefaultList } from "@/app/actions/lists";
 import { getUserTrackDiary } from "@/app/actions/track-diary";
+import type { DiaryEntryUI } from "@/app/actions/diary";
 
 export const revalidate = 0; // Pas de cache, recharger à chaque accès
 
 const ADMIN_IDS = (process.env.ADMIN_USER_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 
+// Notes synthétiques (pas de random, pour ne pas provoquer de mismatch d'hydration
+// SSR/CSR) qui servent à la fois pour les badges de la grille et pour l'histogramme
+// — une seule source de vérité, donc les deux racontent toujours la même histoire.
+const MOCK_RATING_CYCLE = [8, 6, 9, 7, 8, 5, 9, 7, 8, 6, 10, 7, 8, 9, 6, 8, 7, 9];
+
+function buildMockDiaryEntries(trending: Awaited<ReturnType<typeof getTrendingThisWeek>>): DiaryEntryUI[] {
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    return trending.map((a, i) => ({
+        id: `mock-${a.id}`,
+        album_id: a.album_id,
+        album_title: a.album_title,
+        artist_id: a.album_id,
+        artist_name: a.artist_name,
+        cover_url: a.cover_url || null,
+        rating: MOCK_RATING_CYCLE[i % MOCK_RATING_CYCLE.length],
+        review_body: null,
+        listened_at: new Date(now - i * dayMs).toISOString(),
+        created_at: new Date(now - i * dayMs).toISOString(),
+        release_date: null,
+        likes_count: 0,
+        comments_count: 0,
+        is_liked: false,
+    }));
+}
+
 export default async function MyProfilePage() {
     const user = await getAuthUser();
 
     if (!user) {
+        const trending = await getTrendingThisWeek(18);
+        const mockDiaryEntries = buildMockDiaryEntries(trending);
+        const mockRatings = mockDiaryEntries.map((e) => e.rating as number);
+        const favoriteAlbums = mockDiaryEntries.slice(0, 3).map((e, i) => ({
+            id: e.album_id,
+            title: e.album_title,
+            artist_name: e.artist_name,
+            cover_url: e.cover_url,
+            position: i,
+        }));
+        const mockUser = {
+            id: "mock-user",
+            username: "Toi",
+            picture_url: null,
+            is_me: true,
+            is_admin: false,
+            followers_count: 312,
+            following_count: 128,
+            bio: null,
+        };
+        const mockStats = { reviews_count: mockDiaryEntries.length };
+
         return (
-            <div className="px-4 md:px-6 lg:px-8 pb-28 lg:pb-12">
-                <div className="pt-8 pb-6">
-                    <h1 className="text-h1 text-text-primary mb-2">Mon profil</h1>
-                    <p className="text-meta text-text-tertiary">Ton journal, tes stats, tes albums favoris.</p>
-                </div>
-                <UnauthCTA
-                    title={<>Ton profil musical t&apos;attend — <em className="italic text-accent-deep">journal, stats et albums favoris.</em></>}
-                />
-            </div>
+            <UnauthTeaser ctaTitle={<>Ton profil musical t&apos;attend — <em className="italic text-accent-deep">journal, stats et albums favoris.</em></>}>
+                <RatingFilterProvider>
+                    <div className="lg:mx-auto lg:flex lg:max-w-6xl lg:items-start lg:gap-10 lg:px-8">
+                        <aside className="lg:w-72 lg:flex-shrink-0">
+                            <ProfileHeader user={mockUser} stats={mockStats} favoriteAlbums={favoriteAlbums} />
+                            <div className="max-w-page mx-auto px-4 sm:px-6 lg:max-w-none lg:px-0 mt-4 lg:mt-8">
+                                <RatingDistribution ratings={mockRatings} />
+                            </div>
+                        </aside>
+
+                        <div className="lg:flex-1 lg:min-w-0 mt-8 lg:pt-8 lg:mt-0">
+                            <ProfileTabs
+                                isMe
+                                userId="mock-user"
+                                diaryEntries={mockDiaryEntries}
+                                userLists={[]}
+                                savedLists={[]}
+                                trackEntries={[]}
+                                unifiedReviews={[]}
+                            />
+                        </div>
+                    </div>
+                </RatingFilterProvider>
+            </UnauthTeaser>
         );
     }
 
@@ -140,7 +205,7 @@ export default async function MyProfilePage() {
 
     return (
         <RatingFilterProvider>
-        <div className="lg:mx-auto lg:flex lg:max-w-5xl lg:items-start lg:gap-10 lg:px-8 xl:max-w-[1080px]">
+        <div className="lg:mx-auto lg:flex lg:max-w-6xl lg:items-start lg:gap-10 lg:px-8">
             {/* Sidebar gauche (desktop) / Layout empilé (mobile) */}
             <aside className="lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-[72px]">
                 <ProfileHeader user={userData} stats={stats} streak={streak} favoriteAlbums={favoriteAlbums} />

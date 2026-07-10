@@ -6,7 +6,7 @@ import { createSupabaseServer, getAuthUser, userNeedsOnboarding } from '@/lib/su
 import FeedInfiniteList from '@/components/feed/FeedInfiniteList';
 import PublicFeedCard from '@/components/feed/PublicFeedCard';
 import SimilarUsersSection from '@/components/user/SimilarUsersSection';
-import UnauthCTA from '@/components/auth/UnauthCTA';
+import UnauthTeaser from '@/components/auth/UnauthTeaser';
 
 export default async function FeedPage() {
   const user = await getAuthUser();
@@ -16,27 +16,23 @@ export default async function FeedPage() {
     const publicEntries = await getPublicFeed(30);
 
     return (
-      <div className="mx-auto max-w-3xl px-3 pb-28 md:px-5 lg:px-8 lg:pb-12">
+      <div className="mx-auto max-w-6xl px-3 pb-28 md:px-5 lg:px-8 lg:pb-12">
         <div className="pt-8 pb-6 lg:pt-10 lg:pb-8">
           <h1 className="text-h1 text-text-primary mb-2">Activité</h1>
           <p className="text-meta text-text-tertiary">Ce qui se passe autour de toi.</p>
         </div>
 
-        <UnauthCTA
-          className="mb-8"
-          title={<>Tes likes, commentaires et abonnés t&apos;attendent — <em className="italic text-accent-deep">crée un compte pour suivre ton activité.</em></>}
-        />
-
-        {/* Feed public */}
-        {publicEntries.length === 0 ? (
-          <p className="text-meta text-text-tertiary py-8 text-center">Aucune activité récente.</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {publicEntries.map((entry) => (
-              <PublicFeedCard key={entry.id} entry={entry} />
-            ))}
-          </div>
-        )}
+        <UnauthTeaser ctaTitle={<>Tes likes, commentaires et abonnés t&apos;attendent — <em className="italic text-accent-deep">crée un compte pour suivre ton activité.</em></>}>
+          {publicEntries.length === 0 ? (
+            <p className="text-meta text-text-tertiary py-8 text-center">Aucune activité récente.</p>
+          ) : (
+            <div className="flex flex-col gap-3 lg:max-w-3xl">
+              {publicEntries.map((entry) => (
+                <PublicFeedCard key={entry.id} entry={entry} />
+              ))}
+            </div>
+          )}
+        </UnauthTeaser>
       </div>
     );
   }

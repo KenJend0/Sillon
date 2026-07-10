@@ -1,6 +1,6 @@
 export default function Loading() {
     return (
-        <div className="lg:flex lg:items-start lg:gap-12 lg:px-8 lg:pt-8 pb-28 animate-pulse">
+        <div className="lg:mx-auto lg:flex lg:max-w-6xl lg:items-start lg:gap-10 lg:px-8 lg:pt-8 pb-28 animate-pulse">
             {/* Sidebar gauche */}
             <aside className="lg:w-72 lg:flex-shrink-0">
                 {/* ProfileHeader */}
