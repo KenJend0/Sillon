@@ -1,242 +1,199 @@
-# Waveform
+<p align="center">
+  <img src="apps/web/waveform.png" alt="Waveform" width="96">
+</p>
 
-Journal musical social. Suis tes écoutes, note tes albums et titres, découvre ce qu'écoutent tes amis.
+<h1 align="center">Waveform</h1>
+<p align="center">A social music discovery platform — track your listening, rate albums and tracks, and see what your friends are into.</p>
 
----
-
-## Stack
-
-| Couche | Techno |
-|--------|--------|
-| Frontend | Next.js 15 (App Router) |
-| Auth & BDD | Supabase (Postgres + Auth + Storage) |
-| Styles | Tailwind CSS v4 |
-| Données musicales | MusicBrainz API, Last.fm API, iTunes Search API, Deezer API |
-| Déploiement | Vercel |
-
-Pas de backend custom. Toute la logique passe par des **Server Actions** Next.js et le client Supabase côté serveur.
+<p align="center">
+  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs&logoColor=white">
+  <img alt="Expo" src="https://img.shields.io/badge/Expo-React_Native-000020?logo=expo&logoColor=white">
+  <img alt="Supabase" src="https://img.shields.io/badge/Supabase-Postgres_%2B_Auth-3ECF8E?logo=supabase&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white">
+  <img alt="Python" src="https://img.shields.io/badge/ML_pipeline-Python-3776AB?logo=python&logoColor=white">
+</p>
 
 ---
 
-## Démarrage rapide
+## Overview
 
-### Prérequis
+Waveform is a personal, production-oriented project: a music diary and social discovery
+app, similar in spirit to Letterboxd but for music. Users log listens, rate albums and
+tracks, follow each other, and get personalized recommendations computed by a batch ML
+pipeline.
+
+It's a monorepo with three moving parts:
+
+- **`apps/web`** — Next.js 15 web app (App Router), the main product surface.
+- **`apps/mobile`** — React Native / Expo mobile app, sharing the same Supabase backend.
+- **`ml`** — a scheduled recommendation pipeline (collaborative filtering → hybrid →
+  matrix factorization), running independently of the request path.
+
+No custom backend server: business logic lives in Next.js Server Actions and Supabase
+(Postgres + Auth + Storage + Row-Level Security), and the ML pipeline writes precomputed
+results that the app reads directly.
+
+## Screenshots
+
+> _Coming soon — feed, album diary, and profile stats screens._
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph Clients
+        Web[Next.js web app]
+        Mobile[Expo mobile app]
+    end
+
+    subgraph Backend["Supabase"]
+        DB[(Postgres + RLS)]
+        Auth[Auth]
+        Storage[Storage]
+    end
+
+    subgraph External["Music metadata"]
+        MB[MusicBrainz]
+        LFM[Last.fm]
+        SPT[Spotify / iTunes / Deezer]
+    end
+
+    subgraph ML["ML pipeline (GitHub Actions, daily cron)"]
+        Vectors[compute_user_vectors.py]
+        Recs[compute_recommendations.py]
+        Eval[evaluate_metrics.py]
+    end
+
+    Web --> Auth
+    Mobile --> Auth
+    Web --> DB
+    Mobile --> DB
+    Web --> External
+    ML --> DB
+    DB --> Vectors --> Recs --> DB
+    Recs --> Eval --> DB
+```
+
+## Recommendation pipeline
+
+The recommendation system runs as a **daily batch job**, not a live service — it reads
+listening history from Postgres, computes recommendations offline, and writes ranked
+results back for the app to read directly.
+
+| Phase | Approach |
+|---|---|
+| **0 (current)** | User-based collaborative filtering: mean-centered rating vectors, cosine similarity between users, weighted score aggregation over nearest neighbors |
+| **1** | Hybrid CF + content-based scoring (genre vectors), `0.7 × CF + 0.3 × content` |
+| **2** | Matrix factorization (SVD / ALS via `implicit`) on explicit + implicit signals, latent factors stored in `pgvector` |
+
+Quality is measured offline with leave-one-out cross-validation (Precision@K, Recall@K,
+NDCG@K), stored in `recommendation_metrics` and queryable from an admin endpoint.
+Full detail: [`ml/README.md`](ml/README.md).
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Web frontend | Next.js 15 (App Router), Tailwind CSS v4 |
+| Mobile | React Native (Expo) |
+| Auth & database | Supabase (Postgres + Auth + Storage), Row-Level Security on every table |
+| Recommendations | Python — pandas / scipy / `implicit`, scheduled via GitHub Actions |
+| Music metadata | MusicBrainz, Last.fm, iTunes Search, Deezer |
+| Observability | Sentry |
+| Deployment | Vercel (web), EAS (mobile) |
+
+## Getting started
+
+### Prerequisites
 
 - Node.js 20+
-- Un projet Supabase (plan gratuit suffisant pour le dev)
+- A Supabase project (free tier is enough for local development)
 
-### Installation
+### Web app
 
 ```bash
 git clone https://github.com/KenJend0/waveform.git
-cd waveform/frontend
+cd waveform/apps/web
 npm install
-```
-
-### Configuration
-
-```bash
-cp .env.example .env.local
-# Remplis les variables dans .env.local
-```
-
-Variables requises :
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_KEY=eyJ...
-```
-
-Variables optionnelles :
-
-```env
-LASTFM_API_KEY=...                  # enrichissement genres + descriptions
-SPOTIFY_CLIENT_ID=...               # liens streaming Spotify
-SPOTIFY_CLIENT_SECRET=...           # liens streaming Spotify
-UPSTASH_REDIS_REST_URL=https://...  # rate limiting (désactivé si absent)
-UPSTASH_REDIS_REST_TOKEN=...
-```
-
-### Lancer en dev
-
-```bash
-cd frontend
+cp .env.example .env.local   # fill in the values below
 npm run dev
 # → http://localhost:3000
 ```
 
----
+Required environment variables:
 
-## Structure du projet
-
-```
-waveform/
-├── frontend/                        # Application Next.js 15
-│   ├── app/
-│   │   ├── actions/                 # Server Actions (logique métier)
-│   │   ├── api/                     # Route Handlers Next.js
-│   │   ├── add/                     # Ajouter une écoute (album ou titre)
-│   │   ├── albums/[id]/             # Page album
-│   │   ├── artists/[id]/            # Page artiste
-│   │   ├── auth/                    # Login / Signup / Reset
-│   │   ├── diary/[entry_id]/        # Entrée journal album
-│   │   ├── explore/                 # Découverte (tendances, suggestions)
-│   │   ├── feed/                    # Fil d'activité
-│   │   ├── lists/                   # Listes d'albums
-│   │   ├── me/                      # Profil personnel + stats
-│   │   ├── search/                  # Résultats de recherche
-│   │   ├── settings/                # Paramètres & favoris
-│   │   ├── track-diary/[entry_id]/  # Entrée journal titre
-│   │   ├── tracks/[id]/             # Page titre
-│   │   └── u/[username]/            # Profil public + followers/following
-│   ├── components/
-│   │   ├── album/                   # CoverImage, AlbumHero, Reviews, ImportButton…
-│   │   ├── artist/                  # ArtistPageContent, ArtistAlbumsSection
-│   │   ├── track/                   # TrackReviewSection, TrackSearchForDiary…
-│   │   ├── user/                    # UserCard, FollowersList, FollowingList…
-│   │   ├── feed/cards/              # Cartes du feed par type d'événement
-│   │   ├── explore/                 # TrendingSection, DiscoverCard, PourToiSection…
-│   │   ├── lists/                   # ListCard, ListSwitcher, AddToListButton
-│   │   ├── profile/                 # ProfileHeader, ProfileTabs, DiaryList…
-│   │   ├── layout/                  # Header, BottomNav, SearchOverlay, AuthenticatedLayout…
-│   │   ├── ui/                      # Toast, BottomSheet, StarRating, BackButton…
-│   │   ├── auth/                    # AuthForm, UnauthCTA
-│   │   ├── social/                  # FollowButton, ProfileActionsMenu
-│   │   ├── admin/                   # AdminSpotifyEdit, AdminRefreshCover
-│   │   ├── legal/                   # LegalSection, LegalPageShell
-│   │   ├── background/              # NavigationTracker, ServiceWorkerRegistration…
-│   │   ├── onboarding/              # OnboardingFlow
-│   │   ├── avatars/                 # 12 avatars SVG
-│   │   └── icons/                   # Icônes custom
-│   ├── lib/
-│   │   ├── supabase/                # Clients Supabase (client + server + admin)
-│   │   ├── AuthContext.tsx          # Contexte auth global
-│   │   ├── searchRanking.ts         # computeRank + mergeAndRank
-│   │   └── …
-│   ├── hooks/                       # React hooks personnalisés
-│   ├── types/
-│   │   └── database.ts              # Types générés depuis Supabase
-│   └── public/
-├── supabase_migrations/             # Migrations SQL (dashboard Supabase)
-│   ├── supabase_schema.sql          # Schéma complet + RLS
-│   └── …                            # Migrations par feature
-├── scripts/                         # generate-supabase-types.sh / .ps1
-├── design/                          # Maquettes HTML du design system
-├── ml/                              # Scripts Python (recommandations)
-└── docs/                            # Documentation interne
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_KEY=
 ```
 
----
+Optional (feature flags — the app degrades gracefully if these are omitted):
 
-## Base de données
+```env
+LASTFM_API_KEY=                     # genre + description enrichment
+SPOTIFY_CLIENT_ID=                  # streaming links
+SPOTIFY_CLIENT_SECRET=
+UPSTASH_REDIS_REST_URL=             # rate limiting (fail-open if absent)
+UPSTASH_REDIS_REST_TOKEN=
+```
 
-Le schéma complet est dans [`supabase_migrations/supabase_schema.sql`](supabase_migrations/supabase_schema.sql).
-
-**Tables principales :**
-
-| Table | Description |
-|-------|-------------|
-| `profiles` | Métadonnées utilisateur (username, bio, avatar) |
-| `albums` | Catalogue albums, FK → `artists` |
-| `artists` | Artistes |
-| `tracks` | Pistes, FK → `albums` |
-| `diary_entries` | Écoutes/reviews album par user |
-| `track_diary_entries` | Écoutes/reviews titre par user |
-| `diary_comments` | Commentaires sur les entrées |
-| `follows` | Relations sociales |
-| `feed_events` | Fil d'activité (fan-out en écriture) |
-| `lists` | Listes d'albums |
-| `genres` | Genres musicaux (source MB + Last.fm + votes communauté) |
-| `album_metadata` | Descriptions, liens streaming, stats Last.fm |
-| `recommendations` | Recommandations entre users |
-| `search_cache` | Cache résultats MusicBrainz (24h) |
-
-**Vue :** `album_stats` — listeners, reviews, note moyenne par album.
-
-### RLS
-
-Activé sur toutes les tables. Les policies sont dans `supabase_schema.sql`. Les écritures système (fan-out feed, enrichissement) utilisent la clé service role côté serveur uniquement.
-
-### Migrations
-
-Les migrations s'appliquent manuellement via l'éditeur SQL du dashboard Supabase, dans cet ordre :
-
-1. `supabase_schema.sql` — schéma de base
-2. `supabase_migration_fulltext_search.sql` — recherche plein texte (nécessite `unaccent`)
-3. `supabase_migration_trgm.sql` — fuzzy search via pg_trgm
-4. `supabase_migration_search_cache.sql` — cache résultats MB
-5. Les autres migrations par ordre de dépendance feature
-
-### Régénérer les types TypeScript
+### Mobile app
 
 ```bash
-# Unix
-bash scripts/generate-supabase-types.sh
-
-# Windows
-.\scripts\generate-supabase-types.ps1
+cd apps/mobile
+npm install
+cp .env.example .env.local
+npx expo start
 ```
 
----
+### ML pipeline
 
-## Architecture
-
-### Auth
-
-Supabase Auth (email/password). Côté serveur : `getAuthUser()` via cookies SSR. Côté client : `AuthContext` avec `supabase.auth.getUser()`.
-
-### Server Actions
-
-Toute la logique métier est dans `frontend/app/actions/` :
-
-```
-actions/
-├── diary.ts            # upsertDiaryEntry, deleteDiaryEntry, toggleDiaryLike, addComment…
-├── track-diary.ts      # upsertTrackDiaryEntry, getTrackDiaryEntry…
-├── feed.ts             # getMyFeed, fanoutEvent
-├── profile.ts          # ensureProfile, updateProfileSettings, deleteAccount…
-├── social.ts           # toggleFollow
-├── lists.ts            # createList, addAlbumToList…
-├── musicbrainz.ts      # search, import depuis MusicBrainz
-├── metadata.ts         # enrichAlbumMetadata (genres, descriptions, liens streaming)
-├── artists.ts          # getArtistMeta, getArtistReleases
-├── search.ts           # searchInternal (Supabase FTS + ILIKE + fuzzy pg_trgm)
-└── explore.ts          # getTrendingThisWeek, getForYouSuggestions…
+```bash
+cd ml
+pip install -r requirements.txt
+cp .env.example .env
+python scripts/compute_user_vectors.py --dry-run
 ```
 
-### Recherche
+## Database
 
-Deux niveaux, toujours en deux phases (interne d'abord, MB en arrière-plan) :
+Schema and Row-Level Security policies are defined in
+[`supabase_migrations/supabase_schema.sql`](supabase_migrations/supabase_schema.sql).
 
-- **Interne** (`searchInternal`) : full-text search Supabase (`tsvector` + `unaccent`), fallback ILIKE, fallback fuzzy pg_trgm
-- **MusicBrainz** : requêtes Lucene, cache L1 mémoire 5min + L2 Supabase 24h
-- **Ranking unifié** (`lib/searchRanking.ts`) : `computeRank` + `mergeAndRank` partagés entre l'overlay et `/search`
+**Core tables:**
 
-### Enrichissement albums
+| Table | Purpose |
+|---|---|
+| `profiles` | User metadata (username, bio, avatar) |
+| `albums` / `artists` / `tracks` | Music catalog |
+| `diary_entries` / `track_diary_entries` | Listens and reviews |
+| `follows` | Social graph |
+| `feed_events` | Activity feed (write-time fan-out) |
+| `lists` | User-curated album lists |
+| `genres` / `album_metadata` | Enriched metadata from external APIs |
+| `recommendations` / `user_recommendations` | Output of the ML pipeline |
+| `search_cache` | 24h cache of MusicBrainz search results |
 
-Déclenché via `POST /api/enrich` après import. Récupère en parallèle :
-- Genres + tags depuis MusicBrainz et Last.fm
-- Description depuis Last.fm, Wikipedia ou annotation MB
-- Liens streaming depuis MusicBrainz url-rels, puis fallback Spotify/iTunes/Deezer
+RLS is enabled on every table; server-side writes (feed fan-out, metadata enrichment)
+use the service-role key only from trusted server contexts, never exposed to the client.
 
-### Fan-out du feed
+## Key design decisions
 
-Modèle **fan-out en écriture** : chaque action (review, like, follow…) insère un événement dans `feed_events` pour chacun des followers. La lecture est une simple requête filtrée par `user_id`.
-
----
-
-## Déploiement (Vercel)
-
-1. Connecter le repo sur [vercel.com](https://vercel.com)
-2. Définir le **Root Directory** sur `frontend`
-3. Ajouter les variables d'environnement
-4. Deploy
-
----
+- **No custom backend.** Server Actions + Supabase cover all business logic, keeping the
+  system easy to reason about and deploy.
+- **Offline recommendations.** Computing recs as a scheduled batch job rather than
+  on-request keeps read latency low and makes the ML pipeline independently testable and
+  versioned, separate from the product codebase.
+- **Two-phase search.** Internal full-text search (Postgres `tsvector` + `unaccent`,
+  fuzzy fallback via `pg_trgm`) returns instantly; MusicBrainz results are merged in as
+  they arrive, ranked by a shared scoring function used by both the search overlay and
+  the full search page.
+- **Write-time fan-out for the feed.** Each social action inserts a row per follower at
+  write time, so reading a feed is a single indexed query instead of a fan-in join at
+  read time.
 
 ## Roadmap
 
-La V1 web est en production. La prochaine étape est une **application mobile native** (React Native / Expo) qui partagera le même backend Supabase.
-
-Voir [`docs/ROADMAP.md`](docs/ROADMAP.md) pour le détail.
+The web app is in production. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for what's next,
+including the mobile app rollout.

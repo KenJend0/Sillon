@@ -1,7 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 220" fill="#1C1C1C">
-  <title>Waveform wordmark — Direction A</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 160">
+  <title>Sillon wordmark — Direction A</title>
   <defs>
-    
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1');
+      .wm {
+        font-family: 'Instrument Serif', serif;
+        font-style: italic;
+        font-size: 120px;
+        fill: #1C1C1C;
+      }
+    </style>
   </defs>
-  <text x="400" y="160" text-anchor="middle" class="wm">Wave<tspan class="wm-it">form</tspan></text>
+  <text x="280" y="128" text-anchor="middle" class="wm">Sillon</text>
 </svg>
