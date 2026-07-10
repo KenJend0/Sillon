@@ -1,6 +1,5 @@
 import '../global.css';
 
-import { ActivityIndicator, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { useFonts, Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
 import {
@@ -14,6 +13,7 @@ import { AuthProvider } from '../lib/AuthContext';
 import { ScrollNavProvider } from '../lib/ScrollNavContext';
 import BottomNav from '../components/layout/BottomNav';
 import { ToastHost } from '../components/ui/Toast';
+import { LoadingScreen } from '../components/ui/LoadingScreen';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -24,11 +24,7 @@ export default function RootLayout() {
   });
 
   if (!fontsLoaded) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color="#1C1C1C" />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   return (

@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProfileHeader } from '../../../components/profile/ProfileHeader';
+import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { ProfileTabs } from '../../../components/profile/ProfileTabs';
 import { RatingDistribution } from '../../../components/profile/RatingDistribution';
 import { RatingFilterProvider } from '../../../lib/RatingFilterContext';
@@ -43,16 +44,16 @@ export default function MeScreen() {
   const [lists, setLists] = useState<ProfileListUI[]>([]);
   const [savedLists, setSavedLists] = useState<ProfileListUI[]>([]);
 
+  // Le spinner plein écran ne doit s'afficher qu'au tout premier chargement : les refetch
+  // déclenchés par useFocusEffect (à chaque retour sur l'onglet) mettent à jour les données
+  // en arrière-plan sans effacer l'écran ni le scroll.
+  const hasLoadedOnceRef = useRef(false);
+
   const load = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+    if (!hasLoadedOnceRef.current) setLoading(true);
 
     await ensureProfile();
-    try {
-      await getOrCreateDefaultList();
-    } catch (err) {
-      console.error('Error ensuring default list:', err);
-    }
 
     const [
       { data: profileRow },
@@ -84,6 +85,10 @@ export default function MeScreen() {
       supabase.from('track_diary_entries').select('rating').eq('user_id', user.id),
       supabase.from('diary_entries').select('id', { count: 'exact', head: true }).eq('user_id', user.id).not('review_body', 'is', null),
       supabase.from('track_diary_entries').select('id', { count: 'exact', head: true }).eq('user_id', user.id).not('review_body', 'is', null).neq('review_body', ''),
+      getOrCreateDefaultList().catch((err) => {
+        console.error('Error ensuring default list:', err);
+        return null;
+      }),
     ]);
 
     setProfile(profileRow ?? null);
@@ -99,6 +104,7 @@ export default function MeScreen() {
     setAllRatings([...(albumRatings ?? []).map((r) => r.rating), ...(trackRatings ?? []).map((r) => r.rating)]);
     setReviewsCount((albumReviewsCount ?? 0) + (trackReviewsCount ?? 0));
     setLoading(false);
+    hasLoadedOnceRef.current = true;
   }, [user]);
 
   // Refetch à chaque prise de focus de l'onglet (pas juste au montage) — l'écran reste
@@ -123,11 +129,7 @@ export default function MeScreen() {
   }
 
   if (loading || !profile) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color="#1C1C1C" />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   const username = profile.username || user.email?.split('@')[0] || 'user';

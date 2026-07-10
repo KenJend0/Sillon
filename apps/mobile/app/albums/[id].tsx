@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '../../components/ui/BackButton';
+import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { AlbumHero } from '../../components/album/AlbumHero';
 import { MyListenSection } from '../../components/album/MyListenSection';
 import { DiaryEntryBottomSheet } from '../../components/album/DiaryEntryBottomSheet';
@@ -294,11 +295,7 @@ export default function AlbumPage() {
   const { refreshControl } = usePullToRefresh(() => load(true));
 
   if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color="#1C1C1C" />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   if (notFound || !album) {

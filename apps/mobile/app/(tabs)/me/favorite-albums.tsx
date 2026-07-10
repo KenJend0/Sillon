@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { BackButton } from '../../../components/ui/BackButton';
+import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { CoverImage } from '../../../components/album/CoverImage';
 import { FavoriteAlbumSearchSheet, type SelectedAlbum } from '../../../components/profile/FavoriteAlbumSearchSheet';
 import { showToast } from '../../../components/ui/Toast';
@@ -77,11 +78,7 @@ export default function FavoriteAlbumsScreen() {
   };
 
   if (loading) {
-    return (
-      <View className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color="#1C1C1C" />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   return (

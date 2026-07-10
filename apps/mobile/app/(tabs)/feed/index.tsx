@@ -3,6 +3,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { useAuth } from '../../../lib/AuthContext';
 import { useNavScrollHandler } from '../../../lib/useNavScrollHandler';
 import { usePullToRefresh } from '../../../hooks/usePullToRefresh';
@@ -181,9 +182,16 @@ export default function FeedScreen() {
         getLastSeenActivityAt().then(setLastSeenAt);
         setSeenUnreadTabs(new Set());
       }
-      TAB_IDS.forEach((tab) => loadTab(tab));
+      // L'onglet actif d'abord (c'est ce que l'utilisateur regarde), l'onglet inactif un peu
+      // après — les deux en même temps doublent la charge réseau (chacun fait déjà plusieurs
+      // requêtes séquentielles + parallèles dans getMyFeed) et ralentissent l'onglet visible
+      // pour rafraîchir un badge qu'on ne voit pas encore.
+      loadTab(activeTab);
+      const inactiveTab = TAB_IDS.find((tab) => tab !== activeTab)!;
+      const timer = setTimeout(() => loadTab(inactiveTab), 500);
+      return () => clearTimeout(timer);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user])
+    }, [user, activeTab])
   );
 
   const unreadCounts: Record<Tab, number> = {
@@ -270,7 +278,7 @@ export default function FeedScreen() {
         if (item.kind === 'loading') {
           return (
             <View className="py-16 items-center">
-              <ActivityIndicator size="large" color="#1C1C1C" />
+              <LoadingScreen fullScreen={false} />
             </View>
           );
         }

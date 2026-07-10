@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { usePathname } from 'expo-router';
 import { supabase } from './supabase';
@@ -60,13 +60,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Rafraîchit le badge à chaque changement d'onglet — miroir de AuthContext (web), qui le
-  // refait à chaque navigation. Exception : l'écran /feed gère déjà son propre marquage +
-  // rafraîchissement (voir markActivitySeen dans app/(tabs)/feed/index.tsx) ; le refaire ici
-  // créerait une course entre les deux appels qui peut réafficher le badge juste après qu'il
-  // ait été effacé.
+  // Rafraîchit le badge au changement d'onglet, mais throttle : sur mobile chaque navigation
+  // (album, artiste, profil...) déclenchait 2 requêtes Supabase juste pour ce badge, ce qui
+  // ralentissait toute la nav. Un cooldown suffit, le badge n'a pas besoin d'être temps réel.
+  // Exception : l'écran /feed gère déjà son propre marquage + rafraîchissement (voir
+  // markActivitySeen dans app/(tabs)/feed/index.tsx) ; le refaire ici créerait une course entre
+  // les deux appels qui peut réafficher le badge juste après qu'il ait été effacé.
+  const lastCheckedAtRef = useRef(0);
+  const UNSEEN_ACTIVITY_COOLDOWN_MS = 60_000;
   useEffect(() => {
     if (!session?.user || pathname === '/feed') return;
+    const now = Date.now();
+    if (now - lastCheckedAtRef.current < UNSEEN_ACTIVITY_COOLDOWN_MS) return;
+    lastCheckedAtRef.current = now;
     refreshUnseenActivity().catch(() => setUnseenActivity(false));
   }, [pathname, session?.user, refreshUnseenActivity]);
 

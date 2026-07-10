@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '../../components/ui/BackButton';
+import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { Avatar } from '../../components/avatars/Avatar';
 import { NetworkListenersSection } from '../../components/album/NetworkListenersSection';
 import { ArtistPopularSection } from '../../components/artist/ArtistPopularSection';
@@ -208,11 +209,7 @@ export default function ArtistPage() {
   }, [load]);
 
   if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color="#1C1C1C" />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   if (notFound || !artist) {

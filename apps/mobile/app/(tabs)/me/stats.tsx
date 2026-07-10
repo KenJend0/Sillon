@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '../../../components/ui/BackButton';
+import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import ProfileStatsPage from '../../../components/profile/stats/ProfileStatsPage';
 import { useAuth } from '../../../lib/AuthContext';
 import { getUserStatsData, type StatsData } from '../../../lib/profile-stats';
@@ -43,7 +44,7 @@ export default function StatsScreen() {
 
         {loading || !data ? (
           <View className="py-16 items-center">
-            <ActivityIndicator size="large" color="#1C1C1C" />
+            <LoadingScreen fullScreen={false} />
           </View>
         ) : (
           <ProfileStatsPage data={data} />

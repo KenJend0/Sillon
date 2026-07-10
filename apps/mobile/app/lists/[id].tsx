@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bookmark, MoreHorizontal, Pencil, Trash2, ArrowUpDown, Check, Plus } from 'lucide-react-native';
 import { BackButton } from '../../components/ui/BackButton';
+import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { BottomSheet } from '../../components/ui/BottomSheet';
 import { ListCoverCollage } from '../../components/lists/ListCoverCollage';
 import { ListItemCard } from '../../components/lists/ListItemCard';
@@ -119,11 +120,7 @@ export default function ListDetailPage() {
   }
 
   if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color="#1C1C1C" />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   if (notFound || !list) {

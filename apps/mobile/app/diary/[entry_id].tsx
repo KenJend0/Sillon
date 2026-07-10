@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Heart, Share2, Link2, Flag } from 'lucide-react-native';
 import { BackButton } from '../../components/ui/BackButton';
+import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { Avatar } from '../../components/avatars/Avatar';
 import { AlbumEntryMenu } from '../../components/album/AlbumEntryMenu';
 import { DiaryEntryBottomSheet } from '../../components/album/DiaryEntryBottomSheet';
@@ -119,11 +120,7 @@ export default function DiaryEntryPage() {
   };
 
   if (loading) {
-    return (
-      <View className="flex-1 bg-background items-center justify-center" style={{ paddingTop: insets.top }}>
-        <ActivityIndicator size="large" color="#1C1C1C" />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   if (notFound || !entry) {

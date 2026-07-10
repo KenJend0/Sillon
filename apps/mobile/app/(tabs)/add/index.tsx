@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
 import AddQueueMobile from '../../../components/add/AddQueueMobile';
+import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { buildAddQueue, type AddQueueItem } from '../../../lib/buildAddQueue';
 import { getDefaultListAlbums, getDefaultListTracks, getUnratedSavedItems } from '../../../lib/lists';
 
@@ -40,11 +40,7 @@ export default function AddScreen() {
   }, []);
 
   if (!queue) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color="#1C1C1C" />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   return <AddQueueMobile initialQueue={queue} />;

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '../../../components/ui/BackButton';
+import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { ProfileHeader } from '../../../components/profile/ProfileHeader';
 import { ProfileTabs } from '../../../components/profile/ProfileTabs';
 import { RatingDistribution } from '../../../components/profile/RatingDistribution';
@@ -136,11 +137,7 @@ export default function PublicProfileScreen() {
   }, [load]);
 
   if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color="#1C1C1C" />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   if (notFound || !profile) {
