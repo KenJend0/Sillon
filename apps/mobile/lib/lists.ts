@@ -24,6 +24,7 @@ export type ListAlbumItem = {
   album_title: string;
   artist_name: string;
   cover_url: string | null;
+  mbid: string | null;
   added_at: string;
 };
 
@@ -33,6 +34,7 @@ export type ListTrackItem = {
   track_title: string;
   artist_name: string;
   cover_url: string | null;
+  mbid: string | null;
   album_id: string;
   album_title: string;
   artist_id: string;
@@ -43,6 +45,8 @@ export type UnratedItem =
   | (ListAlbumItem & { kind: 'album' })
   | (ListTrackItem & { kind: 'track' });
 
+export type ListCoverRef = { url: string | null; mbid: string | null };
+
 export type ProfileListUI = {
   id: string;
   user_id: string;
@@ -50,7 +54,7 @@ export type ProfileListUI = {
   is_public: boolean;
   is_default: boolean;
   item_count: number;
-  cover_urls: (string | null)[];
+  cover_urls: ListCoverRef[];
   creator_username?: string;
   creator_avatar?: string | null;
   /** Statut "sauvegardée par l'utilisateur courant" — absent (undefined) là où ce n'est
@@ -70,6 +74,7 @@ export type ListItem = {
     id: string;
     title: string;
     cover_url: string | null;
+    mbid: string | null;
     artist: string;
   };
   track?: {
@@ -77,6 +82,7 @@ export type ListItem = {
     title: string;
     artist: string;
     cover_url: string | null;
+    mbid: string | null;
     album_id: string;
   };
 };
@@ -89,21 +95,21 @@ export type ListDetail = {
   is_public: boolean;
   is_default: boolean;
   item_count: number;
-  cover_urls: (string | null)[];
+  cover_urls: ListCoverRef[];
   saves_count: number;
   is_saved: boolean;
   creator_username: string;
   creator_avatar: string | null;
 };
 
-async function attachListMeta(listIds: string[]): Promise<Map<string, { item_count: number; cover_urls: (string | null)[] }>> {
+async function attachListMeta(listIds: string[]): Promise<Map<string, { item_count: number; cover_urls: ListCoverRef[] }>> {
   if (listIds.length === 0) return new Map();
 
   const [countRes, coverRes] = await Promise.all([
     supabase.from('list_items').select('list_id').in('list_id', listIds),
     supabase
       .from('list_items')
-      .select('list_id, album_id, albums(cover_url)')
+      .select('list_id, album_id, albums(cover_url, mbid)')
       .in('list_id', listIds)
       .not('album_id', 'is', null)
       .order('added_at', { ascending: false }),
@@ -112,16 +118,16 @@ async function attachListMeta(listIds: string[]): Promise<Map<string, { item_cou
   const countMap = new Map<string, number>();
   for (const row of countRes.data ?? []) countMap.set(row.list_id, (countMap.get(row.list_id) ?? 0) + 1);
 
-  const coverMap = new Map<string, (string | null)[]>();
+  const coverMap = new Map<string, ListCoverRef[]>();
   for (const row of (coverRes.data ?? []) as any[]) {
     const existing = coverMap.get(row.list_id) ?? [];
     if (existing.length < 4) {
-      existing.push(row.albums?.cover_url ?? null);
+      existing.push({ url: row.albums?.cover_url ?? null, mbid: row.albums?.mbid ?? null });
       coverMap.set(row.list_id, existing);
     }
   }
 
-  const meta = new Map<string, { item_count: number; cover_urls: (string | null)[] }>();
+  const meta = new Map<string, { item_count: number; cover_urls: ListCoverRef[] }>();
   for (const id of listIds) {
     meta.set(id, { item_count: countMap.get(id) ?? 0, cover_urls: coverMap.get(id) ?? [] });
   }
@@ -349,7 +355,7 @@ export async function getDefaultListAlbums(limit = 8): Promise<ListAlbumItem[]> 
   const [{ data: items }, { data: ratedAlbums }] = await Promise.all([
     supabase
       .from('list_items')
-      .select('id, album_id, added_at, albums(id, title, cover_url, artists(name))')
+      .select('id, album_id, added_at, albums(id, title, cover_url, mbid, artists(name))')
       .eq('list_id', targetListId)
       .not('album_id', 'is', null)
       .order('added_at', { ascending: false })
@@ -368,6 +374,7 @@ export async function getDefaultListAlbums(limit = 8): Promise<ListAlbumItem[]> 
       album_title: item.albums?.title || 'Unknown',
       artist_name: item.albums?.artists?.name || 'Unknown',
       cover_url: item.albums?.cover_url ?? null,
+      mbid: item.albums?.mbid ?? null,
       added_at: item.added_at,
     }));
 }
@@ -386,7 +393,7 @@ export async function getDefaultListTracks(limit = 8): Promise<ListTrackItem[]> 
   const [{ data: items }, { data: ratedTracks }] = await Promise.all([
     supabase
       .from('list_items')
-      .select('id, track_id, added_at, tracks(id, title, album_id, artist_id, albums(id, title, cover_url), artists(name))')
+      .select('id, track_id, added_at, tracks(id, title, album_id, artist_id, albums(id, title, cover_url, mbid), artists(name))')
       .eq('list_id', targetListId)
       .not('track_id', 'is', null)
       .order('added_at', { ascending: false })
@@ -405,6 +412,7 @@ export async function getDefaultListTracks(limit = 8): Promise<ListTrackItem[]> 
       track_title: item.tracks?.title || 'Unknown',
       artist_name: item.tracks?.artists?.name || 'Unknown',
       cover_url: item.tracks?.albums?.cover_url ?? null,
+      mbid: item.tracks?.albums?.mbid ?? null,
       album_id: item.tracks?.album_id || '',
       album_title: item.tracks?.albums?.title || '',
       artist_id: item.tracks?.artist_id || '',
@@ -428,13 +436,13 @@ export async function getUnratedSavedItems(limit = 30): Promise<UnratedItem[]> {
   const [albumItemsRes, trackItemsRes, ratedAlbumsRes, ratedTracksRes] = await Promise.all([
     supabase
       .from('list_items')
-      .select('id, album_id, added_at, albums(id, title, cover_url, artists(name))')
+      .select('id, album_id, added_at, albums(id, title, cover_url, mbid, artists(name))')
       .in('list_id', listIds)
       .not('album_id', 'is', null)
       .order('added_at', { ascending: false }),
     supabase
       .from('list_items')
-      .select('id, track_id, added_at, tracks(id, title, album_id, artist_id, albums(id, title, cover_url), artists(name))')
+      .select('id, track_id, added_at, tracks(id, title, album_id, artist_id, albums(id, title, cover_url, mbid), artists(name))')
       .in('list_id', listIds)
       .not('track_id', 'is', null)
       .order('added_at', { ascending: false }),
@@ -457,6 +465,7 @@ export async function getUnratedSavedItems(limit = 30): Promise<UnratedItem[]> {
       album_title: item.albums?.title || 'Unknown',
       artist_name: item.albums?.artists?.name || 'Unknown',
       cover_url: item.albums?.cover_url ?? null,
+      mbid: item.albums?.mbid ?? null,
       added_at: item.added_at,
     });
   }
@@ -473,6 +482,7 @@ export async function getUnratedSavedItems(limit = 30): Promise<UnratedItem[]> {
       track_title: item.tracks?.title || 'Unknown',
       artist_name: item.tracks?.artists?.name || 'Unknown',
       cover_url: item.tracks?.albums?.cover_url ?? null,
+      mbid: item.tracks?.albums?.mbid ?? null,
       album_id: item.tracks?.album_id || '',
       album_title: item.tracks?.albums?.title || '',
       artist_id: item.tracks?.artist_id || '',
@@ -570,8 +580,8 @@ export async function getListWithItems(listId: string): Promise<{ list: ListDeta
     .from('list_items')
     .select(
       `id, list_id, album_id, track_id, added_at, position,
-       albums(id, title, cover_url, artists(name)),
-       tracks(id, title, album_id, artists(name), albums(cover_url))`
+       albums(id, title, cover_url, mbid, artists(name)),
+       tracks(id, title, album_id, artists(name), albums(cover_url, mbid))`
     )
     .eq('list_id', listId)
     .order('position', { ascending: true, nullsFirst: false })
@@ -582,9 +592,9 @@ export async function getListWithItems(listId: string): Promise<{ list: ListDeta
     : { data: null };
 
   const itemRows = (items ?? []) as any[];
-  const coverUrls = itemRows
-    .map((item) => item.albums?.cover_url ?? null)
-    .filter((u): u is string => !!u)
+  const coverUrls: ListCoverRef[] = itemRows
+    .filter((item) => !!item.albums?.cover_url)
+    .map((item) => ({ url: item.albums.cover_url as string, mbid: item.albums.mbid ?? null }))
     .slice(0, 4);
 
   return {
@@ -615,6 +625,7 @@ export async function getListWithItems(listId: string): Promise<{ list: ListDeta
               id: item.albums.id,
               title: item.albums.title,
               cover_url: item.albums.cover_url ?? null,
+              mbid: item.albums.mbid ?? null,
               artist: item.albums.artists?.name || 'Unknown',
             }
           : undefined,
@@ -625,6 +636,7 @@ export async function getListWithItems(listId: string): Promise<{ list: ListDeta
               title: item.tracks.title,
               artist: item.tracks.artists?.name || 'Unknown',
               cover_url: item.tracks.albums?.cover_url ?? null,
+              mbid: item.tracks.albums?.mbid ?? null,
               album_id: item.tracks.album_id,
             }
           : undefined,

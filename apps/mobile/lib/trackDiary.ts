@@ -35,6 +35,7 @@ export type TrackDiaryEntryUI = {
   artist_id: string;
   artist_name: string;
   cover_url: string | null;
+  mbid: string | null;
   rating: number | null;
   review_body: string | null;
   listened_at: string;
@@ -239,7 +240,7 @@ export async function getUserTrackDiary(
     .from('track_diary_entries')
     .select(`
       id, track_id, album_id, rating, review_body, listened_at, created_at,
-      tracks ( id, title, albums ( id, title, cover_url, artist_id, artists ( id, name ) ) )
+      tracks ( id, title, albums ( id, title, cover_url, mbid, artist_id, artists ( id, name ) ) )
     `)
     .eq('user_id', userId);
 
@@ -269,6 +270,7 @@ export async function getUserTrackDiary(
       artist_id: album?.artist_id || '',
       artist_name: artist?.name || 'Unknown',
       cover_url: album?.cover_url || null,
+      mbid: album?.mbid || null,
       rating: e.rating,
       review_body: e.review_body,
       listened_at: e.listened_at,

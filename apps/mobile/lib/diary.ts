@@ -37,6 +37,7 @@ export type DiaryEntryUI = {
   artist_id: string;
   artist_name: string;
   cover_url: string | null;
+  mbid: string | null;
   rating: number | null;
   review_body: string | null;
   listened_at: string;
@@ -250,7 +251,7 @@ export async function getUserDiary(
     .from('diary_entries')
     .select(`
       id, album_id, rating, review_body, listened_at, created_at,
-      albums ( id, title, cover_url, release_date, artist_id, artists ( id, name ) )
+      albums ( id, title, cover_url, mbid, release_date, artist_id, artists ( id, name ) )
     `)
     .eq('user_id', userId);
 
@@ -292,6 +293,7 @@ export async function getUserDiary(
       artist_id: album?.artist_id || '',
       artist_name: artist?.name || 'Unknown',
       cover_url: album?.cover_url || null,
+      mbid: album?.mbid || null,
       rating: e.rating,
       review_body: e.review_body,
       listened_at: e.listened_at,
@@ -309,6 +311,7 @@ export type UnifiedReview = {
   title: string;
   subtitle: string;
   cover_url: string | null;
+  mbid: string | null;
   rating: number | null;
   review_body: string;
   listened_at: string;
@@ -325,7 +328,7 @@ export async function getUserReviewsUnified(userId: string): Promise<UnifiedRevi
 
   let albumQuery = supabase
     .from('diary_entries')
-    .select(`id, rating, review_body, listened_at, created_at, album_id, albums(id, title, cover_url, artist_id, artists(id, name))`)
+    .select(`id, rating, review_body, listened_at, created_at, album_id, albums(id, title, cover_url, mbid, artist_id, artists(id, name))`)
     .eq('user_id', userId)
     .not('review_body', 'is', null)
     .neq('review_body', '');
@@ -333,7 +336,7 @@ export async function getUserReviewsUnified(userId: string): Promise<UnifiedRevi
 
   let trackQuery = supabase
     .from('track_diary_entries')
-    .select(`id, rating, review_body, listened_at, created_at, track_id, album_id, tracks(id, title, albums(id, title, cover_url, artist_id, artists(id, name)))`)
+    .select(`id, rating, review_body, listened_at, created_at, track_id, album_id, tracks(id, title, albums(id, title, cover_url, mbid, artist_id, artists(id, name)))`)
     .eq('user_id', userId)
     .not('review_body', 'is', null)
     .neq('review_body', '');
@@ -378,6 +381,7 @@ export async function getUserReviewsUnified(userId: string): Promise<UnifiedRevi
       title: album?.title || 'Inconnu',
       subtitle: artist?.name || 'Inconnu',
       cover_url: album?.cover_url || null,
+      mbid: album?.mbid || null,
       rating: e.rating,
       review_body: e.review_body,
       listened_at: e.listened_at,
@@ -400,6 +404,7 @@ export async function getUserReviewsUnified(userId: string): Promise<UnifiedRevi
       title: track?.title || 'Inconnu',
       subtitle: artist?.name || 'Inconnu',
       cover_url: album?.cover_url || null,
+      mbid: album?.mbid || null,
       rating: e.rating,
       review_body: e.review_body,
       listened_at: e.listened_at,

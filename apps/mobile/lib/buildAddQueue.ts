@@ -14,8 +14,8 @@ export type DiscoveryAlbum = { album_id: string; title: string; artist: string; 
 export type AddQueueSource = "unrated" | "list" | "foryou" | "discovery" | "classic" | "search";
 
 export type AddQueueItem =
-    | { kind: "album"; id: string; title: string; artist: string; coverUrl: string | null; year?: number | null; source: AddQueueSource }
-    | { kind: "track"; id: string; title: string; artist: string; coverUrl: string | null; albumId: string; albumTitle: string; artistId: string; source: AddQueueSource };
+    | { kind: "album"; id: string; title: string; artist: string; coverUrl: string | null; mbid: string | null; year?: number | null; source: AddQueueSource }
+    | { kind: "track"; id: string; title: string; artist: string; coverUrl: string | null; mbid: string | null; albumId: string; albumTitle: string; artistId: string; source: AddQueueSource };
 
 // Nombre de cartes qu'on garantit à tout utilisateur connecté, même tout
 // neuf sans aucun signal — au-delà de ce seuil les classiques ne servent
@@ -62,15 +62,15 @@ export function buildAddQueue(params: {
     const seenAlbums = new Set<string>();
     const seenTracks = new Set<string>();
 
-    const toAlbumItem = (source: AddQueueSource, id: string, title: string, artist: string, coverUrl: string | null, year?: number | null): AddQueueItem | null => {
+    const toAlbumItem = (source: AddQueueSource, id: string, title: string, artist: string, coverUrl: string | null, mbid: string | null, year?: number | null): AddQueueItem | null => {
         if (!id || seenAlbums.has(id)) return null;
         seenAlbums.add(id);
-        return { kind: "album", id, title, artist, coverUrl, year, source };
+        return { kind: "album", id, title, artist, coverUrl, mbid, year, source };
     };
-    const toTrackItem = (source: AddQueueSource, id: string, title: string, artist: string, coverUrl: string | null, albumId: string, albumTitle: string, artistId: string): AddQueueItem | null => {
+    const toTrackItem = (source: AddQueueSource, id: string, title: string, artist: string, coverUrl: string | null, mbid: string | null, albumId: string, albumTitle: string, artistId: string): AddQueueItem | null => {
         if (!id || seenTracks.has(id)) return null;
         seenTracks.add(id);
-        return { kind: "track", id, title, artist, coverUrl, albumId, albumTitle, artistId, source };
+        return { kind: "track", id, title, artist, coverUrl, mbid, albumId, albumTitle, artistId, source };
     };
 
     // Un palier = priorité de dédup (calculée dans cet ordre) ; à l'intérieur
@@ -78,27 +78,27 @@ export function buildAddQueue(params: {
     const unratedTier = shuffle(
         unratedSaved.map((item) =>
             item.kind === "album"
-                ? toAlbumItem("unrated", item.album_id, item.album_title, item.artist_name, item.cover_url)
-                : toTrackItem("unrated", item.track_id, item.track_title, item.artist_name, item.cover_url, item.album_id, item.album_title, item.artist_id)
+                ? toAlbumItem("unrated", item.album_id, item.album_title, item.artist_name, item.cover_url, item.mbid)
+                : toTrackItem("unrated", item.track_id, item.track_title, item.artist_name, item.cover_url, item.mbid, item.album_id, item.album_title, item.artist_id)
         ).filter(isItem)
     );
 
     const listTier = shuffle(
         [
-            ...listAlbums.map((item) => toAlbumItem("list", item.album_id, item.album_title, item.artist_name, item.cover_url)),
-            ...listTracks.map((item) => toTrackItem("list", item.track_id, item.track_title, item.artist_name, item.cover_url, item.album_id, item.album_title, item.artist_id)),
+            ...listAlbums.map((item) => toAlbumItem("list", item.album_id, item.album_title, item.artist_name, item.cover_url, item.mbid)),
+            ...listTracks.map((item) => toTrackItem("list", item.track_id, item.track_title, item.artist_name, item.cover_url, item.mbid, item.album_id, item.album_title, item.artist_id)),
         ].filter(isItem)
     );
 
     const forYouTier = shuffle(
         [
-            ...forYouAlbums.map((item) => toAlbumItem("foryou", item.album_id, item.title, item.artist, item.cover_url)),
-            ...forYouTracks.map((item) => toTrackItem("foryou", item.track_id, item.track_title, item.artist, item.cover_url, item.album_id, "", item.artist_id)),
+            ...forYouAlbums.map((item) => toAlbumItem("foryou", item.album_id, item.title, item.artist, item.cover_url, null)),
+            ...forYouTracks.map((item) => toTrackItem("foryou", item.track_id, item.track_title, item.artist, item.cover_url, null, item.album_id, "", item.artist_id)),
         ].filter(isItem)
     );
 
     const discoveryTier = shuffle(
-        discoveryAlbums.map((item) => toAlbumItem("discovery", item.album_id, item.title, item.artist, item.cover_url)).filter(isItem)
+        discoveryAlbums.map((item) => toAlbumItem("discovery", item.album_id, item.title, item.artist, item.cover_url, null)).filter(isItem)
     );
 
     const queue: AddQueueItem[] = [];
@@ -121,7 +121,7 @@ export function buildAddQueue(params: {
     if (queue.length < MIN_QUEUE_SIZE) {
         for (const album of shuffle(CLASSIC_ALBUMS)) {
             if (queue.length >= MIN_QUEUE_SIZE) break;
-            const item = toAlbumItem("classic", album.id, album.title, album.artist, album.coverUrl);
+            const item = toAlbumItem("classic", album.id, album.title, album.artist, album.coverUrl, null);
             if (item) queue.push(item);
         }
     }

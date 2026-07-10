@@ -200,6 +200,7 @@ export type FavoriteAlbum = {
   title: string;
   artist_name: string;
   cover_url: string | null;
+  mbid: string | null;
   position: number;
 };
 
@@ -207,7 +208,7 @@ export type FavoriteAlbum = {
 export async function getFavoriteAlbums(userId: string): Promise<FavoriteAlbum[]> {
   const { data } = await supabase
     .from('user_favorite_albums')
-    .select('position, album_id, albums (id, title, cover_url, artists (name))')
+    .select('position, album_id, albums (id, title, cover_url, mbid, artists (name))')
     .eq('user_id', userId)
     .order('position', { ascending: true })
     .limit(3);
@@ -217,6 +218,7 @@ export async function getFavoriteAlbums(userId: string): Promise<FavoriteAlbum[]
     title: item.albums?.title || 'Album inconnu',
     artist_name: item.albums?.artists?.name || 'Artiste inconnu',
     cover_url: item.albums?.cover_url ?? null,
+    mbid: item.albums?.mbid ?? null,
     position: item.position,
   }));
 }
