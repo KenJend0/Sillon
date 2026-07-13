@@ -726,12 +726,14 @@ export default function FeedInfiniteList({
       hasMore: restoredState?.activityHasMore ?? Boolean(initialActivityCursor),
     },
   }));
-  const [loading, setLoading] = useState(false);
+  const [loadingByScope, setLoadingByScope] = useState<Record<FeedTab, boolean>>({ notifications: false, activity: false });
   const [activeTab, setActiveTab] = useState<FeedTab>(restoredState?.scope ?? 'notifications');
   const [seenUnreadTabs, setSeenUnreadTabs] = useState<Set<FeedTab>>(() => new Set());
-  const observerTarget = useRef<HTMLDivElement>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const observerTargets = useRef<Record<FeedTab, HTMLDivElement | null>>({ notifications: null, activity: null });
   const mountedRef = useRef(false);
   const bucketsRef = useRef(buckets);
+  const loadingRef = useRef(loadingByScope);
   const activeTabRef = useRef<FeedTab>(restoredState?.scope ?? 'notifications');
   const markSeenInFlightRef = useRef(false);
 
@@ -741,8 +743,21 @@ export default function FeedInfiniteList({
   }, [buckets]);
 
   useEffect(() => {
+    loadingRef.current = loadingByScope;
+  }, [loadingByScope]);
+
+  useEffect(() => {
     activeTabRef.current = activeTab;
   }, [activeTab]);
+
+  // Both columns are visible simultaneously ≥ lg — matches Tailwind's `lg:` breakpoint (1024px)
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 1024px)');
+    setIsDesktop(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   const unreadNotificationsCount = countEventsAfter(buckets.notifications.events, initialLastSeenRef.current);
   const unreadNetworkCount = countEventsAfter(buckets.activity.events, initialLastSeenRef.current);
@@ -752,13 +767,14 @@ export default function FeedInfiniteList({
   };
 
   useEffect(() => {
-    if (unreadCounts[activeTab] === 0 || seenUnreadTabs.has(activeTab)) {
-      return;
-    }
+    // On mobile only the active tab is actually on screen; on desktop both columns are, so both count as "seen".
+    const tabsToCheck = isDesktop ? FEED_TABS.map((tab) => tab.id) : [activeTab];
+    const pendingTabs = tabsToCheck.filter((tab) => unreadCounts[tab] > 0 && !seenUnreadTabs.has(tab));
+    if (pendingTabs.length === 0) return;
 
     const timer = window.setTimeout(() => {
       const nextSeenTabs = new Set(seenUnreadTabs);
-      nextSeenTabs.add(activeTab);
+      pendingTabs.forEach((tab) => nextSeenTabs.add(tab));
       setSeenUnreadTabs(nextSeenTabs);
 
       const unreadTabs = FEED_TABS
@@ -777,7 +793,7 @@ export default function FeedInfiniteList({
     }, 800);
 
     return () => window.clearTimeout(timer);
-  }, [activeTab, seenUnreadTabs, unreadNotificationsCount, unreadNetworkCount]);
+  }, [activeTab, isDesktop, seenUnreadTabs, unreadNotificationsCount, unreadNetworkCount]);
 
   // Restore scroll position after back-navigation and clear saved state
   useEffect(() => {
@@ -821,12 +837,11 @@ export default function FeedInfiniteList({
     }
   }, [storageKey]);
 
-  const loadMore = useCallback(async () => {
-    const scope = activeTabRef.current;
+  const loadMore = useCallback(async (scope: FeedTab) => {
     const bucket = bucketsRef.current[scope];
-    if (loading || !bucket.hasMore) return;
+    if (loadingRef.current[scope] || !bucket.hasMore) return;
 
-    setLoading(true);
+    setLoadingByScope((prev) => ({ ...prev, [scope]: true }));
     try {
       const result = await getMyFeed({
         limit: 20,
@@ -873,9 +888,9 @@ export default function FeedInfiniteList({
         },
       }));
     } finally {
-      setLoading(false);
+      setLoadingByScope((prev) => ({ ...prev, [scope]: false }));
     }
-  }, [loading]);
+  }, []);
 
   useEffect(() => {
     // Avoid firing loadMore immediately during hydration (can cause duplicate fetch)
@@ -883,39 +898,104 @@ export default function FeedInfiniteList({
       mountedRef.current = true;
     }, 300);
 
-    const observer = new IntersectionObserver(
-      entries => {
-        const activeBucket = bucketsRef.current[activeTabRef.current];
-        if (entries[0].isIntersecting && activeBucket.hasMore && !loading && mountedRef.current) {
-          loadMore();
-        }
-      },
-      { threshold: 0.1 }
-    );
+    // One observer per scope column — both columns are always mounted (mobile just
+    // hides the inactive one via CSS), so this only needs to run once on mount.
+    const observers = FEED_TABS.map(({ id: scope }) => {
+      const observer = new IntersectionObserver(
+        entries => {
+          const bucket = bucketsRef.current[scope];
+          if (entries[0].isIntersecting && bucket.hasMore && !loadingRef.current[scope] && mountedRef.current) {
+            loadMore(scope);
+          }
+        },
+        { threshold: 0.1 }
+      );
 
-    const currentTarget = observerTarget.current;
-    if (currentTarget) {
-      observer.observe(currentTarget);
-    }
+      const target = observerTargets.current[scope];
+      if (target) observer.observe(target);
+      return observer;
+    });
 
     return () => {
       clearTimeout(mountTimer);
-      if (currentTarget) {
-        observer.unobserve(currentTarget);
-      }
+      observers.forEach((observer) => observer.disconnect());
     };
-  }, [loadMore, loading, activeTab]);
+  }, [loadMore]);
 
-  const activeBucket = buckets[activeTab];
-  const renderItems = groupEvents(activeBucket.events, currentUserId);
-  const lastSeenTime = initialLastSeenRef.current ? new Date(initialLastSeenRef.current).getTime() : null;
-  const firstItemTime = renderItems.length > 0 ? new Date(renderItems[0].created_at).getTime() : null;
-  const allItemsAreNew = lastSeenTime !== null && firstItemTime !== null && renderItems.every(item => new Date(item.created_at).getTime() > lastSeenTime);
-  const showNewMarker = lastSeenTime !== null && Number.isFinite(lastSeenTime) && !allItemsAreNew;
+  function renderScopeBody(scope: FeedTab) {
+    const bucket = buckets[scope];
+    const renderItems = groupEvents(bucket.events, currentUserId);
+    const lastSeenTime = initialLastSeenRef.current ? new Date(initialLastSeenRef.current).getTime() : null;
+    const firstItemTime = renderItems.length > 0 ? new Date(renderItems[0].created_at).getTime() : null;
+    const allItemsAreNew = lastSeenTime !== null && firstItemTime !== null && renderItems.every(item => new Date(item.created_at).getTime() > lastSeenTime);
+    const showNewMarker = lastSeenTime !== null && Number.isFinite(lastSeenTime) && !allItemsAreNew;
+    const newSeparatorLabel = scope === 'notifications' ? 'Déjà vu' : 'Plus ancien';
+
+    return (
+      <>
+        <div>
+          {renderItems.length === 0 && (
+            <div className="pt-10 pb-6">
+              <p className="text-meta text-text-disabled text-center mb-6">{getTabEmptyLabel(scope)}</p>
+              {showDiscoverPeople && <FeedDiscoverPeople users={similarUsers} />}
+            </div>
+          )}
+
+          {renderItems.map((item, index) => {
+            const dateLabel = getDateBucket(item.created_at);
+            const prevItem = index > 0 ? renderItems[index - 1] : null;
+            const prevDateLabel = prevItem ? getDateBucket(prevItem.created_at) : null;
+            const showDateSeparator = dateLabel !== prevDateLabel;
+            const itemIsNew = showNewMarker && new Date(item.created_at).getTime() > lastSeenTime!;
+            const prevItemIsNew = !!prevItem && showNewMarker && new Date(prevItem.created_at).getTime() > lastSeenTime!;
+            const showNewSeparator = !itemIsNew && prevItemIsNew;
+            const needsClearance = !!prevItem && isCritiqueCard(item) && isCritiqueCard(prevItem);
+
+            return (
+              <div key={item.id}>
+                {showNewSeparator && <FeedNewSeparator label={newSeparatorLabel} />}
+                {showDateSeparator && (
+                  <div className={index > 0 ? 'mt-6 mb-2 lg:mt-8 lg:mb-3' : 'mb-2 lg:mb-3'}>
+                    <span className="font-display italic text-[19px] text-accent leading-none lg:text-[21px]">{dateLabel}</span>
+                  </div>
+                )}
+                <div className={index > 0 && !showDateSeparator ? (needsClearance ? 'mt-2 lg:mt-3' : 'mt-0.5 lg:mt-2') : ''}>
+                  {item.type === 'LIKE_GROUP'
+                    ? <LikeGroupCard group={item} currentUserId={currentUserId} />
+                    : item.type === 'LISTEN_GROUP'
+                      ? <ListenGroupCard group={item} currentUserId={currentUserId} />
+                    : renderEvent(item, currentUserId)
+                  }
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {bucket.hasMore && (
+          <div ref={(el) => { observerTargets.current[scope] = el; }} className="py-8 text-center">
+            {loadingByScope[scope] && (
+              <p className="text-meta text-text-disabled">...</p>
+            )}
+          </div>
+        )}
+
+        {!bucket.hasMore && bucket.events.length > 0 && (
+          <div className="pt-12 pb-8">
+            <div className="text-center mb-6">
+              <div className="w-8 h-px bg-border mx-auto mb-4" />
+              <p className="text-meta text-text-disabled">Fin du fil</p>
+            </div>
+            {showDiscoverPeople && <FeedDiscoverPeople users={similarUsers} />}
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="pb-20 lg:pb-10" onClick={handleContainerClick}>
-      <div className="sticky top-0 z-20 -mx-3 mb-3 bg-background/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:top-16 lg:top-20 lg:mx-0 lg:mb-5 lg:bg-background/90 lg:px-0 lg:py-3">
+      <div className="sticky top-0 z-20 -mx-3 mb-3 bg-background/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:top-16 lg:hidden">
         <div className="grid grid-cols-2 rounded-full border border-border bg-paper-hi p-1 shadow-subtle">
           {FEED_TABS.map((tab) => {
             const active = activeTab === tab.id;
@@ -924,7 +1004,7 @@ export default function FeedInfiniteList({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative rounded-full px-3 py-2 text-[13px] font-medium leading-none lg:py-2.5 lg:text-[14px] ${
+                className={`relative rounded-full px-3 py-2 text-[13px] font-medium leading-none ${
                   active
                     ? 'bg-background text-accent-deep shadow-sm'
                     : 'text-text-tertiary'
@@ -943,63 +1023,27 @@ export default function FeedInfiniteList({
           })}
         </div>
       </div>
-      <div>
-        {renderItems.length === 0 && (
-          <div className="pt-10 pb-6">
-            <p className="text-meta text-text-disabled text-center mb-6">{getTabEmptyLabel(activeTab)}</p>
-            {showDiscoverPeople && <FeedDiscoverPeople users={similarUsers} />}
-          </div>
-        )}
 
-        {renderItems.map((item, index) => {
-          const dateLabel = getDateBucket(item.created_at);
-          const prevItem = index > 0 ? renderItems[index - 1] : null;
-          const prevDateLabel = prevItem ? getDateBucket(prevItem.created_at) : null;
-          const showDateSeparator = dateLabel !== prevDateLabel;
-          const itemIsNew = showNewMarker && new Date(item.created_at).getTime() > lastSeenTime!;
-          const prevItemIsNew = !!prevItem && showNewMarker && new Date(prevItem.created_at).getTime() > lastSeenTime!;
-          const showNewSeparator = !itemIsNew && prevItemIsNew;
-          const needsClearance = !!prevItem && isCritiqueCard(item) && isCritiqueCard(prevItem);
-          const newSeparatorLabel = activeTab === 'notifications' ? 'Déjà vu' : 'Plus ancien';
-
-          return (
-            <div key={item.id}>
-              {showNewSeparator && <FeedNewSeparator label={newSeparatorLabel} />}
-              {showDateSeparator && (
-                <div className={index > 0 ? 'mt-6 mb-2 lg:mt-8 lg:mb-3' : 'mb-2 lg:mb-3'}>
-                  <span className="font-display italic text-[19px] text-accent leading-none lg:text-[21px]">{dateLabel}</span>
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 lg:items-start">
+        {FEED_TABS.map((tab, index) => (
+          <div
+            key={tab.id}
+            className={`${activeTab === tab.id ? '' : 'hidden lg:block'} ${
+              index === 0 ? 'lg:pr-5' : 'lg:border-l lg:border-rule lg:pl-5'
+            }`}
+          >
+            <div className="hidden lg:flex lg:items-baseline lg:justify-between lg:gap-2 lg:pb-3 lg:mb-2">
+              <h2 className="text-h2 text-text-primary">{tab.label}</h2>
+              {unreadCounts[tab.id] > 0 && !seenUnreadTabs.has(tab.id) && (
+                <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold leading-none text-paper-hi">
+                  {unreadCounts[tab.id] > 9 ? '9+' : unreadCounts[tab.id]}
+                </span>
               )}
-              <div className={index > 0 && !showDateSeparator ? (needsClearance ? 'mt-2 lg:mt-3' : 'mt-0.5 lg:mt-2') : ''}>
-                {item.type === 'LIKE_GROUP'
-                  ? <LikeGroupCard group={item} currentUserId={currentUserId} />
-                  : item.type === 'LISTEN_GROUP'
-                    ? <ListenGroupCard group={item} currentUserId={currentUserId} />
-                  : renderEvent(item, currentUserId)
-                }
-              </div>
             </div>
-          );
-        })}
-      </div>
-
-      {activeBucket.hasMore && (
-        <div ref={observerTarget} className="py-8 text-center">
-          {loading && (
-            <p className="text-meta text-text-disabled">...</p>
-          )}
-        </div>
-      )}
-
-      {!activeBucket.hasMore && activeBucket.events.length > 0 && (
-        <div className="pt-12 pb-8">
-          <div className="text-center mb-6">
-            <div className="w-8 h-px bg-border mx-auto mb-4" />
-            <p className="text-meta text-text-disabled">Fin du fil</p>
+            {renderScopeBody(tab.id)}
           </div>
-          {showDiscoverPeople && <FeedDiscoverPeople users={similarUsers} />}
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }

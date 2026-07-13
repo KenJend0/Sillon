@@ -70,26 +70,16 @@ export default async function FeedPage() {
       </div>
 
       {hasEvents ? (
-        <div className="lg:grid lg:grid-cols-[minmax(0,720px)_320px] lg:items-start lg:gap-10">
-          <section className="min-w-0">
-            <FeedInfiniteList
-              initialNotifications={notificationEvents}
-              initialNotificationsCursor={notificationsResult.nextCursor ?? null}
-              initialActivity={activityEvents}
-              initialActivityCursor={activityResult.nextCursor ?? null}
-              currentUserId={user.id}
-              lastSeenActivityAt={lastSeenActivityAt}
-              similarUsers={similarUsers}
-              showDiscoverPeople={false}
-            />
-          </section>
-
-          {similarUsers.length > 0 && (
-            <aside className="hidden lg:block lg:sticky lg:top-24">
-              <SimilarUsersSection users={similarUsers} />
-            </aside>
-          )}
-        </div>
+        <FeedInfiniteList
+          initialNotifications={notificationEvents}
+          initialNotificationsCursor={notificationsResult.nextCursor ?? null}
+          initialActivity={activityEvents}
+          initialActivityCursor={activityResult.nextCursor ?? null}
+          currentUserId={user.id}
+          lastSeenActivityAt={lastSeenActivityAt}
+          similarUsers={similarUsers}
+          showDiscoverPeople={true}
+        />
       ) : (
         <div className="lg:grid lg:grid-cols-[minmax(0,720px)_320px] lg:items-start lg:gap-10">
           <section className="min-w-0 py-4 lg:py-6">
