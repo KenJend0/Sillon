@@ -28,7 +28,8 @@ import {
   clearRecentSearches,
   getRecentSearches,
   removeRecentSearch,
-  saveRecentSearch,
+  saveRecentEntity,
+  type RecentSearchItem,
 } from '../../lib/recentSearches';
 
 // Miroir mobile de apps/web/components/layout/SearchOverlay.tsx — même logique de
@@ -156,7 +157,7 @@ export function SearchOverlayHost() {
   const [results, setResults] = useState<SearchResultUI[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingExtended, setLoadingExtended] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentSearches, setRecentSearches] = useState<RecentSearchItem[]>([]);
   const [importingId, setImportingId] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
@@ -313,20 +314,21 @@ export function SearchOverlayHost() {
         return;
       }
 
-      if (q.trim()) saveRecentSearch(q.trim());
-
       // Albums, titres, artistes et profils déjà en DB → pages dédiées (6.3, 6.3bis, 6.5, 6.7).
       if (item.kind === 'album' && item.source === 'internal') {
+        saveRecentEntity({ kind: 'album', id: item.id, title: item.title, subtitle: item.subtitle, coverUrl: item.coverUrl });
         close();
         router.push(`/albums/${item.id}`);
         return;
       }
       if (item.kind === 'track' && item.source === 'internal') {
+        saveRecentEntity({ kind: 'track', id: item.id, title: item.title, subtitle: item.subtitle, coverUrl: item.coverUrl });
         close();
         router.push(`/tracks/${item.id}`);
         return;
       }
       if (item.kind === 'artist' && item.source === 'internal') {
+        saveRecentEntity({ kind: 'artist', id: item.id, title: item.title, subtitle: item.subtitle, coverUrl: item.coverUrl });
         close();
         router.push(`/artists/${item.id}` as any);
         return;
@@ -335,6 +337,7 @@ export function SearchOverlayHost() {
         // Pas de profils MusicBrainz — la recherche de profils est Supabase-only
         // (voir lib/search.ts), donc pas de branche import ici, contrairement aux
         // trois autres kinds.
+        saveRecentEntity({ kind: 'user', id: item.slug ?? item.title, title: item.title, subtitle: item.subtitle, coverUrl: item.coverUrl, slug: item.slug });
         close();
         router.push(`/u/${item.slug ?? item.title}` as any);
         return;
@@ -350,6 +353,7 @@ export function SearchOverlayHost() {
             body: { kind: 'album', mbid: item.releaseId || item.id },
           });
           if (!error && data?.success && data.albumId) {
+            saveRecentEntity({ kind: 'album', id: data.albumId, title: item.title, subtitle: item.subtitle, coverUrl: item.coverUrl });
             close();
             router.push((data.redirectUrl ?? `/albums/${data.albumId}`) as any);
           } else {
@@ -375,6 +379,7 @@ export function SearchOverlayHost() {
             },
           });
           if (!error && data?.success && data.trackId) {
+            saveRecentEntity({ kind: 'track', id: data.trackId, title: item.title, subtitle: item.subtitle, coverUrl: item.coverUrl });
             close();
             router.push(`/tracks/${data.trackId}` as any);
           } else {
@@ -395,6 +400,7 @@ export function SearchOverlayHost() {
             body: { kind: 'artist', mbid: item.id, name: item.title },
           });
           if (!error && data?.success && data.artistId) {
+            saveRecentEntity({ kind: 'artist', id: data.artistId, title: item.title, subtitle: item.subtitle, coverUrl: item.coverUrl });
             close();
             router.push(`/artists/${data.artistId}` as any);
           } else {
@@ -531,27 +537,74 @@ export function SearchOverlayHost() {
                 >
                   Recherches récentes
                 </Text>
-                {recentSearches.map((search, i) => (
-                  <View
-                    key={search}
-                    className="flex-row items-center justify-between px-3 py-2.5"
-                    style={i > 0 ? { marginTop: 2 } : undefined}
-                  >
-                    <Pressable onPress={() => setQ(search)} className="flex-row items-center gap-3 flex-1 min-w-0">
-                      <Clock size={13} color="#BDBDBD" />
-                      <Text numberOfLines={1} style={{ fontFamily: 'Inter_400Regular' }} className="text-[14px] text-text-primary">
-                        {search}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => removeRecentSearch(search).then(setRecentSearches)}
-                      hitSlop={8}
-                      className="ml-2"
+                {recentSearches.map((search, i) => {
+                  const isEntity = search.type === 'entity';
+                  const isRound = isEntity && (search.kind === 'artist' || search.kind === 'user');
+                  const PlaceholderIcon = isEntity
+                    ? search.kind === 'album' || search.kind === 'track'
+                      ? Disc3
+                      : User
+                    : Clock;
+
+                  const onPressItem = () => {
+                    if (search.type === 'query') {
+                      setQ(search.q);
+                      return;
+                    }
+                    close();
+                    if (search.kind === 'album') router.push(`/albums/${search.id}` as any);
+                    else if (search.kind === 'track') router.push(`/tracks/${search.id}` as any);
+                    else if (search.kind === 'artist') router.push(`/artists/${search.id}` as any);
+                    else if (search.kind === 'user') router.push(`/u/${search.slug ?? search.id}` as any);
+                  };
+
+                  return (
+                    <View
+                      key={search.type === 'entity' ? `${search.kind}-${search.id}` : `q-${search.q}`}
+                      className="flex-row items-center justify-between px-3 py-2.5"
+                      style={i > 0 ? { marginTop: 2 } : undefined}
                     >
-                      <X size={12} color="#9A9A9A" />
-                    </Pressable>
-                  </View>
-                ))}
+                      <Pressable onPress={onPressItem} className="flex-row items-center gap-3 flex-1 min-w-0">
+                        {isEntity ? (
+                          <View
+                            className={`w-8 h-8 bg-background-tertiary items-center justify-center overflow-hidden ${
+                              isRound ? 'rounded-full' : 'rounded-cover-sm'
+                            }`}
+                          >
+                            {search.coverUrl ? (
+                              <CoverImage
+                                src={search.coverUrl}
+                                placeholder={<PlaceholderIcon size={14} color="#BDBDBD" />}
+                                style={{ width: 32, height: 32 }}
+                              />
+                            ) : (
+                              <PlaceholderIcon size={14} color="#BDBDBD" />
+                            )}
+                          </View>
+                        ) : (
+                          <Clock size={13} color="#BDBDBD" />
+                        )}
+                        <View className="flex-1 min-w-0">
+                          <Text numberOfLines={1} style={{ fontFamily: 'Inter_400Regular' }} className="text-[14px] text-text-primary">
+                            {isEntity ? search.title : search.q}
+                          </Text>
+                          {isEntity && !!search.subtitle && (
+                            <Text numberOfLines={1} style={{ fontFamily: 'Inter_400Regular' }} className="text-[12px] text-text-tertiary">
+                              {search.subtitle}
+                            </Text>
+                          )}
+                        </View>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => removeRecentSearch(search).then(setRecentSearches)}
+                        hitSlop={8}
+                        className="ml-2"
+                      >
+                        <X size={12} color="#9A9A9A" />
+                      </Pressable>
+                    </View>
+                  );
+                })}
 
                 <Pressable
                   onPress={handleClearAll}

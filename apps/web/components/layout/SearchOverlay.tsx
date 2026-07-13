@@ -11,8 +11,10 @@ import { Clock, X, Disc3, User, Search, ArrowRight, Music } from "lucide-react";
 import { CoverImage } from "@/components/album/CoverImage";
 import {
   getRecentSearches,
-  saveRecentSearch,
+  saveRecentQuery,
+  saveRecentEntity,
   removeRecentSearch,
+  type RecentSearchItem,
 } from '@/lib/recentSearches';
 import { computeRank, mergeAndRank } from '@/lib/searchRanking';
 
@@ -129,7 +131,7 @@ export default function SearchOverlay({
   const [results, setResults] = useState<SearchResultUI[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingExtended, setLoadingExtended] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentSearches, setRecentSearches] = useState<RecentSearchItem[]>([]);
   const [importingId, setImportingId] = useState<string | null>(null);
   const [hasMoreResults, setHasMoreResults] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -316,16 +318,13 @@ export default function SearchOverlay({
         return;
       }
 
-      if (q.trim()) {
-        saveRecentSearch(q.trim());
-      }
-
       if (item.kind === "album" && item.source === "musicbrainz") {
         setImportingId(item.id);
         try {
           // Use the release MBID for import — falls back to release-group MBID if unavailable
           const result = await importAlbumFromMusicBrainz(item.releaseId || item.id);
           if (result.success && 'albumId' in result && result.albumId) {
+            saveRecentEntity({ kind: "album", id: result.albumId, title: item.title, subtitle: item.subtitle, coverUrl: item.coverUrl });
             setIsOpen(false);
             setResults([]);
             setQ("");
@@ -360,6 +359,7 @@ export default function SearchOverlay({
             item.title
           );
           if (result.success && result.trackId) {
+            saveRecentEntity({ kind: "track", id: result.trackId, title: item.title, subtitle: item.subtitle, coverUrl: item.coverUrl });
             setIsOpen(false);
             setResults([]);
             setQ("");
@@ -385,6 +385,7 @@ export default function SearchOverlay({
         try {
           const result = await importArtistFromMusicBrainz(item.id, item.title);
           if (result.success && result.artistId) {
+            saveRecentEntity({ kind: "artist", id: result.artistId, title: item.title, subtitle: item.subtitle, coverUrl: item.coverUrl });
             setIsOpen(false);
             setResults([]);
             setQ("");
@@ -406,6 +407,15 @@ export default function SearchOverlay({
       setQ("");
       setArtist("");
 
+      saveRecentEntity({
+        kind: item.kind,
+        id: item.kind === "user" ? (item.slug ?? item.title) : item.id,
+        title: item.title,
+        subtitle: item.subtitle,
+        coverUrl: item.coverUrl,
+        slug: item.slug,
+      });
+
       if (item.kind === "album") {
         router.push(`/albums/${item.id}`);
       } else if (item.kind === "track") {
@@ -420,11 +430,26 @@ export default function SearchOverlay({
   );
 
   const handleSeeAll = () => {
+    if (q.trim()) saveRecentQuery(q.trim());
     setIsOpen(false);
     setQ("");
     setArtist("");
     const artistParam = activeTab === "tracks" && artist.trim() ? `&artist=${encodeURIComponent(artist.trim())}` : "";
     router.push(`/search?q=${encodeURIComponent(q)}&filter=${activeTab}${artistParam}`);
+  };
+
+  const handleSelectRecent = (item: RecentSearchItem) => {
+    if (item.type === "query") {
+      setQ(item.q);
+      return;
+    }
+    setIsOpen(false);
+    setQ("");
+    setArtist("");
+    if (item.kind === "album") router.push(`/albums/${item.id}`);
+    else if (item.kind === "track") router.push(`/tracks/${item.id}`);
+    else if (item.kind === "artist") router.push(`/artists/${item.id}`);
+    else if (item.kind === "user") router.push(`/u/${item.slug ?? item.id}`);
   };
 
   const tabLabels: Record<SearchTab, string> = {
@@ -563,28 +588,70 @@ export default function SearchOverlay({
                       Recherches récentes
                     </p>
                     <div className="space-y-0.5">
-                      {recentSearches.map((search, i) => (
-                        <div
-                          key={i}
-                          onClick={() => setQ(search)}
-                          className="flex items-center justify-between px-3 py-2.5 hover:bg-[#ECE8E1] rounded-[8px] transition-colors cursor-pointer group"
-                        >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <Clock size={13} className="text-text-disabled flex-shrink-0" />
-                            <span className="text-[14px] text-text-primary truncate">{search}</span>
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const updated = removeRecentSearch(search);
-                              setRecentSearches(updated);
-                            }}
-                            className="text-text-disabled hover:text-text-secondary transition-colors flex-shrink-0 ml-2"
+                      {recentSearches.map((search, i) => {
+                        const isEntity = search.type === "entity";
+                        const isRound = isEntity && (search.kind === "artist" || search.kind === "user");
+                        const placeholderIcon = isEntity ? (
+                          search.kind === "album" || search.kind === "track" ? (
+                            <Disc3 size={16} className="text-text-disabled" />
+                          ) : (
+                            <User size={16} className="text-text-disabled" />
+                          )
+                        ) : null;
+
+                        return (
+                          <div
+                            key={i}
+                            onClick={() => handleSelectRecent(search)}
+                            className="flex items-center justify-between px-3 py-2.5 hover:bg-[#ECE8E1] rounded-[8px] transition-colors cursor-pointer group"
                           >
-                            <X size={12} />
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              {isEntity ? (
+                                <div
+                                  className={`flex-shrink-0 w-8 h-8 bg-[#E4DFD6] overflow-hidden flex items-center justify-center ${
+                                    isRound ? "rounded-full" : "rounded-[6px]"
+                                  }`}
+                                >
+                                  {search.coverUrl ? (
+                                    <CoverImage
+                                      src={search.coverUrl}
+                                      alt={search.title}
+                                      width={32}
+                                      height={32}
+                                      className="w-full h-full object-cover"
+                                      placeholder={placeholderIcon}
+                                    />
+                                  ) : (
+                                    placeholderIcon
+                                  )}
+                                </div>
+                              ) : (
+                                <Clock size={13} className="text-text-disabled flex-shrink-0" />
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <span className="text-[14px] text-text-primary truncate block">
+                                  {isEntity ? search.title : search.q}
+                                </span>
+                                {isEntity && search.subtitle && (
+                                  <span className="text-[12px] text-text-tertiary truncate block">
+                                    {search.subtitle}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const updated = removeRecentSearch(search);
+                                setRecentSearches(updated);
+                              }}
+                              className="text-text-disabled hover:text-text-secondary transition-colors flex-shrink-0 ml-2"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (

@@ -16,7 +16,7 @@ import BackButton from "@/components/ui/BackButton";
 import { showToast } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/AuthContext";
 
-import { saveRecentSearch } from '@/lib/recentSearches';
+import { saveRecentQuery } from '@/lib/recentSearches';
 
 type FilterType = "all" | "albums" | "artists" | "tracks" | "users";
 
@@ -274,7 +274,7 @@ function SearchPageContent() {
 
   // Save search for the overlay's recent searches list
   useEffect(() => {
-    if (q.trim()) saveRecentSearch(q.trim());
+    if (q.trim()) saveRecentQuery(q.trim());
   }, [q]);
 
   // Main search effect
