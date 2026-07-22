@@ -6,7 +6,7 @@ import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Bienvenue — Sillon',
+    title: 'Bienvenue',
 };
 
 export default async function OnboardingPage() {

@@ -11,9 +11,13 @@ export default function AuthPage() {
     const { user } = useAuth();
 
     useEffect(() => {
-        // Si déjà connecté, rediriger vers explore
+        // Si déjà connecté (y compris via un autre onglet qui vient de confirmer
+        // l'email — la session Supabase se synchronise entre onglets), on passe
+        // toujours par /onboarding : la page se charge de rediriger elle-même
+        // vers /explore si l'utilisateur est déjà onboardé. Ça évite d'avoir deux
+        // onglets qui atterrissent à deux endroits différents après une inscription.
         if (user) {
-            router.push('/explore');
+            router.push('/onboarding');
         }
     }, [user, router]);
 

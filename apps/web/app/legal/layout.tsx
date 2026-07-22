@@ -3,7 +3,7 @@ import LegalPageShell from "@/components/legal/LegalPageShell";
 
 export const metadata: Metadata = {
     title: {
-        default: "Légal — Sillon",
+        default: "Légal",
         template: "%s — Sillon",
     },
 };

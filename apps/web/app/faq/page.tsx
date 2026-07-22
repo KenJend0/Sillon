@@ -3,7 +3,7 @@ import LegalPageShell from "@/components/legal/LegalPageShell";
 import LegalSection from "@/components/legal/LegalSection";
 
 export const metadata: Metadata = {
-    title: "FAQ — Sillon",
+    title: "FAQ",
 };
 
 const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[] = [
