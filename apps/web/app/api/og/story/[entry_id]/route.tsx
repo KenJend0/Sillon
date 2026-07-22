@@ -23,7 +23,7 @@ const REVIEW_TITLE_GAP = 20;
 const STORY_TOP_MIN    = 140;
 const STORY_BOTTOM_MIN = 240;
 
-// ─── Palette Waveform ─────────────────────────────────────────────────────────
+// ─── Palette Sillon ─────────────────────────────────────────────────────────
 const C = {
   bg:      '#F5F3EF',
   card:    '#FCFAF6',
@@ -345,7 +345,7 @@ export async function GET(
                 textTransform: 'uppercase',
               }}
             >
-              Waveform
+              Sillon
             </span>
           </div>
         </div>

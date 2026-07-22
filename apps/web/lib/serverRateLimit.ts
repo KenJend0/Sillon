@@ -29,7 +29,7 @@ const redis = makeRedis();
 
 // API routes: 30 req / 60s per IP
 const ratelimit = redis
-  ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(30, "60 s"), analytics: false, prefix: "waveform:rl" })
+  ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(30, "60 s"), analytics: false, prefix: "sillon:rl" })
   : null;
 
 // Server actions: per-user limits keyed by action type
@@ -50,7 +50,7 @@ const actionLimiters = redis
   ? (Object.fromEntries(
       Object.entries(ACTION_LIMITS).map(([key, { requests, window }]) => [
         key,
-        new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(requests, window as any), analytics: false, prefix: `waveform:action:${key}` }),
+        new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(requests, window as any), analytics: false, prefix: `sillon:action:${key}` }),
       ])
     ) as Record<ActionKey, Ratelimit>)
   : null;

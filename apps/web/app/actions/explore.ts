@@ -109,7 +109,7 @@ function pickDailyRotation<T>(pool: T[], seedKey: string, take: number): T[] {
 }
 
 /**
- * Albums populaires sur Waveform cette semaine (écoutes + sauvegardes agrégées).
+ * Albums populaires sur Sillon cette semaine (écoutes + sauvegardes agrégées).
  */
 export async function getTrendingThisWeek(limit = 10): Promise<TrendingAlbum[]> {
     const supabase = createSupabaseAnon();

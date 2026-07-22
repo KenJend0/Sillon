@@ -13,12 +13,12 @@ export default function MentionsLegales() {
 
             <LegalSection title="Éditeur">
                 <p>
-                    Waveform est un projet indépendant édité à titre personnel.
+                    Sillon est un projet indépendant édité à titre personnel.
                 </p>
                 <dl>
-                    <Row label="Nom du projet" value="Waveform" />
-                    <Row label="Site" value="waveformapp.online" />
-                    <Row label="Contact" value="waveform.contact@proton.me" />
+                    <Row label="Nom du projet" value="Sillon" />
+                    <Row label="Site" value="sillon.fm" />
+                    <Row label="Contact" value="sillon.contact@proton.me" />
                     <Row label="Statut" value="Projet personnel non commercial" />
                 </dl>
             </LegalSection>
@@ -45,24 +45,24 @@ export default function MentionsLegales() {
                     <strong>Cover Art Archive</strong>, également sous CC0.
                 </p>
                 <p className="mt-3">
-                    Waveform n'héberge aucun fichier audio et ne propose aucun service de streaming musical.
+                    Sillon n'héberge aucun fichier audio et ne propose aucun service de streaming musical.
                 </p>
             </LegalSection>
 
             <LegalSection title="Propriété intellectuelle">
                 <p>
-                    Le code source, le design et les textes propres à Waveform sont la propriété de l'éditeur.
+                    Le code source, le design et les textes propres à Sillon sont la propriété de l'éditeur.
                     Toute reproduction sans autorisation est interdite.
                 </p>
                 <p className="mt-3">
                     Les contenus publiés par les utilisateurs (avis, notes, listes) restent leur propriété.
-                    En les publiant sur Waveform, ils accordent à l'application une licence d'affichage non exclusive.
+                    En les publiant sur Sillon, ils accordent à l'application une licence d'affichage non exclusive.
                 </p>
             </LegalSection>
 
             <LegalSection title="Responsabilité">
                 <p>
-                    Waveform est fourni "tel quel", sans garantie de disponibilité ou d'exactitude des données.
+                    Sillon est fourni "tel quel", sans garantie de disponibilité ou d'exactitude des données.
                     L'éditeur ne saurait être tenu responsable des contenus publiés par les utilisateurs.
                 </p>
             </LegalSection>
@@ -70,8 +70,8 @@ export default function MentionsLegales() {
             <LegalSection title="Contact">
                 <p>
                     Pour toute question relative aux présentes mentions légales :{" "}
-                    <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
-                        waveform.contact@proton.me
+                    <a href="mailto:sillon.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                        sillon.contact@proton.me
                     </a>
                 </p>
             </LegalSection>

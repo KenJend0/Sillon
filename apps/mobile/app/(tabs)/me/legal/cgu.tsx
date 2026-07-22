@@ -18,7 +18,7 @@ export default function CGUScreen() {
 
       <LegalSection title="Objet">
         <LegalParagraph>
-          Les présentes conditions régissent l'accès et l'utilisation de Waveform, un journal
+          Les présentes conditions régissent l'accès et l'utilisation de Sillon, un journal
           musical social permettant de noter des albums, partager des avis et suivre l'activité
           musicale de ses contacts.
         </LegalParagraph>
@@ -29,33 +29,33 @@ export default function CGUScreen() {
 
       <LegalSection title="Accès au service">
         <LegalParagraph>
-          Waveform est accessible gratuitement. La création d'un compte est requise pour accéder
+          Sillon est accessible gratuitement. La création d'un compte est requise pour accéder
           aux fonctionnalités sociales (journal, feed, abonnements). Certaines pages (albums,
           artistes, exploration) sont accessibles sans compte.
         </LegalParagraph>
         <LegalParagraph>
-          Waveform se réserve le droit de suspendre ou supprimer un compte en cas de violation
+          Sillon se réserve le droit de suspendre ou supprimer un compte en cas de violation
           des présentes conditions, sans préavis.
         </LegalParagraph>
       </LegalSection>
 
       <LegalSection title="Contenu utilisateur">
         <LegalParagraph>
-          Vous êtes seul·e responsable des contenus que vous publiez sur Waveform (avis, notes,
+          Vous êtes seul·e responsable des contenus que vous publiez sur Sillon (avis, notes,
           commentaires, bio). En publiant un contenu, vous déclarez être l'auteur ou disposer des
           droits nécessaires sur ce contenu, que ce contenu ne viole aucune loi applicable, et
           qu'il ne porte pas atteinte aux droits de tiers.
         </LegalParagraph>
         <LegalParagraph>
-          Waveform n'héberge aucun fichier audio. Les pochettes et métadonnées musicales
+          Sillon n'héberge aucun fichier audio. Les pochettes et métadonnées musicales
           proviennent de MusicBrainz (licence CC0) et du Cover Art Archive.
         </LegalParagraph>
       </LegalSection>
 
       <LegalSection title="Comportements interdits">
         <LegalParagraph>
-          Il est interdit sur Waveform de publier des contenus haineux, discriminatoires,
-          harcelants ou illégaux, d'usurper l'identité d'une autre personne, d'utiliser Waveform
+          Il est interdit sur Sillon de publier des contenus haineux, discriminatoires,
+          harcelants ou illégaux, d'usurper l'identité d'une autre personne, d'utiliser Sillon
           à des fins commerciales sans autorisation, de tenter de compromettre la sécurité ou
           l'intégrité de la plateforme, ou de créer plusieurs comptes pour contourner une
           suspension.
@@ -66,17 +66,17 @@ export default function CGUScreen() {
         <LegalParagraph>
           Les informations musicales affichées (titres, artistes, albums, dates, pochettes) sont
           issues de MusicBrainz et du Cover Art Archive, publiés sous licence Creative Commons
-          CC0. Waveform ne revendique aucun droit sur ces données.
+          CC0. Sillon ne revendique aucun droit sur ces données.
         </LegalParagraph>
         <LegalParagraph>
           Si vous estimez qu'un contenu affiché porte atteinte à vos droits, contactez-nous à
-          waveform.contact@proton.me.
+          sillon.contact@proton.me.
         </LegalParagraph>
       </LegalSection>
 
       <LegalSection title="Disponibilité du service">
         <LegalParagraph>
-          Waveform est un projet indépendant fourni sans garantie de disponibilité. Le service
+          Sillon est un projet indépendant fourni sans garantie de disponibilité. Le service
           peut être interrompu, modifié ou arrêté à tout moment, avec un préavis raisonnable dans
           la mesure du possible.
         </LegalParagraph>
@@ -98,7 +98,7 @@ export default function CGUScreen() {
       </LegalSection>
 
       <LegalSection title="Contact">
-        <LegalParagraph>Pour toute question : waveform.contact@proton.me</LegalParagraph>
+        <LegalParagraph>Pour toute question : sillon.contact@proton.me</LegalParagraph>
       </LegalSection>
     </ScrollView>
   );

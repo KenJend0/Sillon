@@ -27,14 +27,14 @@ export default function ConfidentialiteScreen() {
 
       <LegalSection title="Qui sommes-nous ?">
         <LegalParagraph>
-          Waveform est un journal musical social, projet indépendant non commercial. Cette
+          Sillon est un journal musical social, projet indépendant non commercial. Cette
           politique décrit quelles données personnelles nous collectons, pourquoi, et quels
           droits vous avez sur celles-ci.
         </LegalParagraph>
-        <Pressable onPress={() => Linking.openURL('mailto:waveform.contact@proton.me')}>
+        <Pressable onPress={() => Linking.openURL('mailto:sillon.contact@proton.me')}>
           <Text className="text-text-secondary" style={metaStyle}>
-            Responsable de traitement : Waveform —{' '}
-            <Text className="text-text-primary underline">waveform.contact@proton.me</Text>
+            Responsable de traitement : Sillon —{' '}
+            <Text className="text-text-primary underline">sillon.contact@proton.me</Text>
           </Text>
         </Pressable>
       </LegalSection>
@@ -103,21 +103,21 @@ export default function ConfidentialiteScreen() {
         <Row label="Portabilité">Télécharger un export JSON de vos données depuis les Réglages.</Row>
         <Row label="Opposition">Vous opposer à un traitement spécifique par e-mail.</Row>
         <LegalParagraph>
-          Pour exercer ces droits : waveform.contact@proton.me. Vous pouvez également introduire
+          Pour exercer ces droits : sillon.contact@proton.me. Vous pouvez également introduire
           une réclamation auprès de la CNIL (cnil.fr).
         </LegalParagraph>
       </LegalSection>
 
       <LegalSection title="Cookies">
         <LegalParagraph>
-          Waveform utilise uniquement des cookies de session strictement nécessaires au maintien
+          Sillon utilise uniquement des cookies de session strictement nécessaires au maintien
           de votre connexion. Aucun cookie publicitaire ou de tracking tiers n'est utilisé.
         </LegalParagraph>
       </LegalSection>
 
       <LegalSection title="Contact">
         <LegalParagraph>
-          Pour toute question relative à vos données personnelles : waveform.contact@proton.me
+          Pour toute question relative à vos données personnelles : sillon.contact@proton.me
         </LegalParagraph>
       </LegalSection>
     </ScrollView>

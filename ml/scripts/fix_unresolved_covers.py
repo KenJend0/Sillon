@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils.supabase_client import get_client
 
 BUCKET = "covers"
-HEADERS = {"User-Agent": "Waveform/1.0 (https://waveform.app)", "Accept": "application/json"}
+HEADERS = {"User-Agent": "Sillon/1.0 (https://sillon.fm)", "Accept": "application/json"}
 
 
 def fetch_json(url: str) -> dict | None:

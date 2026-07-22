@@ -1,4 +1,4 @@
--- ML Tables — Waveform Recommender System
+-- ML Tables — Sillon Recommender System
 -- Run this in the Supabase SQL editor.
 -- These tables store precomputed ML results written by the Python batch pipeline.
 

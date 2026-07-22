@@ -13,7 +13,7 @@ export default function CGU() {
 
             <LegalSection title="Objet">
                 <p>
-                    Les présentes conditions régissent l'accès et l'utilisation de Waveform,
+                    Les présentes conditions régissent l'accès et l'utilisation de Sillon,
                     un journal musical social permettant de noter des albums, partager des avis
                     et suivre l'activité musicale de ses contacts.
                 </p>
@@ -24,19 +24,19 @@ export default function CGU() {
 
             <LegalSection title="Accès au service">
                 <p>
-                    Waveform est accessible gratuitement. La création d'un compte est requise
+                    Sillon est accessible gratuitement. La création d'un compte est requise
                     pour accéder aux fonctionnalités sociales (journal, feed, abonnements).
                     Certaines pages (albums, artistes, exploration) sont accessibles sans compte.
                 </p>
                 <p className="mt-3">
-                    Waveform se réserve le droit de suspendre ou supprimer un compte en cas
+                    Sillon se réserve le droit de suspendre ou supprimer un compte en cas
                     de violation des présentes conditions, sans préavis.
                 </p>
             </LegalSection>
 
             <LegalSection title="Contenu utilisateur">
                 <p>
-                    Vous êtes seul·e responsable des contenus que vous publiez sur Waveform
+                    Vous êtes seul·e responsable des contenus que vous publiez sur Sillon
                     (avis, notes, commentaires, bio). En publiant un contenu, vous déclarez :
                 </p>
                 <ul className="mt-3 space-y-2 list-disc list-inside">
@@ -45,17 +45,17 @@ export default function CGU() {
                     <li>Que ce contenu ne porte pas atteinte aux droits de tiers.</li>
                 </ul>
                 <p className="mt-4">
-                    Waveform n'héberge aucun fichier audio. Les pochettes et métadonnées
+                    Sillon n'héberge aucun fichier audio. Les pochettes et métadonnées
                     musicales proviennent de MusicBrainz (licence CC0) et du Cover Art Archive.
                 </p>
             </LegalSection>
 
             <LegalSection title="Comportements interdits">
-                <p>Il est interdit sur Waveform de :</p>
+                <p>Il est interdit sur Sillon de :</p>
                 <ul className="mt-3 space-y-2 list-disc list-inside">
                     <li>Publier des contenus haineux, discriminatoires, harcelants ou illégaux.</li>
                     <li>Usurper l'identité d'une autre personne.</li>
-                    <li>Utiliser Waveform à des fins commerciales sans autorisation.</li>
+                    <li>Utiliser Sillon à des fins commerciales sans autorisation.</li>
                     <li>Tenter de compromettre la sécurité ou l'intégrité de la plateforme.</li>
                     <li>Créer plusieurs comptes pour contourner une suspension.</li>
                 </ul>
@@ -66,13 +66,13 @@ export default function CGU() {
                     Les informations musicales affichées (titres, artistes, albums, dates, pochettes)
                     sont issues de <strong>MusicBrainz</strong> et du <strong>Cover Art Archive</strong>,
                     publiés sous licence Creative Commons CC0.
-                    Waveform ne revendique aucun droit sur ces données.
+                    Sillon ne revendique aucun droit sur ces données.
                 </p>
                 <p className="mt-3">
                     Si vous estimez qu'un contenu affiché porte atteinte à vos droits,
                     contactez-nous à{" "}
-                    <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
-                        waveform.contact@proton.me
+                    <a href="mailto:sillon.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                        sillon.contact@proton.me
                     </a>
                     .
                 </p>
@@ -80,7 +80,7 @@ export default function CGU() {
 
             <LegalSection title="Disponibilité du service">
                 <p>
-                    Waveform est un projet indépendant fourni sans garantie de disponibilité.
+                    Sillon est un projet indépendant fourni sans garantie de disponibilité.
                     Le service peut être interrompu, modifié ou arrêté à tout moment,
                     avec un préavis raisonnable dans la mesure du possible.
                 </p>
@@ -105,8 +105,8 @@ export default function CGU() {
             <LegalSection title="Contact">
                 <p>
                     Pour toute question :{" "}
-                    <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
-                        waveform.contact@proton.me
+                    <a href="mailto:sillon.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                        sillon.contact@proton.me
                     </a>
                 </p>
             </LegalSection>

@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// WAVEFORM — Charte Graphique v2
+// SILLON — Charte Graphique v2
 // Esthétique : journal intime analogique. Chaud, doux, pas technologique.
 // Polices : Instrument Serif (display/titres) + Inter (corps)
 // ─────────────────────────────────────────────────────────────────────────────

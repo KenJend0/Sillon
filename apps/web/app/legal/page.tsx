@@ -5,7 +5,7 @@ import LegalSection from "@/components/legal/LegalSection";
 
 export const metadata: Metadata = {
     title: "Aide & support",
-    description: "Besoin d'aide avec Waveform ? Contacte-nous ou consulte nos ressources.",
+    description: "Besoin d'aide avec Sillon ? Contacte-nous ou consulte nos ressources.",
 };
 
 const resources = [
@@ -13,7 +13,7 @@ const resources = [
         href: "/faq",
         icon: HelpCircle,
         label: "FAQ",
-        description: "Questions fréquentes sur l'utilisation de Waveform",
+        description: "Questions fréquentes sur l'utilisation de Sillon",
     },
     {
         href: "/legal/cgu",
@@ -51,14 +51,14 @@ export default function LegalIndex() {
 
             <LegalSection title="Nous contacter">
                 <a
-                    href="mailto:waveform.contact@proton.me?subject=Support%20Waveform"
+                    href="mailto:sillon.contact@proton.me?subject=Support%20Sillon"
                     className="flex items-center gap-4 px-4 py-4 rounded-[12px] bg-background-secondary hover:bg-background-tertiary transition-colors duration-150 group -mx-4"
                 >
                     <div className="flex-shrink-0 w-9 h-9 rounded-[8px] bg-background-tertiary group-hover:bg-[#D8D3CB] flex items-center justify-center transition-colors duration-150">
                         <Mail size={16} className="text-text-tertiary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-[14px] text-text-primary font-medium">waveform.contact@proton.me</p>
+                        <p className="text-[14px] text-text-primary font-medium">sillon.contact@proton.me</p>
                         <p className="text-[12px] text-text-tertiary mt-0.5">
                             Réponse sous 48 h en général
                         </p>

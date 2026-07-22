@@ -167,7 +167,7 @@ export async function getArtistImagesByMbids(
       {
         headers: {
           Accept: 'application/sparql-results+json',
-          'User-Agent': 'Waveform/1.0 (musicboxd)',
+          'User-Agent': 'Sillon/1.0 (musicboxd)',
         },
         signal: AbortSignal.timeout(6000),
       }

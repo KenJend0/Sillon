@@ -4,7 +4,7 @@ import type { StyleProp } from 'react-native';
 
 // User-Agent descriptif — même convention que les appels API MusicBrainz
 // (cf. USER_AGENT dans lib/musicbrainz.ts), bonne pratique pour les services MB.
-const IMAGE_USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
+const IMAGE_USER_AGENT = 'Sillon/1.0 (https://sillon.fm)';
 
 // coverartarchive.org redirige vers archive.org pour servir le fichier réel : quand
 // archive.org est injoignable (panne, blocage réseau/FAI), la connexion TCP peut rester

@@ -1,5 +1,5 @@
 -- ============================================================
--- WAVEFORM — Migration : votes genres communautaires
+-- SILLON — Migration : votes genres communautaires
 -- A exécuter via le Supabase SQL Editor
 -- ============================================================
 

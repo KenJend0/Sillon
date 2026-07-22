@@ -24,7 +24,7 @@ for (const a of albums) {
   console.log(`\n─── "${a.title}" (MBID: ${a.mbid})`);
   const r = await fetch(
     `https://musicbrainz.org/ws/2/release-group/${a.mbid}?fmt=json&inc=genres+tags`,
-    { headers: { 'User-Agent': 'Waveform/1.0 (https://waveform.app)' } }
+    { headers: { 'User-Agent': 'Sillon/1.0 (https://sillon.fm)' } }
   );
   console.log('  HTTP:', r.status);
   const d = await r.json();

@@ -36,7 +36,7 @@ from urllib.request import Request, urlopen
 from supabase import Client, create_client
 
 MUSICBRAINZ_API = "https://musicbrainz.org/ws/2"
-USER_AGENT = "WaveformSeed/1.0 (https://waveform.app)"
+USER_AGENT = "SillonSeed/1.0 (https://sillon.fm)"
 
 
 
@@ -71,7 +71,7 @@ def parse_input_file(path: Path) -> List[Dict[str, Any]]:
 
 
 def build_email(username: str) -> str:
-    return f"{username}@seed.waveform.local"
+    return f"{username}@seed.sillon.local"
 
 
 def fetch_users_by_email(client: Client) -> Dict[str, str]:

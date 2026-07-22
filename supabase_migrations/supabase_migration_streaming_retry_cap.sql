@@ -1,5 +1,5 @@
 -- ============================================================
--- WAVEFORM — Migration : cap sur les retries de liens streaming
+-- SILLON — Migration : cap sur les retries de liens streaming
 -- À exécuter via le Supabase SQL Editor (une seule fois en production)
 --
 -- Problème : Phase 2 de enrich-missing.mjs réinitialise fetched_at à chaque

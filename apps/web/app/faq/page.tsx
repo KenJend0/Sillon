@@ -3,12 +3,12 @@ import LegalPageShell from "@/components/legal/LegalPageShell";
 import LegalSection from "@/components/legal/LegalSection";
 
 export const metadata: Metadata = {
-    title: "FAQ — Waveform",
+    title: "FAQ — Sillon",
 };
 
 const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[] = [
     {
-        category: "Utiliser Waveform",
+        category: "Utiliser Sillon",
         questions: [
             {
                 q: "Comment logger un album que j'ai écouté ?",
@@ -96,8 +96,8 @@ const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[
                 a: (
                     <>
                         Vérifie ton dossier spam. Si le problème persiste, contacte-nous à{" "}
-                        <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
-                            waveform.contact@proton.me
+                        <a href="mailto:sillon.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                            sillon.contact@proton.me
                         </a>{" "}
                         en précisant l'adresse utilisée à l'inscription.
                     </>
@@ -109,8 +109,8 @@ const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[
                     <>
                         La modification d'adresse e-mail n'est pas encore disponible directement dans l'app.
                         Contacte-nous à{" "}
-                        <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
-                            waveform.contact@proton.me
+                        <a href="mailto:sillon.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                            sillon.contact@proton.me
                         </a>{" "}
                         depuis ton adresse actuelle.
                     </>
@@ -132,8 +132,8 @@ const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[
                     <>
                         L'export automatique n'est pas encore disponible. Tu peux en faire la demande
                         à{" "}
-                        <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
-                            waveform.contact@proton.me
+                        <a href="mailto:sillon.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                            sillon.contact@proton.me
                         </a>
                         . Conformément au RGPD, nous répondrons sous 30 jours.
                     </>
@@ -175,15 +175,15 @@ const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[
                         <a href="https://musicbrainz.org" target="_blank" rel="noopener noreferrer" className="text-text-primary underline underline-offset-2">
                             musicbrainz.org
                         </a>
-                        : la correction ou l'ajout sera repris sur Waveform une fois validé.
+                        : la correction ou l'ajout sera repris sur Sillon une fois validé.
                     </>
                 ),
             },
             {
-                q: "Est-ce que Waveform propose du streaming musical ?",
+                q: "Est-ce que Sillon propose du streaming musical ?",
                 a: (
                     <>
-                        Non. Waveform est un journal et réseau social musical, pas une plateforme de streaming.
+                        Non. Sillon est un journal et réseau social musical, pas une plateforme de streaming.
                         L'application n'héberge aucun fichier audio. Pour écouter un album,
                         utilise Spotify, Apple Music, Deezer ou toute autre plateforme de ton choix.
                     </>
@@ -193,7 +193,7 @@ const faq: { category: string; questions: { q: string; a: React.ReactNode }[] }[
                 q: "Les notes et avis sont-ils liés à d'autres sites ?",
                 a: (
                     <>
-                        Non. Les notes et avis sur Waveform sont propres à la plateforme et à sa communauté.
+                        Non. Les notes et avis sur Sillon sont propres à la plateforme et à sa communauté.
                         Ils ne sont pas synchronisés avec Last.fm, RateYourMusic ou d'autres services.
                     </>
                 ),
@@ -209,7 +209,7 @@ export default function FAQ() {
                 <h1 className="text-h1 text-text-primary mb-2">Questions fréquentes</h1>
                 <p className="text-meta text-text-secondary mb-10">
                     Une autre question ?{" "}
-                    <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                    <a href="mailto:sillon.contact@proton.me" className="text-text-primary underline underline-offset-2">
                         Écris-nous
                     </a>
                     .

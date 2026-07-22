@@ -1,4 +1,4 @@
-# Waveform — Vision produit, rétention & communication
+# Sillon — Vision produit, rétention & communication
 
 Document de travail pour avancer ensemble sur la com, le marketing et la rétention. Ce qui suit, c'est notre réflexion à date — pas une décision figée. L'idée c'est que tu voies où on en est, que tu challenges ce qui te semble faux, et qu'on construise la suite à deux.
 
@@ -6,7 +6,7 @@ Document de travail pour avancer ensemble sur la com, le marketing et la rétent
 
 ## 1. Le concept en une phrase
 
-Waveform, c'est le **Letterboxd de la musique en français** : on note ses albums et titres sur 10, on écrit des critiques, on suit des comptes, et leur activité musicale devient un fil de vie sociale — comme Instagram, mais l'objet central c'est la musique qu'on écoute, pas une photo qu'on poste.
+Sillon, c'est le **Letterboxd de la musique en français** : on note ses albums et titres sur 10, on écrit des critiques, on suit des comptes, et leur activité musicale devient un fil de vie sociale — comme Instagram, mais l'objet central c'est la musique qu'on écoute, pas une photo qu'on poste.
 
 Personne n'occupe sérieusement ce créneau en français aujourd'hui. RateYourMusic existe mais en anglais, interface datée, pas social. Spotify a volontairement bridé le social pour rester focus streaming. Letterboxd a prouvé le modèle (15M d'utilisateurs) mais pour le cinéma, jamais vraiment installé en France.
 

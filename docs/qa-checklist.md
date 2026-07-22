@@ -1,4 +1,4 @@
-# Checklist QA beta Waveform
+# Checklist QA beta Sillon
 
 Objectif: rejouer toujours les memes parcours critiques pour voir vite ce qui a casse.
 

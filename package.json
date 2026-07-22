@@ -1,5 +1,5 @@
 {
-  "name": "waveform",
+  "name": "sillon",
   "private": true,
   "workspaces": [
     "apps/*",

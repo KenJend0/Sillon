@@ -14,7 +14,7 @@ import {
 } from '@/lib/externalValidation';
 
 const MB_API = 'https://musicbrainz.org/ws/2';
-const MB_USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
+const MB_USER_AGENT = 'Sillon/1.0 (https://sillon.fm)';
 const LASTFM_API = 'https://ws.audioscrobbler.com/2.0';
 const FETCH_TIMEOUT_MS = 10_000;
 const ENRICHMENT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 jours

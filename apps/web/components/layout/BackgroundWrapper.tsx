@@ -7,7 +7,7 @@ interface BackgroundWrapperProps {
   children: React.ReactNode;
 }
 
-// Charte Waveform â€” seules couleurs autorisÃ©es
+// Charte Sillon â€” seules couleurs autorisÃ©es
 const colorMap: Record<string, string> = {
   'bg-background': '#F5F3EF',
   'bg-background-secondary': '#ECE8E1',

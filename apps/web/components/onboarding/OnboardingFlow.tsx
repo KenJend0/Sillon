@@ -106,9 +106,9 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
                     <Progress />
 
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/logo/mark.svg" alt="Waveform" className="h-5 w-auto mb-6 opacity-50" />
+                    <img src="/logo/mark.svg" alt="Sillon" className="h-5 w-auto mb-6 opacity-50" />
                     <h1 className="text-h1 text-text-primary mb-2">
-                        Bienvenue sur Waveform !
+                        Bienvenue sur Sillon !
                     </h1>
                     <p className="text-meta text-text-secondary mb-8">
                         Commence par choisir ton pseudo. C'est ce que verront les autres.

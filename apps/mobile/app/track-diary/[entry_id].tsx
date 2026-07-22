@@ -31,7 +31,7 @@ function relativeTime(dateStr: string): string {
   return `il y a ${Math.floor(days / 365)} an${Math.floor(days / 365) > 1 ? 's' : ''}`;
 }
 
-const SITE_URL = 'https://waveformapp.online';
+const SITE_URL = 'https://sillon.fm';
 
 /** Miroir de apps/web/app/track-diary/[entry_id]/TrackDiaryEntryClient.tsx — détail d'une écoute de titre. */
 export default function TrackDiaryEntryPage() {

@@ -250,7 +250,7 @@ def safe_iso(dt: datetime) -> str:
 
 
 def build_email(username: str) -> str:
-    return f"{username}@seed.waveform.local"
+    return f"{username}@seed.sillon.local"
 
 
 def clamp_int(v: float, lo: int, hi: int) -> int:

@@ -1,5 +1,5 @@
 // Rendu à l'intérieur de LegalPageShell (via legal/layout.tsx).
-// Le shell (BackButton, label Waveform, footer nav) est déjà affiché.
+// Le shell (BackButton, label Sillon, footer nav) est déjà affiché.
 export default function Loading() {
     return (
         <article className="animate-pulse">

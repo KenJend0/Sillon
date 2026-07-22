@@ -1,6 +1,6 @@
-Roadmap ML — Waveform Recommender System
+Roadmap ML — Sillon Recommender System
 Context
-Waveform est une app de journal musical (ratings 0-10, social graph, diary public). L'objectif est de construire une couche ML réelle, crédible pour un poste MLE (Spotify-level), qui soit aussi un vrai produit évolutif. L'approche : poser des bases solides maintenant, même avec peu d'utilisateurs, pour absorber proprement une croissance future.
+Sillon est une app de journal musical (ratings 0-10, social graph, diary public). L'objectif est de construire une couche ML réelle, crédible pour un poste MLE (Spotify-level), qui soit aussi un vrai produit évolutif. L'approche : poser des bases solides maintenant, même avec peu d'utilisateurs, pour absorber proprement une croissance future.
 
 Décision d'architecture : Batch scripts Python + Supabase (pas de service live). Les résultats ML sont pré-calculés et stockés dans Supabase. Next.js lit directement. Zéro latence côté user, zéro infra supplémentaire à maintenir.
 

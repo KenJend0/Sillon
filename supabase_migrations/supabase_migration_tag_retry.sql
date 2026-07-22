@@ -1,5 +1,5 @@
 -- ============================================================
--- WAVEFORM — Migration : retry des tags/genres (album_metadata)
+-- SILLON — Migration : retry des tags/genres (album_metadata)
 -- À exécuter via le Supabase SQL Editor (une seule fois en production)
 --
 -- Constat : Phase 1 d'enrich-missing.mjs ne traite que les albums jamais

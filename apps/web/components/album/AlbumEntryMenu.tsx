@@ -38,7 +38,7 @@ export default function AlbumEntryMenu({
         setOpen(false);
         const url = `${window.location.origin}/diary/${entryId}`;
         if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-            try { await navigator.share({ url, title: "Mon écoute sur Waveform" }); } catch {}
+            try { await navigator.share({ url, title: "Mon écoute sur Sillon" }); } catch {}
         } else {
             await handleCopyLink();
         }

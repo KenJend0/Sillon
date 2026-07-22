@@ -2,7 +2,7 @@
 
 import type { ProductEventName } from '@/lib/productEvents';
 
-const PRODUCT_SESSION_STORAGE_KEY = 'waveform_product_session_id';
+const PRODUCT_SESSION_STORAGE_KEY = 'sillon_product_session_id';
 
 function getStorage(): Storage | null {
   if (typeof window === 'undefined') return null;

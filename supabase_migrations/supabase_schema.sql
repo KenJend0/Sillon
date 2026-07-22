@@ -1,5 +1,5 @@
 -- ============================================================
--- SCHÉMA DE RÉFÉRENCE — WAVEFORM
+-- SCHÉMA DE RÉFÉRENCE — SILLON
 -- Généré automatiquement via `npx supabase db dump --linked --schema public`
 -- le 2026-06-30, après l'audit pré-V1 (voir AUDIT_SUPABASE_V1.md).
 --

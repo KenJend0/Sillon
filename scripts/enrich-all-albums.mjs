@@ -27,7 +27,7 @@ for (const line of content.split('\n')) {
 const SUPABASE_URL = env['NEXT_PUBLIC_SUPABASE_URL'];
 const SUPABASE_KEY = env['SUPABASE_SERVICE_KEY'];
 const LASTFM_KEY   = env['LASTFM_API_KEY'];
-const MB_UA        = 'Waveform/1.0 (https://waveform.app)';
+const MB_UA        = 'Sillon/1.0 (https://sillon.fm)';
 const TIMEOUT_MS   = 4000;
 const MB_DELAY_MS  = 1200; // respect MB 1 req/sec
 
@@ -204,7 +204,7 @@ async function upsertMetadata(albumId, lfm) {
 
 // ── Main ─────────────────────────────────────────────────────
 
-console.log(`\n🎵 Waveform — Enrichissement rétroactif des albums`);
+console.log(`\n🎵 Sillon — Enrichissement rétroactif des albums`);
 console.log(`   Mode : ${DRY_RUN ? 'DRY RUN (pas d\'écriture)' : FORCE_ALL ? 'FORCE (tous les albums)' : 'NORMAL (albums sans metadata)'}`);
 if (LASTFM_KEY) console.log(`   Last.fm : ✓`);
 else console.log(`   Last.fm : ✗ (LASTFM_API_KEY absente — MusicBrainz uniquement)`);

@@ -76,7 +76,7 @@ export async function GET(
             textTransform: 'uppercase',
           }}
         >
-          Waveform
+          Sillon
         </span>
       </div>
 
@@ -194,7 +194,7 @@ export async function GET(
               {'\u2002\u00B7\u2002'}
               {formattedDate}
             </span>
-            <span style={{ fontSize: 14, fontWeight: 400, color: C.disabled }}>waveformapp.online</span>
+            <span style={{ fontSize: 14, fontWeight: 400, color: C.disabled }}>sillon.fm</span>
           </div>
         </div>
       </div>

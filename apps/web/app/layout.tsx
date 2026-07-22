@@ -30,24 +30,24 @@ const instrumentSerif = Instrument_Serif({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Waveform',
-    template: '%s — Waveform',
+    default: 'Sillon',
+    template: '%s — Sillon',
   },
   description:
     "Une application de journal musical. Suis tes écoutes, note tes albums, lis les avis de tes amis.",
-  authors: [{ name: 'Waveform' }],
-  keywords: ['musique', 'journal', 'albums', 'reviews', 'Waveform'],
+  authors: [{ name: 'Sillon' }],
+  keywords: ['musique', 'journal', 'albums', 'reviews', 'Sillon'],
   openGraph: {
-    title: 'Waveform — Journal musical',
+    title: 'Sillon — Journal musical',
     description:
       "Une application de journal musical. Suis tes écoutes, note tes albums, lis les avis de tes amis.",
-    siteName: 'Waveform',
+    siteName: 'Sillon',
     type: 'website',
     locale: 'fr_FR',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Waveform',
+    title: 'Sillon',
     description:
       "Une application de journal musical. Suis tes écoutes, note tes albums, lis les avis de tes amis.",
   },
@@ -68,7 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <head>
           <meta name="apple-mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-          <meta name="apple-mobile-web-app-title" content="Waveform" />
+          <meta name="apple-mobile-web-app-title" content="Sillon" />
           <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
           <link rel="manifest" href="/manifest.webmanifest" />
         </head>

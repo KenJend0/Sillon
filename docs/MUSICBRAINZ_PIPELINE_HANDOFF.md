@@ -1,6 +1,6 @@
 # MusicBrainz pipeline — état des lieux et passation
 
-Ce document résume une session longue et approfondie consacrée à fiabiliser le pipeline d'import/recherche MusicBrainz de Waveform. Il ne couvre **pas** les changements UI de la page artiste (filtres Albums/EPs/Singles/Lives, etc.) — uniquement la récupération/fiabilité des données MB elles-mêmes.
+Ce document résume une session longue et approfondie consacrée à fiabiliser le pipeline d'import/recherche MusicBrainz de Sillon. Il ne couvre **pas** les changements UI de la page artiste (filtres Albums/EPs/Singles/Lives, etc.) — uniquement la récupération/fiabilité des données MB elles-mêmes.
 
 ## Pourquoi ce chantier a démarré
 

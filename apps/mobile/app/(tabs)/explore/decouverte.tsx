@@ -51,7 +51,7 @@ export default function DecouverteScreen() {
           ? 'Des artistes absents de ton journal, suggérés par des comptes que tu suis.'
           : result.hasTasteProfile
             ? 'Des albums largement salués, en dehors de tes artistes habituels.'
-            : 'Des albums largement salués sur Waveform, pour commencer à explorer.'}
+            : 'Des albums largement salués sur Sillon, pour commencer à explorer.'}
       </Text>
 
       {loading ? (

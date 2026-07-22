@@ -422,7 +422,7 @@ export default function ProfileSettings() {
             const a = document.createElement("a");
             const date = new Date().toISOString().slice(0, 10);
             a.href = url;
-            a.download = `waveform-export-${profile.username || "moi"}-${date}.json`;
+            a.download = `sillon-export-${profile.username || "moi"}-${date}.json`;
             a.click();
             URL.revokeObjectURL(url);
         } catch (e: any) {

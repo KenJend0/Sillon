@@ -26,7 +26,7 @@ export default function ShareButton({ entryId, basePath = 'diary' }: ShareButton
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'waveform-story.png';
+    a.download = 'sillon-story.png';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -74,7 +74,7 @@ export default function ShareButton({ entryId, basePath = 'diary' }: ShareButton
         blobRef.current = blob;
       }
 
-      const file = new File([blob], 'waveform-story.png', { type: 'image/png' });
+      const file = new File([blob], 'sillon-story.png', { type: 'image/png' });
       const pageUrl = `${window.location.origin}/${basePath}/${entryId}`;
       const linkCopied = await copyTextToClipboard(pageUrl);
 

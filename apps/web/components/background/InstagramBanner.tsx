@@ -104,7 +104,7 @@ export default function InstagramBanner() {
         {platform === 'android' && (
           intentFailed
             ? (copied ? 'Lien copié — colle-le dans ton navigateur.' : 'Ouvre ton navigateur et colle le lien.')
-            : 'Ouvre Waveform dans ton navigateur pour une meilleure expérience.'
+            : 'Ouvre Sillon dans ton navigateur pour une meilleure expérience.'
         )}
         {platform === null && 'Ouvre ce lien dans ton navigateur.'}
       </p>

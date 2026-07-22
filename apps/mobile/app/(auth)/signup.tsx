@@ -11,7 +11,7 @@ import {
 import { Link, useRouter } from 'expo-router';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
-import { WaveformMark } from '../../components/icons/WaveformMark';
+import { SillonMark } from '../../components/icons/SillonMark';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -69,10 +69,10 @@ export default function SignupScreen() {
     >
       <View className="flex-1 justify-center px-6">
         <View className="items-center mb-4">
-          <WaveformMark />
+          <SillonMark />
         </View>
         <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-text-secondary text-center mb-8">
-          Crée ton compte Waveform
+          Crée ton compte Sillon
         </Text>
 
         {error && (

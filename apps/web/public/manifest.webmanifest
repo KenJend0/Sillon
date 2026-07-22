@@ -1,6 +1,6 @@
 {
-  "name": "Waveform",
-  "short_name": "Waveform",
+  "name": "Sillon",
+  "short_name": "Sillon",
   "description": "Un journal intime pour la musique que tu écoutes.",
   "start_url": "/",
   "display": "standalone",

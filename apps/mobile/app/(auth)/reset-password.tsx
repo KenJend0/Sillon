@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Link } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { WaveformMark } from '../../components/icons/WaveformMark';
+import { SillonMark } from '../../components/icons/SillonMark';
 
 export default function ResetPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -24,7 +24,7 @@ export default function ResetPasswordScreen() {
     setLoading(true);
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: 'waveform://auth/callback',
+      redirectTo: 'sillon://auth/callback',
     });
 
     setLoading(false);
@@ -45,7 +45,7 @@ export default function ResetPasswordScreen() {
     >
       <View className="flex-1 justify-center px-6">
         <View className="items-center mb-4">
-          <WaveformMark />
+          <SillonMark />
         </View>
         <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-text-secondary text-center mb-8">
           Réinitialise ton mot de passe

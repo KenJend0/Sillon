@@ -7,7 +7,7 @@ interface UnauthCTAProps {
 }
 
 export default function UnauthCTA({
-  tagline = 'Bienvenue sur Waveform',
+  tagline = 'Bienvenue sur Sillon',
   title,
   className = '',
 }: UnauthCTAProps) {

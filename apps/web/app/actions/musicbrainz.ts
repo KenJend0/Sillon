@@ -19,7 +19,7 @@ import {
 } from '@/lib/externalValidation';
 
 const MUSICBRAINZ_API = 'https://musicbrainz.org/ws/2';
-const USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
+const USER_AGENT = 'Sillon/1.0 (https://sillon.fm)';
 const CACHE_TTL_SECONDS = 24 * 60 * 60; // 24 heures
 
 // Search timeout: prod (Vercel → MB) ~200ms, dev (localhost → MB) ~400ms.
@@ -1921,7 +1921,7 @@ export async function searchMusicBrainzPreview(query: string): Promise<SearchRes
       `${MUSICBRAINZ_API}/release?query=${encodeURIComponent(query)}&fmt=json&limit=${limit}`,
       {
         headers: {
-          'User-Agent': 'Waveform/1.0 (https://waveformapp.online)',
+          'User-Agent': 'Sillon/1.0 (https://sillon.fm)',
         },
       }
     );

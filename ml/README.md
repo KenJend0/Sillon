@@ -1,6 +1,6 @@
-# Waveform — ML Pipeline
+# Sillon — ML Pipeline
 
-Batch recommendation system for Waveform. Runs daily via GitHub Actions, stores precomputed results in Supabase. Next.js reads results directly — no live ML service.
+Batch recommendation system for Sillon. Runs daily via GitHub Actions, stores precomputed results in Supabase. Next.js reads results directly — no live ML service.
 
 ---
 

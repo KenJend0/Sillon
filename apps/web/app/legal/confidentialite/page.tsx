@@ -13,17 +13,17 @@ export default function Confidentialite() {
 
             <LegalSection title="Qui sommes-nous ?">
                 <p>
-                    Waveform est un journal musical social, projet indépendant non commercial.
+                    Sillon est un journal musical social, projet indépendant non commercial.
                     Cette politique décrit quelles données personnelles nous collectons, pourquoi,
                     et quels droits vous avez sur celles-ci.
                 </p>
                 <p className="mt-3">
-                    Responsable de traitement : Waveform — <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">waveform.contact@proton.me</a>
+                    Responsable de traitement : Sillon — <a href="mailto:sillon.contact@proton.me" className="text-text-primary underline underline-offset-2">sillon.contact@proton.me</a>
                 </p>
             </LegalSection>
 
             <LegalSection title="Données collectées">
-                <p className="mb-3">Lors de l'utilisation de Waveform, nous collectons :</p>
+                <p className="mb-3">Lors de l'utilisation de Sillon, nous collectons :</p>
                 <ul className="space-y-3">
                     <Li label="Compte">
                         Adresse e-mail, nom d'affichage, nom d'utilisateur (@pseudo), biographie,
@@ -114,8 +114,8 @@ export default function Confidentialite() {
                 </ul>
                 <p className="mt-4">
                     Pour exercer ces droits :{" "}
-                    <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
-                        waveform.contact@proton.me
+                    <a href="mailto:sillon.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                        sillon.contact@proton.me
                     </a>
                     . Vous pouvez également introduire une réclamation auprès de la{" "}
                     <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer" className="text-text-primary underline underline-offset-2">
@@ -127,7 +127,7 @@ export default function Confidentialite() {
 
             <LegalSection title="Cookies">
                 <p>
-                    Waveform utilise uniquement des cookies de session strictement nécessaires
+                    Sillon utilise uniquement des cookies de session strictement nécessaires
                     au maintien de votre connexion. Aucun cookie publicitaire ou de tracking tiers n'est utilisé.
                 </p>
             </LegalSection>
@@ -135,8 +135,8 @@ export default function Confidentialite() {
             <LegalSection title="Contact">
                 <p>
                     Pour toute question relative à vos données personnelles :{" "}
-                    <a href="mailto:waveform.contact@proton.me" className="text-text-primary underline underline-offset-2">
-                        waveform.contact@proton.me
+                    <a href="mailto:sillon.contact@proton.me" className="text-text-primary underline underline-offset-2">
+                        sillon.contact@proton.me
                     </a>
                 </p>
             </LegalSection>

@@ -12,7 +12,7 @@
 import { isAcceptableReleaseGroup } from '../lib/musicbrainzReleasePolicy.mjs';
 
 const MUSICBRAINZ_API = 'https://musicbrainz.org/ws/2';
-const USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
+const USER_AGENT = 'Sillon/1.0 (https://sillon.fm)';
 const MB_RATE_LIMIT_MS = 1100; // MB allows 1 req/sec
 
 // ---------------------------------------------------------------------------
@@ -210,7 +210,7 @@ const queries = process.argv.slice(2).length > 0
   ? process.argv.slice(2)
   : DEFAULT_QUERIES;
 
-console.log(`\n${BOLD}${CYAN}=== Waveform Search Test ===${RESET}\n`);
+console.log(`\n${BOLD}${CYAN}=== Sillon Search Test ===${RESET}\n`);
 console.log(`${DIM}Teste les mêmes filtres/ranking que searchMusicBrainzAlbums() + searchMusicBrainzArtists() + computeRank()${RESET}\n`);
 
 for (let i = 0; i < queries.length; i++) {

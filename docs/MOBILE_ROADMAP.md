@@ -1,4 +1,4 @@
-# Waveform Mobile — Roadmap & Checklist
+# Sillon Mobile — Roadmap & Checklist
 
 Application mobile native (React Native / Expo) partageant le même backend Supabase que la version web.
 

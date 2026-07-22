@@ -1,12 +1,12 @@
 import Svg, { Path } from 'react-native-svg';
 
-type WaveformMarkProps = {
+type SillonMarkProps = {
   width?: number;
   height?: number;
   color?: string;
 };
 
-export function WaveformMark({ width = 64, height = 37, color = '#1C1C1C' }: WaveformMarkProps) {
+export function SillonMark({ width = 64, height = 37, color = '#1C1C1C' }: SillonMarkProps) {
   return (
     <Svg width={width} height={height} viewBox="-50 -50 700 400" fill="none">
       <Path

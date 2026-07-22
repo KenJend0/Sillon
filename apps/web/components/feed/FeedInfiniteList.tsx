@@ -695,7 +695,7 @@ function getSavedFeedState(storageKey: string): SavedFeedState | null {
 }
 
 function notifyActivitySeen() {
-  window.dispatchEvent(new CustomEvent('waveform:activity-seen'));
+  window.dispatchEvent(new CustomEvent('sillon:activity-seen'));
 }
 
 export default function FeedInfiniteList({

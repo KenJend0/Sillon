@@ -2,7 +2,7 @@
 --
 -- IMPORTANT:
 -- 1) Create the 20 auth users first in Supabase Auth (Dashboard > Authentication > Users)
---    with emails: <username>@seed.waveform.local
+--    with emails: <username>@seed.sillon.local
 --    (password can be the same for all users)
 -- 2) Then run this script in SQL Editor.
 --
@@ -26,26 +26,26 @@ CREATE TEMP TABLE tmp_seed_users (
 ) ON COMMIT DROP;
 
 INSERT INTO tmp_seed_users (username, bio, style, created_at, email) VALUES
-('ruefroide', 'je note surtout le rap fr qui traine pas partout', 'rap_fr_underground', '2025-01-12', 'ruefroide@seed.waveform.local'),
-('lucas_music', 'jecoute un peu de tout', 'mainstream', '2025-01-20', 'lucas_music@seed.waveform.local'),
-('lostinaudio', 'je cherche des trucs un peu partout', 'global_digger', '2025-01-05', 'lostinaudio@seed.waveform.local'),
-('nightvibes', 'musique pour le soir', 'rnb_chill', '2025-01-18', 'nightvibes@seed.waveform.local'),
-('filmsonics', 'les bandes originales c est la vie', 'soundtracks', '2025-01-10', 'filmsonics@seed.waveform.local'),
-('ldnflow', 'uk rap and grime', 'uk', '2025-01-08', 'ldnflow@seed.waveform.local'),
-('indienight', 'indie and alt vibes', 'indie', '2025-01-15', 'indienight@seed.waveform.local'),
-('emma', 'jecoute surtout en voiture', 'casual', '2025-01-25', 'emma@seed.waveform.local'),
-('caliente', 'reggaeton and latino', 'latino', '2025-01-10', 'caliente@seed.waveform.local'),
-('popdiary', 'pop lover', 'pop', '2025-01-18', 'popdiary@seed.waveform.local'),
-('hardears', 'note severe', 'critic', '2025-01-05', 'hardears@seed.waveform.local'),
-('nightpulse', 'electronic only', 'electro', '2025-01-12', 'nightpulse@seed.waveform.local'),
-('oldrecords', 'jazz and classics', 'classic', '2025-01-07', 'oldrecords@seed.waveform.local'),
-('sunwave', 'afrobeats lover', 'afro', '2025-01-20', 'sunwave@seed.waveform.local'),
-('antoine', 'rap fr plus un peu de tout', 'fr_casual', '2025-01-22', 'antoine@seed.waveform.local'),
-('soundtracklife', 'film music only', 'soundtrack', '2025-01-09', 'soundtracklife@seed.waveform.local'),
-('guitars', 'rock only', 'rock', '2025-01-06', 'guitars@seed.waveform.local'),
-('softvoice', 'rnb feminin', 'rnb', '2025-01-14', 'softvoice@seed.waveform.local'),
-('leo', '', 'random', '2025-01-28', 'leo@seed.waveform.local'),
-('noah', '', 'minimal', '2025-01-30', 'noah@seed.waveform.local');
+('ruefroide', 'je note surtout le rap fr qui traine pas partout', 'rap_fr_underground', '2025-01-12', 'ruefroide@seed.sillon.local'),
+('lucas_music', 'jecoute un peu de tout', 'mainstream', '2025-01-20', 'lucas_music@seed.sillon.local'),
+('lostinaudio', 'je cherche des trucs un peu partout', 'global_digger', '2025-01-05', 'lostinaudio@seed.sillon.local'),
+('nightvibes', 'musique pour le soir', 'rnb_chill', '2025-01-18', 'nightvibes@seed.sillon.local'),
+('filmsonics', 'les bandes originales c est la vie', 'soundtracks', '2025-01-10', 'filmsonics@seed.sillon.local'),
+('ldnflow', 'uk rap and grime', 'uk', '2025-01-08', 'ldnflow@seed.sillon.local'),
+('indienight', 'indie and alt vibes', 'indie', '2025-01-15', 'indienight@seed.sillon.local'),
+('emma', 'jecoute surtout en voiture', 'casual', '2025-01-25', 'emma@seed.sillon.local'),
+('caliente', 'reggaeton and latino', 'latino', '2025-01-10', 'caliente@seed.sillon.local'),
+('popdiary', 'pop lover', 'pop', '2025-01-18', 'popdiary@seed.sillon.local'),
+('hardears', 'note severe', 'critic', '2025-01-05', 'hardears@seed.sillon.local'),
+('nightpulse', 'electronic only', 'electro', '2025-01-12', 'nightpulse@seed.sillon.local'),
+('oldrecords', 'jazz and classics', 'classic', '2025-01-07', 'oldrecords@seed.sillon.local'),
+('sunwave', 'afrobeats lover', 'afro', '2025-01-20', 'sunwave@seed.sillon.local'),
+('antoine', 'rap fr plus un peu de tout', 'fr_casual', '2025-01-22', 'antoine@seed.sillon.local'),
+('soundtracklife', 'film music only', 'soundtrack', '2025-01-09', 'soundtracklife@seed.sillon.local'),
+('guitars', 'rock only', 'rock', '2025-01-06', 'guitars@seed.sillon.local'),
+('softvoice', 'rnb feminin', 'rnb', '2025-01-14', 'softvoice@seed.sillon.local'),
+('leo', '', 'random', '2025-01-28', 'leo@seed.sillon.local'),
+('noah', '', 'minimal', '2025-01-30', 'noah@seed.sillon.local');
 
 -- ----------
 -- 2) Resolve auth users and create profiles

@@ -1,11 +1,11 @@
-WAVEFORM — CHARTE GRAPHIQUE v2
+SILLON — CHARTE GRAPHIQUE v2
 ═══════════════════════════════════════════════════════════════════════════════
 
 
 1. POSITIONNEMENT VISUEL
 ───────────────────────
 
-Waveform est :
+Sillon est :
 
   Intime — un journal personnel, pas un réseau social
   Éditorial — le contenu prime sur l'interface
@@ -77,7 +77,7 @@ Test final : une capture en noir et blanc reste lisible.
 3. TYPOGRAPHIE
 ──────────────
 
-  Waveform est éditorial. Deux polices, deux rôles distincts.
+  Sillon est éditorial. Deux polices, deux rôles distincts.
 
   POLICES
   ────────

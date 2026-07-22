@@ -9,7 +9,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const MUSICBRAINZ_API = 'https://musicbrainz.org/ws/2';
-const USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
+const USER_AGENT = 'Sillon/1.0 (https://sillon.fm)';
 
 const albumId = process.argv[2];
 if (!albumId) {

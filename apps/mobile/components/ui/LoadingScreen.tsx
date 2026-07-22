@@ -8,7 +8,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { WaveformMark } from '../icons/WaveformMark';
+import { SillonMark } from '../icons/SillonMark';
 
 type Props = {
   size?: number;
@@ -45,7 +45,7 @@ export function LoadingScreen({ size = 56, color = '#1C1C1C', fullScreen = true,
 
   const mark = (
     <Animated.View style={[animatedStyle, style]}>
-      <WaveformMark width={size} height={size * 0.58} color={color} />
+      <SillonMark width={size} height={size * 0.58} color={color} />
     </Animated.View>
   );
 

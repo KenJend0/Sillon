@@ -15,7 +15,7 @@
 import { isAcceptableReleaseGroup } from '../lib/musicbrainzReleasePolicy.mjs';
 
 const MUSICBRAINZ_API = 'https://musicbrainz.org/ws/2';
-const USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
+const USER_AGENT = 'Sillon/1.0 (https://sillon.fm)';
 const MB_RATE_LIMIT_MS = 1100; // MB allows 1 req/sec
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -149,7 +149,7 @@ const DEFAULT_QUERIES = [
 const argQueries = process.argv.slice(2);
 const queries = argQueries.length > 0 ? argQueries : DEFAULT_QUERIES;
 
-console.log(`\n${BOLD}${CYAN}=== Waveform Track Search Test ===${RESET}\n`);
+console.log(`\n${BOLD}${CYAN}=== Sillon Track Search Test ===${RESET}\n`);
 console.log(`${DIM}Teste searchMusicBrainzRecordings() tel qu'utilisé par TrackSearchForDiary${RESET}\n`);
 
 for (let i = 0; i < queries.length; i++) {

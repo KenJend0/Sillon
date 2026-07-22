@@ -1,4 +1,4 @@
-# Waveform — Roadmap
+# Sillon — Roadmap
 
 ---
 
@@ -113,7 +113,7 @@ Ce qui rend l'app vraiment utilisable au quotidien.
 
 ### Import & données
 - [x] **Import historique Last.fm** — pseudo public → top albums ajoutés à une liste privée "Import Last.fm", notables depuis `/add` ou la liste ; mentionné (texte, sans lien) à l'écran de lancement de l'onboarding, dispo dans `/settings`
-- [x] **Import historique RateYourMusic** — upload du CSV exporté par l'utilisateur depuis son profil RYM ; notes (échelle 0-10, identique à Waveform) et critiques mappées directement en `diary_entries` (pas de liste de triage, contrairement à Last.fm)
+- [x] **Import historique RateYourMusic** — upload du CSV exporté par l'utilisateur depuis son profil RYM ; notes (échelle 0-10, identique à Sillon) et critiques mappées directement en `diary_entries` (pas de liste de triage, contrairement à Last.fm)
 - [x] **Export RGPD** — dump JSON du diary sur demande (automatisé, pas manuel)
 
 ### Listes (wishlist)
@@ -237,7 +237,7 @@ Messagerie privée, ML lourd au-delà du pipeline batch actuel, refonte complèt
 - [x] Suppression de compte
 - [x] Vercel Analytics
 - [x] Pages légales + FAQ
-- [x] Email de contact : waveform.contact@proton.me
+- [x] Email de contact : sillon.contact@proton.me
 - [x] Onboarding flow 3 étapes (pseudo → suggestions → lancement)
 - [x] SMTP Resend configuré
 - [x] Intégrité données follows (CASCADE FK + cleanup orphelins)

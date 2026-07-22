@@ -123,7 +123,7 @@ export default function ExploreScreen() {
       ) : isEmpty ? (
         <View className="py-16 items-center" style={{ gap: 16 }}>
           <Text className="text-text-primary text-center" style={{ fontFamily: 'Inter_500Medium', fontSize: 16 }}>
-            Bienvenue sur Waveform !
+            Bienvenue sur Sillon !
           </Text>
           <Text className="text-text-secondary text-center" style={{ fontFamily: 'Inter_400Regular', fontSize: 14 }}>
             Commence à découvrir de la musique en recherchant tes albums et artistes préférés.

@@ -42,7 +42,7 @@ import { canonicalTrackTitle } from '../lib/trackCanonical.mjs';
 import { pickBestRelease, releaseSelectionMode } from '../lib/musicbrainzReleasePolicy.mjs';
 
 const MUSICBRAINZ_API = 'https://musicbrainz.org/ws/2';
-const USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
+const USER_AGENT = 'Sillon/1.0 (https://sillon.fm)';
 const DELAY_MS = 1200; // slightly above 1s to stay safely under MB rate limit
 
 const supabase = createClient(
@@ -131,7 +131,7 @@ async function getOrCreateArtistByMbid(mbid, name) {
 }
 
 async function main() {
-  console.log('🎵 Waveform — Featured artists backfill\n');
+  console.log('🎵 Sillon — Featured artists backfill\n');
   if (!apply) console.log('🔍 DRY RUN — no writes will be made (re-run with --apply)\n');
   if (skipCount > 0) console.log(`⏭️  Skipping first ${skipCount} album(s)\n`);
 

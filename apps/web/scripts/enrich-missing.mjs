@@ -37,7 +37,7 @@ import { createClient } from '@supabase/supabase-js';
 // ── Config ─────────────────────────────────────────────────────────────────────
 
 const MB_API = 'https://musicbrainz.org/ws/2';
-const MB_UA  = 'Waveform/1.0 (https://waveformapp.online)';
+const MB_UA  = 'Sillon/1.0 (https://sillon.fm)';
 const LFM_API = 'https://ws.audioscrobbler.com/2.0';
 const CAA_URL = 'https://coverartarchive.org/release-group';
 const DELAY_MS = 1250; // safely above MB's 1 req/s limit
@@ -1064,7 +1064,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('🎵 Waveform — Enrichissement');
+  console.log('🎵 Sillon — Enrichissement');
   if (DRY_RUN)     console.log('   Mode dry-run activé — aucune écriture en BDD.');
   if (PHASE4_ONLY) console.log('   Mode phase4-only — backfill liens streaming par titre.');
   if (LIMIT !== Infinity) console.log(`   Limite : ${LIMIT} élément(s) par phase.`);

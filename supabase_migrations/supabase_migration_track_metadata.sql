@@ -1,5 +1,5 @@
 -- ============================================================
--- WAVEFORM — Migration : track_metadata
+-- SILLON — Migration : track_metadata
 -- Liens streaming par titre (Spotify, Apple Music, Deezer)
 -- À exécuter via le Supabase SQL Editor
 -- ============================================================

@@ -9,7 +9,7 @@
  */
 
 const MB_API = 'https://musicbrainz.org/ws/2';
-const MB_UA = 'Waveform/1.0 (https://waveformapp.online)';
+const MB_UA = 'Sillon/1.0 (https://sillon.fm)';
 const LFM_API = 'https://ws.audioscrobbler.com/2.0';
 const DELAY_MS = 1250; // safely above MB's 1 req/s limit
 

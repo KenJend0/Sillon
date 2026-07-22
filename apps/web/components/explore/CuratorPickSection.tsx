@@ -165,7 +165,7 @@ export default function CuratorPickSection({
                                 Sélectionné par <span className="text-accent-deep">{pick.curator_username}</span>
                             </p>
                             <p className="text-[11.5px] text-text-tertiary leading-tight mt-0.5">
-                                créateur de Waveform · une trouvaille par semaine
+                                créateur de Sillon · une trouvaille par semaine
                             </p>
                         </div>
                     </div>

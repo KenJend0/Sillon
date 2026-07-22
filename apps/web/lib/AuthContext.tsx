@@ -167,8 +167,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       refreshUnseenActivity().catch(() => setUnseenActivity(false));
     };
 
-    window.addEventListener('waveform:activity-seen', handleActivitySeen);
-    return () => window.removeEventListener('waveform:activity-seen', handleActivitySeen);
+    window.addEventListener('sillon:activity-seen', handleActivitySeen);
+    return () => window.removeEventListener('sillon:activity-seen', handleActivitySeen);
   }, [refreshUnseenActivity, user]);
 
   const signOut = async () => {

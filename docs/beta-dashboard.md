@@ -1,8 +1,8 @@
-# Dashboard beta Waveform
+# Dashboard beta Sillon
 
 Objectif: savoir si un nouvel utilisateur comprend la promesse du produit, fait une premiere action utile, puis revient.
 
-Ce dashboard est volontairement minimal. Tant que Waveform est en beta, il ne faut pas suivre 50 chiffres. Il faut suivre le funnel coeur du produit.
+Ce dashboard est volontairement minimal. Tant que Sillon est en beta, il ne faut pas suivre 50 chiffres. Il faut suivre le funnel coeur du produit.
 
 Les requetes SQL prêtes a lancer sont dans [docs/beta-dashboard-sql.md](docs/beta-dashboard-sql.md).
 
@@ -58,7 +58,7 @@ KPIs:
 
 ## Evenements a suivre
 
-Waveform a deja Vercel Analytics pour les vues de pages. Il manque surtout des evenements produit.
+Sillon a deja Vercel Analytics pour les vues de pages. Il manque surtout des evenements produit.
 
 Evenements minimum a emettre:
 

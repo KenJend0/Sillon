@@ -3,8 +3,8 @@ import LegalPageShell from "@/components/legal/LegalPageShell";
 
 export const metadata: Metadata = {
     title: {
-        default: "Légal — Waveform",
-        template: "%s — Waveform",
+        default: "Légal — Sillon",
+        template: "%s — Sillon",
     },
 };
 

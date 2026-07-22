@@ -25,7 +25,7 @@ export default function LegalPageShell({ children }: { children: React.ReactNode
                 <div className="mb-8">
                     <BackButton className="mb-6" />
                     <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-text-tertiary tracking-widest uppercase">Waveform</span>
+                        <span className="text-sm font-medium text-text-tertiary tracking-widest uppercase">Sillon</span>
                     </div>
                 </div>
 

@@ -1,5 +1,5 @@
 -- ============================================================
--- WAVEFORM — Migration : Metadata (genres, album_genres, album_metadata)
+-- SILLON — Migration : Metadata (genres, album_genres, album_metadata)
 -- À exécuter via le Supabase SQL Editor (une seule fois en production)
 -- ============================================================
 

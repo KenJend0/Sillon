@@ -29,7 +29,7 @@ import { canonicalAlbumKey } from '../lib/albumCanonical.mjs';
 import { canonicalTrackTitle } from '../lib/trackCanonical.mjs';
 
 const MB_API = 'https://musicbrainz.org/ws/2';
-const MB_UA = 'Waveform/1.0 (https://waveformapp.online)';
+const MB_UA = 'Sillon/1.0 (https://sillon.fm)';
 const CAA_URL = 'https://coverartarchive.org/release-group';
 const DELAY_MS = 1250; // safely above MB's 1 req/s limit
 const STALE_MINUTES = 3;
@@ -399,7 +399,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('🎵 Waveform — Reprise des imports externes (Last.fm/RYM)');
+  console.log('🎵 Sillon — Reprise des imports externes (Last.fm/RYM)');
   if (DRY_RUN) console.log('   Mode dry-run activé — aucune écriture en BDD.');
   console.log('');
 

@@ -15,7 +15,7 @@ export default function Loading() {
                     ))}
                 </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo/mark.svg" alt="Waveform" className="h-4 w-auto opacity-40" />
+                <img src="/logo/mark.svg" alt="Sillon" className="h-4 w-auto opacity-40" />
             </div>
             <style>{`
                 @keyframes waveBar {

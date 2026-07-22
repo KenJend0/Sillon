@@ -1,4 +1,4 @@
-# Audit Supabase pré-V1 — Waveform
+# Audit Supabase pré-V1 — Sillon
 
 Audit de l'architecture base de données + du pipeline de suppression des critiques, mené avant le gel du schéma pour la V1. Coche au fur et à mesure qu'on traite chaque point.
 

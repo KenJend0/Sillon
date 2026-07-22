@@ -4,7 +4,7 @@ export default function Loading() {
     return (
         <div className="min-h-screen bg-background animate-pulse">
             <div className="max-w-2xl mx-auto px-6 py-12 pb-24">
-                {/* Shell: BackButton + "Waveform" label */}
+                {/* Shell: BackButton + "Sillon" label */}
                 <div className="mb-8">
                     <div className="h-4 w-16 bg-background-secondary rounded mb-6" />
                     <div className="h-3 w-20 bg-background-secondary rounded" />

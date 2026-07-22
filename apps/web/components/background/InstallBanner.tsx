@@ -125,7 +125,7 @@ export default function InstallBanner() {
       <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.3', flex: 1 }}>
         {mode === 'ios'
           ? <>Tape <strong>•••</strong> en bas à droite, puis <strong>Partager</strong>, puis <strong>Sur l&apos;écran d&apos;accueil</strong>.</>
-          : <>Installe Waveform — accès rapide depuis ton écran d&apos;accueil.</>
+          : <>Installe Sillon — accès rapide depuis ton écran d&apos;accueil.</>
         }
       </p>
 

@@ -10,15 +10,15 @@
  * par process serveur.
  */
 
-export interface WaveformFonts {
+export interface SillonFonts {
   regular: ArrayBuffer;
   medium: ArrayBuffer;
   italic: ArrayBuffer;
 }
 
-let _cache: WaveformFonts | null = null;
+let _cache: SillonFonts | null = null;
 
-export async function loadFonts(): Promise<WaveformFonts> {
+export async function loadFonts(): Promise<SillonFonts> {
   if (_cache) return _cache;
 
   const [regular, medium, italic] = await Promise.all([

@@ -25,7 +25,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const APPLY = process.argv.includes('--apply');
 const BUCKET = 'covers';
-const USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
+const USER_AGENT = 'Sillon/1.0 (https://sillon.fm)';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,

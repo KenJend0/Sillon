@@ -2,7 +2,7 @@ import 'server-only';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 const BUCKET = 'covers';
-const USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
+const USER_AGENT = 'Sillon/1.0 (https://sillon.fm)';
 // URLs already in Supabase Storage — skip re-upload
 const SUPABASE_STORAGE_HOST = 'supabase.co/storage';
 

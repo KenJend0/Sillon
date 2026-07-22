@@ -109,7 +109,7 @@ export default async function ExplorePage() {
                     <div className="text-center py-16 space-y-6">
                         <div className="space-y-3">
                             <p className="text-body text-text-primary font-medium">
-                                Bienvenue sur Waveform !
+                                Bienvenue sur Sillon !
                             </p>
                             <p className="text-meta text-text-secondary max-w-md mx-auto">
                                 Commence à découvrir de la musique en recherchant tes albums et artistes préférés.

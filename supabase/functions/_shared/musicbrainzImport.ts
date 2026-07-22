@@ -22,7 +22,7 @@ import { isAcceptableReleaseGroup, pickBestRelease, releaseSelectionMode } from 
 import { uploadCoverToSupabase } from './storage.ts';
 
 const MUSICBRAINZ_API = 'https://musicbrainz.org/ws/2';
-const USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
+const USER_AGENT = 'Sillon/1.0 (https://sillon.fm)';
 
 function normalizeReleaseDate(date?: string | null): string | null {
   if (!date) return null;

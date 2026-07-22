@@ -32,7 +32,7 @@ const env = loadEnv(resolve(__dirname, '../frontend/.env.local'));
 const SUPABASE_URL = env['NEXT_PUBLIC_SUPABASE_URL'];
 const SUPABASE_SERVICE_KEY = env['SUPABASE_SERVICE_KEY'];
 const LASTFM_API_KEY = env['LASTFM_API_KEY'];
-const MB_USER_AGENT = 'Waveform/1.0 (https://waveform.app)';
+const MB_USER_AGENT = 'Sillon/1.0 (https://sillon.fm)';
 const TIMEOUT_MS = 4000;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
@@ -121,7 +121,7 @@ async function testLastFm(artist, title) {
 const SAMPLE_SIZE = 30;
 const DELAY_MS = 1200; // respect MB 1 req/sec
 
-console.log(`\n🎵 Waveform — Test de couverture metadata`);
+console.log(`\n🎵 Sillon — Test de couverture metadata`);
 console.log(`   Last.fm API key : ${LASTFM_API_KEY ? '✓ présente' : '✗ absente'}\n`);
 
 // Récupère un échantillon d'albums avec mbid + artiste (via PostgREST)

@@ -1,5 +1,5 @@
 -- ============================================================
--- WAVEFORM — Migration : santé des jobs cron (GitHub Actions)
+-- SILLON — Migration : santé des jobs cron (GitHub Actions)
 -- À exécuter via le Supabase SQL Editor (une seule fois en production)
 --
 -- Contexte : daily-enrich.yml a échoué silencieusement 5 nuits de suite

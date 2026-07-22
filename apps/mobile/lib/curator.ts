@@ -43,7 +43,7 @@ export async function getCuratorPick(): Promise<CuratorPick | null> {
     avg_rating: stats?.avg_rating ?? null,
     note: data.note,
     curator_id: data.curator_id,
-    curator_username: curator?.username || 'Waveform',
+    curator_username: curator?.username || 'Sillon',
     curator_avatar: curator?.avatar_url ?? null,
   };
 }

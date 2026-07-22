@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils.supabase_client import get_client
 
 BUCKET = "covers"
-USER_AGENT = "Waveform/1.0 (https://waveform.app)"
+USER_AGENT = "Sillon/1.0 (https://sillon.fm)"
 SUPABASE_STORAGE_MARKER = "supabase.co/storage"
 DOWNLOAD_TIMEOUT_S = 10
 SLEEP_BETWEEN_S = 0.1   # stay polite to archive.org

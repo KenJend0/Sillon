@@ -1,7 +1,7 @@
 import 'server-only';
 
 const REPO_OWNER = 'KenJend0';
-const REPO_NAME = 'waveform';
+const REPO_NAME = 'sillon';
 const WORKFLOW_FILE = 'process-external-imports.yml';
 
 /**

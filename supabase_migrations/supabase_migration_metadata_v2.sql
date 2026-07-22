@@ -1,5 +1,5 @@
 -- ============================================================
--- WAVEFORM — Migration : album_metadata v2
+-- SILLON — Migration : album_metadata v2
 -- Ajout des colonnes lastfm_listeners et lastfm_playcount
 -- À exécuter via le Supabase SQL Editor
 -- ============================================================

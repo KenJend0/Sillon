@@ -2,7 +2,7 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const BUCKET = 'covers';
-const USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
+const USER_AGENT = 'Sillon/1.0 (https://sillon.fm)';
 const SUPABASE_STORAGE_HOST = 'supabase.co/storage';
 
 /**

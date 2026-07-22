@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="apps/web/waveform.png" alt="Waveform" width="96">
+  <img src="apps/web/sillon.png" alt="Sillon" width="96">
 </p>
 
-<h1 align="center">Waveform</h1>
+<h1 align="center">Sillon</h1>
 <p align="center">A social music discovery platform — track your listening, rate albums and tracks, and see what your friends are into.</p>
 
 <p align="center">
@@ -17,7 +17,7 @@
 
 ## Overview
 
-Waveform is a personal, production-oriented project: a music diary and social discovery
+Sillon is a personal, production-oriented project: a music diary and social discovery
 app, similar in spirit to Letterboxd but for music. Users log listens, rate albums and
 tracks, follow each other, and get personalized recommendations computed by a batch ML
 pipeline.
@@ -112,8 +112,8 @@ Full detail: [`ml/README.md`](ml/README.md).
 ### Web app
 
 ```bash
-git clone https://github.com/KenJend0/waveform.git
-cd waveform/apps/web
+git clone https://github.com/KenJend0/sillon.git
+cd sillon/apps/web
 npm install
 cp .env.example .env.local   # fill in the values below
 npm run dev

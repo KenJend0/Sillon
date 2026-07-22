@@ -36,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils.supabase_client import get_client
 
 MB_API = "https://musicbrainz.org/ws/2"
-USER_AGENT = "WaveformML/1.0 (https://waveform.app)"
+USER_AGENT = "SillonML/1.0 (https://sillon.fm)"
 RATE_LIMIT_S = 1.1   # MB allows 1 req/s
 MIN_TAG_COUNT = 3     # ignore tags with fewer votes
 MAX_TAGS = 12

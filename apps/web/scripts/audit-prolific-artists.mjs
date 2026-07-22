@@ -26,7 +26,7 @@ import { createClient } from '@supabase/supabase-js';
 import { writeFileSync, readFileSync } from 'fs';
 
 const MUSICBRAINZ_API = 'https://musicbrainz.org/ws/2';
-const USER_AGENT = 'Waveform/1.0 (https://waveformapp.online)';
+const USER_AGENT = 'Sillon/1.0 (https://sillon.fm)';
 const DELAY_MS = 1300;
 
 const outArg = process.argv.find((a) => a.startsWith('--out='));

@@ -1,5 +1,5 @@
 -- ============================================================
--- WAVEFORM — Migration : nettoyage des genres parasites
+-- SILLON — Migration : nettoyage des genres parasites
 -- À exécuter via le Supabase SQL Editor
 -- ============================================================
 

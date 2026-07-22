@@ -47,7 +47,7 @@ export default function Header() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="/logo/mark.svg" alt="" aria-hidden="true" className="h-5 w-auto" />
                     <span className="font-display italic text-[23px] leading-none">
-                        Waveform
+                        Sillon
                     </span>
                 </Link>
 

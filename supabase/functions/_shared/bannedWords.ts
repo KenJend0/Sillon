@@ -34,7 +34,8 @@ const USERNAME_BANNED_WORDS: string[] = [
 
   // Reserved / impersonation
   'admin', 'administrator', 'moderator', 'mod', 'support', 'staff', 'official',
-  'waveform', 'waveformapp', 'teamwaveform', 'waveformteam', 'owner', 'founder',
+  'waveform', 'waveformapp', 'teamwaveform', 'waveformteam',
+  'sillon', 'sillonapp', 'teamsillon', 'sillonteam', 'owner', 'founder',
   'security', 'contact', 'helpdesk', 'serviceclient', 'sav',
 ];
 
