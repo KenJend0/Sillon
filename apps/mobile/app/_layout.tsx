@@ -38,6 +38,7 @@ export default function RootLayout() {
                   de (tabs), qui gère elle-même son propre TopTabs + Stack imbriqué. */}
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(auth)" />
+                <Stack.Screen name="auth/callback" />
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="albums/[id]" options={{ animation: 'slide_from_right' }} />
                 <Stack.Screen name="tracks/[id]" options={{ animation: 'slide_from_right' }} />

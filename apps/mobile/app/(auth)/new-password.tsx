@@ -8,47 +8,42 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import { SillonMark } from '../../components/icons/SillonMark';
 
-export default function LoginScreen() {
+export default function NewPasswordScreen() {
   const router = useRouter();
-  const { error: urlError } = useLocalSearchParams<{ error?: string }>();
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(
-    urlError === 'confirmation_failed'
-      ? 'Le lien est invalide ou expiré. Réessaie ou demande un nouveau lien.'
-      : null
-  );
+  const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async () => {
+  const handleSubmit = async () => {
     setError(null);
-    setLoading(true);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
-
-    setLoading(false);
-
-    if (signInError) {
-      let message = signInError.message;
-      if (message.includes('Invalid login credentials')) {
-        message = 'Adresse mail ou mot de passe incorrect';
-      } else if (message.includes('Email not confirmed')) {
-        message = 'Confirme ton email avant de te connecter.';
-      }
-      setError(message);
+    if (password.length < 8) {
+      setError('Le mot de passe doit contenir au moins 8 caractères');
+      return;
+    }
+    if (password !== confirm) {
+      setError('Les mots de passe ne correspondent pas');
       return;
     }
 
-    router.replace('/(tabs)/explore');
+    setLoading(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+
+    if (updateError) {
+      setError(updateError.message || 'Erreur lors de la mise à jour du mot de passe');
+      return;
+    }
+
+    await supabase.auth.signOut();
+    router.replace('/(auth)/login');
   };
 
   return (
@@ -61,7 +56,7 @@ export default function LoginScreen() {
           <SillonMark />
         </View>
         <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-text-secondary text-center mb-8">
-          Connecte-toi à ton compte
+          Choisis un nouveau mot de passe
         </Text>
 
         {error && (
@@ -77,27 +72,7 @@ export default function LoginScreen() {
             style={{ fontFamily: 'Inter_500Medium' }}
             className="text-sm text-text-secondary mb-1"
           >
-            Email
-          </Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="vous@example.com"
-            placeholderTextColor="#9A9A9A"
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            style={{ fontFamily: 'Inter_400Regular' }}
-            className="bg-background-secondary border border-border rounded-input px-3 py-3 text-text-primary"
-          />
-        </View>
-
-        <View className="mb-6">
-          <Text
-            style={{ fontFamily: 'Inter_500Medium' }}
-            className="text-sm text-text-secondary mb-1"
-          >
-            Mot de passe
+            Nouveau mot de passe
           </Text>
           <View className="relative justify-center">
             <TextInput
@@ -124,43 +99,41 @@ export default function LoginScreen() {
           </View>
         </View>
 
+        <View className="mb-2">
+          <Text
+            style={{ fontFamily: 'Inter_500Medium' }}
+            className="text-sm text-text-secondary mb-1"
+          >
+            Confirmer
+          </Text>
+          <TextInput
+            value={confirm}
+            onChangeText={setConfirm}
+            placeholder="••••••••••"
+            placeholderTextColor="#9A9A9A"
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            style={{ fontFamily: 'Inter_400Regular' }}
+            className="bg-background-secondary border border-border rounded-input px-3 py-3 text-text-primary"
+          />
+        </View>
+        <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-xs text-text-tertiary mb-6">
+          Minimum 8 caractères
+        </Text>
+
         <Pressable
-          onPress={handleLogin}
-          disabled={loading || !email || !password}
+          onPress={handleSubmit}
+          disabled={loading || !password || !confirm}
           className="bg-text-warm rounded-button py-3 items-center disabled:opacity-40"
         >
           {loading ? (
             <ActivityIndicator color="#FAF8F4" />
           ) : (
             <Text style={{ fontFamily: 'Inter_500Medium' }} className="text-paper-hi">
-              Se connecter
+              Changer le mot de passe
             </Text>
           )}
         </Pressable>
-
-        <View className="items-center mt-6 gap-3">
-          <View className="flex-row">
-            <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-text-secondary text-sm">
-              Pas encore de compte ?{' '}
-            </Text>
-            <Link href="/(auth)/signup">
-              <Text
-                style={{ fontFamily: 'Inter_400Regular' }}
-                className="text-text-primary underline text-sm"
-              >
-                Créer un compte
-              </Text>
-            </Link>
-          </View>
-          <Link href="/(auth)/reset-password">
-            <Text
-              style={{ fontFamily: 'Inter_400Regular' }}
-              className="text-text-primary underline text-sm"
-            >
-              Mot de passe oublié ?
-            </Text>
-          </Link>
-        </View>
       </View>
     </KeyboardAvoidingView>
   );

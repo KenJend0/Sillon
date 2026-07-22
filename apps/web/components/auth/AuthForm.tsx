@@ -27,6 +27,7 @@ export default function AuthForm() {
   const [firstName, setFirstName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const urlError = searchParams.get("error");
 
   const navigateAfterAuth = (destination: "/explore" | "/onboarding" = "/explore") => {
@@ -150,11 +151,7 @@ export default function AuthForm() {
           throw new Error("Impossible d'envoyer l'email de réinitialisation pour l'instant.");
         }
 
-        showToast(
-          "Email de réinitialisation envoyé ! Vérifie ta boîte mail.",
-          "success"
-        );
-        setMode("login");
+        setResetSent(true);
         setEmail("");
       }
     } catch (err: any) {
@@ -177,10 +174,34 @@ export default function AuthForm() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo/mark.svg" alt="Sillon" className="h-10 w-auto mx-auto mb-4" />
         <p className="text-meta text-text-secondary">
-          {mode === "login" ? "Connecte-toi à ton compte" : mode === "signup" ? "Crée ton compte Sillon" : "Réinitialise ton mot de passe"}
+          {mode === "login"
+            ? "Connecte-toi à ton compte"
+            : mode === "signup"
+            ? "Crée ton compte Sillon"
+            : resetSent
+            ? "Email envoyé"
+            : "Réinitialise ton mot de passe"}
         </p>
       </div>
 
+      {mode === "reset" && resetSent ? (
+        <div className="space-y-6">
+          <p className="text-meta text-text-secondary text-center">
+            Si un compte existe pour cette adresse, un lien de réinitialisation vient d&apos;être envoyé.
+            Clique dessus pour choisir un nouveau mot de passe. Tu peux aussi te reconnecter normalement
+            si tu as retrouvé le tien entre-temps.
+          </p>
+          <button
+            onClick={() => {
+              setMode("login");
+              setResetSent(false);
+            }}
+            className="w-full px-4 py-2.5 bg-[#1C1C1C] hover:opacity-85 rounded-[8px] text-[#F5F3EF] font-medium transition-opacity"
+          >
+            Retour à la connexion
+          </button>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-4">
 
         {mode === "signup" && (
@@ -272,9 +293,10 @@ export default function AuthForm() {
           {loading ? "Chargement..." : mode === "login" ? "Se connecter" : mode === "signup" ? "Créer un compte" : "Envoyer le lien"}
         </button>
       </form>
+      )}
 
       <div className="text-center text-meta text-text-secondary space-y-2">
-        {mode === "login" ? (
+        {mode === "reset" && resetSent ? null : mode === "login" ? (
           <>
             <div>
               Pas encore de compte ?{" "}
@@ -295,6 +317,7 @@ export default function AuthForm() {
                 onClick={() => {
                   setMode("reset");
                   setPassword("");
+                  setResetSent(false);
                 }}
                 className="underline underline-offset-2 text-text-primary hover:text-[#8E6F5E] transition-colors duration-150"
               >

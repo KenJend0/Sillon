@@ -7,17 +7,17 @@
 
 ## PHASE 1 — Renommage
 
-- [ ] Changer le nom de l'app dans `app.json` / `app.config.js` (Expo) : `"name": "Sillon"`
-- [ ] Changer le `slug` Expo : `"slug": "sillon"`
-- [ ] Changer le Bundle ID iOS : `fm.sillon.app`
-- [ ] Changer l'Application ID Android : `fm.sillon.app`
-- [ ] Remplacer toutes les occurrences "Waveform" dans le code (variables, commentaires, constantes)
-- [ ] Mettre à jour le titre de l'onglet web (`<title>Sillon</title>`)
-- [ ] Mettre à jour les meta tags web (og:title, og:description)
-- [ ] Acheter le domaine `sillon.fm`
-- [ ] Rediriger l'ancien domaine vers sillon.fm si nécessaire
-- [ ] Créer les comptes réseaux : Instagram @sillon.fm · X @sillonfm · TikTok @sillonfm
-- [ ] Mettre à jour les liens dans l'app (CGU, contact, liens sociaux)
+- [x] Changer le nom de l'app dans `app.json` / `app.config.js` (Expo) : `"name": "Sillon"`
+- [x] Changer le `slug` Expo : `"sillon-mobile"` (pas `"sillon"` seul — même convention que l'ancien `waveform-mobile`)
+- [x] Changer le Bundle ID iOS : `com.sillon.app` (décidé à la place de `fm.sillon.app` — convention plus standard)
+- [x] Changer l'Application ID Android : `com.sillon.app`
+- [x] Remplacer toutes les occurrences "Waveform" dans le code (variables, commentaires, constantes)
+- [x] Mettre à jour le titre de l'onglet web (`<title>Sillon</title>`)
+- [x] Mettre à jour les meta tags web (og:title, og:description)
+- [x] Acheter le domaine `sillon.fm`
+- [x] Rediriger l'ancien domaine vers sillon.fm si nécessaire
+- [X] Créer les comptes réseaux : Instagram @sillon.fm · TikTok @sillon.fm
+- [ ] Mettre à jour les liens dans l'app (CGU, contact fait — liens sociaux en attente des comptes ci-dessus)
 
 ---
 

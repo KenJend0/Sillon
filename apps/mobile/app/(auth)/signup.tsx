@@ -32,6 +32,7 @@ export default function SignupScreen() {
       email: email.trim(),
       password,
       options: {
+        emailRedirectTo: 'sillon://auth/callback',
         data: {
           display_name: firstName.trim() || null,
         },
