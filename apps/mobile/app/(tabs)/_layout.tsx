@@ -4,9 +4,11 @@ import { TopTabs } from 'expo-router/js-top-tabs';
 import { SearchOverlayProvider } from '../../lib/SearchOverlayContext';
 import { SearchOverlayHost } from '../../components/layout/SearchOverlay';
 import { useAuth } from '../../lib/AuthContext';
+import { useScrollNav } from '../../lib/ScrollNavContext';
 
 export default function TabsLayout() {
   const { session, loading } = useAuth();
+  const { tabSwipeEnabled } = useScrollNav();
 
   if (!loading && !session) {
     return <Redirect href="/(auth)/login" />;
@@ -18,7 +20,7 @@ export default function TabsLayout() {
         <TopTabs
           tabBar={() => null}
           screenOptions={{
-            swipeEnabled: true,
+            swipeEnabled: tabSwipeEnabled,
             lazy: true,
           }}
         >

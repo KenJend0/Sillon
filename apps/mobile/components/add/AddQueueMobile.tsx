@@ -34,6 +34,7 @@ import { upsertTrackDiaryEntry } from '../../lib/trackDiary';
 import { showToast } from '../ui/Toast';
 import { supabase } from '../../lib/supabase';
 import { type AddQueueItem, ADD_QUEUE_SOURCE_LABELS } from '../../lib/buildAddQueue';
+import { useScrollNav } from '../../lib/ScrollNavContext';
 
 /**
  * Miroir mobile de apps/web/components/add/AddQueueMobile.tsx — pile de cartes
@@ -73,6 +74,7 @@ const SWIPE_THRESHOLD = 120;
 export default function AddQueueMobile({ initialQueue }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { setTabSwipeEnabled } = useScrollNav();
   const today = new Date().toISOString().split('T')[0];
 
   const [queue, setQueue] = useState<AddQueueItem[]>(initialQueue);
@@ -113,7 +115,14 @@ export default function AddQueueMobile({ initialQueue }: Props) {
   const peekCount = Math.min(upcoming.length, 2);
 
   const commentOpen = panelMode === 'comment';
-  const searchHasResults = panelMode === 'search' && searchQuery.trim() !== '' && searchResults.length >= 3;
+  // Sous ce seuil, la carte pleine (avec bouton Suivant/critique/lien album) tient sans
+  // problème à côté de la liste de résultats. Au-delà, on bascule sur la carte compacte
+  // (pochette + étoiles) plutôt que de risquer un chevauchement avec le clavier — 3
+  // résultats avec le clavier ouvert se comporte déjà comme 4 en termes d'espace dispo.
+  const searchHasResults =
+    panelMode === 'search' &&
+    searchQuery.trim() !== '' &&
+    (searchResults.length >= 4 || (searchResults.length === 3 && keyboardVisible));
   const cardView = commentOpen ? 'comment' : searchHasResults ? 'search' : 'full';
   const visibleResults = searchExpanded ? searchResults : searchResults.slice(0, SEARCH_LIMIT_INITIAL);
   const hasMoreResults = !searchExpanded && searchResults.length > SEARCH_LIMIT_INITIAL;
@@ -435,6 +444,13 @@ export default function AddQueueMobile({ initialQueue }: Props) {
     () =>
       Gesture.Pan()
         .activeOffsetX([-12, 12])
+        // Le pager natif du TopTabs (changement d'onglet) capte facilement ce même geste
+        // horizontal si on ne le désactive pas explicitement pendant le swipe de carte —
+        // sinon un swipe de carte se confond avec un swipe de changement d'onglet.
+        .onBegin(() => {
+          if (!panelModeIsNone.value || !hasCurrent.value) return;
+          runOnJS(setTabSwipeEnabled)(false);
+        })
         .onUpdate((e) => {
           if (!panelModeIsNone.value || !hasCurrent.value) return;
           translateX.value = e.translationX;
@@ -449,8 +465,11 @@ export default function AddQueueMobile({ initialQueue }: Props) {
           } else {
             translateX.value = withSpring(0, { damping: 18 });
           }
+        })
+        .onFinalize(() => {
+          runOnJS(setTabSwipeEnabled)(true);
         }),
-    [translateX, panelModeIsNone, hasCurrent, triggerNextFromGesture]
+    [translateX, panelModeIsNone, hasCurrent, triggerNextFromGesture, setTabSwipeEnabled]
   );
 
   const cardAnimatedStyle = useAnimatedStyle(() => ({
@@ -469,7 +488,8 @@ export default function AddQueueMobile({ initialQueue }: Props) {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View
+      <Pressable
+        onPress={Keyboard.dismiss}
         className="flex-1 bg-background px-6"
         style={{ paddingTop: insets.top + 8, paddingBottom: keyboardVisible ? 12 : 100 }}
       >
@@ -555,7 +575,11 @@ export default function AddQueueMobile({ initialQueue }: Props) {
               className="bg-paper-hi border border-border rounded-input overflow-hidden mb-3"
               style={searchExpanded ? { maxHeight: SEARCH_RESULTS_EXPANDED_MAX_PX } : undefined}
             >
-              <ScrollView scrollEnabled={searchExpanded} style={searchExpanded ? undefined : { flexGrow: 0 }}>
+              <ScrollView
+                scrollEnabled={searchExpanded}
+                style={searchExpanded ? undefined : { flexGrow: 0 }}
+                keyboardShouldPersistTaps="handled"
+              >
                 {searchLoading ? (
                   <View className="flex-row items-center gap-2 px-3 py-3">
                     <ActivityIndicator size="small" color="#8E6F5E" />
@@ -665,11 +689,15 @@ export default function AddQueueMobile({ initialQueue }: Props) {
               </View>
             )
           ) : (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: searchHasResults ? 'center' : 'flex-start' }}>
+            // flex-start dans tous les cas : centrer la carte compacte dans l'espace restant
+            // la fait flotter au milieu du vide dès qu'il en reste beaucoup (3 résultats
+            // clavier ouvert, 4 clavier fermé) — ancrée sous la liste de résultats, elle
+            // reste cohérente avec la carte pleine.
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-start' }}>
               <View
                 style={
                   searchHasResults
-                    ? { width: '100%', maxWidth: 384, maxHeight: SEARCH_MINI_CARD_MAX_PX, height: '100%' }
+                    ? { width: '100%', maxWidth: 384, maxHeight: SEARCH_MINI_CARD_MAX_PX }
                     : { width: '100%', maxWidth: 384, flex: 1 }
                 }
               >
@@ -708,7 +736,11 @@ export default function AddQueueMobile({ initialQueue }: Props) {
                   <Animated.View
                     style={[
                       {
-                        flex: 1,
+                        // La carte compacte (résultats de recherche visibles) épouse son
+                        // contenu plutôt que de s'étirer sur tout l'espace dispo — sinon le
+                        // contenu (pochette + étoiles) se retrouve centré dans une boîte trop
+                        // haute, avec un grand vide au-dessus/en dessous.
+                        ...(searchHasResults ? {} : { flex: 1 }),
                         zIndex: 10,
                         backgroundColor: '#FAF8F4',
                         borderWidth: 1,
@@ -788,7 +820,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
                         </Pressable>
                       </View>
                     ) : cardView === 'search' ? (
-                      <View style={{ flex: 1, justifyContent: 'center', padding: 12 }}>
+                      <View style={{ padding: 12 }}>
                         <View className="flex-row items-center gap-3 mb-2">
                           <View className="w-12 h-12 rounded-cover-sm overflow-hidden bg-background-tertiary">
                             {currentCoverSrc ? (
@@ -895,7 +927,7 @@ export default function AddQueueMobile({ initialQueue }: Props) {
             </View>
           )}
         </View>
-      </View>
+      </Pressable>
     </KeyboardAvoidingView>
   );
 }
