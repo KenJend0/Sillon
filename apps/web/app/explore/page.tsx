@@ -39,9 +39,6 @@ function CommunityListsSection({ lists, compact = false }: { lists: UserList[]; 
                     <h2 className="text-h2 text-text-primary">
                         Listes <em className="italic text-accent-deep">populaires</em>
                     </h2>
-                    <p className="text-sm text-text-secondary mt-1">
-                        Sélections musicales partagées par la communauté.
-                    </p>
                 </div>
                 <Link
                     href="/lists"

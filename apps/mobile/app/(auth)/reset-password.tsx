@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -23,8 +24,10 @@ export default function ResetPasswordScreen() {
     setInfo(null);
     setLoading(true);
 
+    // Voir le commentaire équivalent dans (auth)/signup.tsx : un lien https:// est fiable
+    // depuis un client mail, contrairement au schéma custom sillon://.
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: 'sillon://auth/callback',
+      redirectTo: 'https://sillon.fm/auth/callback',
     });
 
     setLoading(false);
@@ -43,7 +46,7 @@ export default function ResetPasswordScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       className="flex-1 bg-background"
     >
-      <View className="flex-1 justify-center px-6">
+      <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss} className="justify-center px-6">
         <View className="items-center mb-4">
           <SillonMark />
         </View>
@@ -113,7 +116,7 @@ export default function ResetPasswordScreen() {
             </Text>
           </Link>
         </View>
-      </View>
+      </Pressable>
     </KeyboardAvoidingView>
   );
 }

@@ -107,12 +107,16 @@ export default function ExploreScreen() {
         refreshControl={refreshControl}
         className="flex-1 bg-background"
         contentContainerStyle={{ paddingTop: 12, paddingHorizontal: 16, paddingBottom: 100 }}
-        // Index 1 = la barre de recherche : reste collée en haut au scroll, comme
+        // Index 0 = la barre de recherche : reste collée en haut au scroll, comme
         // StickySearchBar (web, sticky top-0 + IntersectionObserver). stickyHeaderIndices
         // se réfère à l'index parmi les enfants directs du ScrollView ci-dessous.
-        stickyHeaderIndices={[1]}
+        stickyHeaderIndices={[0]}
       >
-      <View className="mt-6 bg-background pb-5">
+      {/* pt- (padding), pas mt- : une marge est hors de la boîte et n'est pas couverte
+          par bg-background — une fois cette View collée en haut (sticky), ça laissait
+          un espace transparent au-dessus de la barre où le contenu défilant en dessous
+          restait visible en transparence. */}
+      <View className="pt-6 bg-background pb-5">
         <SearchTrigger />
       </View>
 

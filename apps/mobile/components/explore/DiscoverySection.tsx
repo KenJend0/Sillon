@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../lib/AuthContext';
 import { DiscoverCard } from './DiscoverCard';
 import { type DiscoveryResult } from '../../lib/explore';
-import { h2Style, smStyle } from '../../lib/typography';
+import { h2Style } from '../../lib/typography';
 
 const CARD_WIDTH = 148;
 
@@ -33,13 +33,6 @@ export function DiscoverySection({ result }: { result: DiscoveryResult }) {
             ) : (
               <>À <Text style={{ fontFamily: 'InstrumentSerif_400Regular_Italic' }} className="text-accent-deep">découvrir</Text></>
             )}
-          </Text>
-          <Text style={smStyle} className="text-text-secondary">
-            {isBubble
-              ? 'Des artistes absents de ton journal, suggérés par des comptes que tu suis.'
-              : result.hasTasteProfile
-                ? 'Des albums largement salués, en dehors de tes artistes habituels.'
-                : 'Des albums largement salués sur Sillon, pour commencer à explorer.'}
           </Text>
         </View>
         <Pressable onPress={() => router.push('/explore/decouverte' as any)} className="border-b border-accent pb-0.5">

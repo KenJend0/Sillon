@@ -148,9 +148,6 @@ export default function PourToiSection({ albums, tracks }: Props) {
                     <h2 className="text-h2 text-text-primary">
                         Pour <em className="italic text-accent-deep">toi</em>
                     </h2>
-                    <p className="text-sm text-text-secondary mt-1">
-                        Reviens demain pour une nouvelle sélection.
-                    </p>
                 </div>
             </div>
 

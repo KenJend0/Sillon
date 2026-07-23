@@ -86,9 +86,6 @@ export function PourToiSection({ albums, tracks }: Props) {
         <Text style={h2Style} className="text-text-primary">
           Pour <Text style={{ fontFamily: 'InstrumentSerif_400Regular_Italic' }} className="text-accent-deep">toi</Text>
         </Text>
-        <Text style={smStyle} className="text-text-secondary mt-1">
-          Reviens demain pour une nouvelle sélection.
-        </Text>
       </View>
 
       <View className="flex-row gap-1.5 mb-4">

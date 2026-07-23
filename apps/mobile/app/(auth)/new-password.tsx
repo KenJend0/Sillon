@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -51,7 +52,7 @@ export default function NewPasswordScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       className="flex-1 bg-background"
     >
-      <View className="flex-1 justify-center px-6">
+      <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss} className="justify-center px-6">
         <View className="items-center mb-4">
           <SillonMark />
         </View>
@@ -134,7 +135,7 @@ export default function NewPasswordScreen() {
             </Text>
           )}
         </Pressable>
-      </View>
+      </Pressable>
     </KeyboardAvoidingView>
   );
 }

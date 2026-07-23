@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -32,7 +33,12 @@ export default function SignupScreen() {
       email: email.trim(),
       password,
       options: {
-        emailRedirectTo: 'sillon://auth/callback',
+        // Un lien https:// s'ouvre toujours de façon fiable depuis un client mail — contrairement
+        // à un schéma custom (sillon://) que beaucoup d'apps mail refusent de relayer vers l'OS.
+        // L'utilisateur confirme son compte dans le navigateur puis revient se connecter dans l'app
+        // (même compte, même base Supabase). Passer par un vrai deep link (Universal Links) est
+        // possible plus tard, mais demande une config .well-known + entitlements natifs à part.
+        emailRedirectTo: 'https://sillon.fm/auth/callback/mobile',
         data: {
           display_name: firstName.trim() || null,
         },
@@ -68,7 +74,7 @@ export default function SignupScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       className="flex-1 bg-background"
     >
-      <View className="flex-1 justify-center px-6">
+      <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss} className="justify-center px-6">
         <View className="items-center mb-4">
           <SillonMark />
         </View>
@@ -190,7 +196,7 @@ export default function SignupScreen() {
             </Text>
           </Link>
         </View>
-      </View>
+      </Pressable>
     </KeyboardAvoidingView>
   );
 }

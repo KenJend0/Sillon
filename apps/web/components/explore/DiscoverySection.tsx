@@ -31,13 +31,6 @@ export default function DiscoverySection({ result }: { result: DiscoveryResult }
                             <>À <em style={{ fontStyle: 'italic', color: 'var(--color-accent-deep, #5C4538)' }}>découvrir</em></>
                         )}
                     </h2>
-                    <p className="text-[13px] text-text-secondary">
-                        {isBubble
-                            ? "Des artistes absents de ton journal, suggérés par des comptes que tu suis."
-                            : result.hasTasteProfile
-                                ? "Des albums largement salués, en dehors de tes artistes habituels."
-                                : "Des albums largement salués sur Sillon, pour commencer à explorer."}
-                    </p>
                 </div>
                 <Link
                     href="/explore/decouverte"

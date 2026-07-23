@@ -23,9 +23,6 @@ export default function TrendingSection({ albums, tracks }: Props) {
                     <h2 className="text-h2 text-text-primary">
                         <em className="font-display italic text-accent-deep">Tendances</em> de la semaine
                     </h2>
-                    <p className="text-sm text-text-secondary mt-1">
-                        Ce que la communauté écoute en ce moment.
-                    </p>
                 </div>
                 <Link
                     href="/explore/tendances"

@@ -25,9 +25,6 @@ export function TrendingSection({ albums, tracks }: Props) {
           <Text style={h2Style} className="text-text-primary">
             <Text style={{ fontFamily: 'InstrumentSerif_400Regular_Italic' }} className="text-accent-deep">Tendances</Text> de la semaine
           </Text>
-          <Text style={smStyle} className="text-text-secondary mt-1">
-            Ce que la communauté écoute en ce moment.
-          </Text>
         </View>
         <Pressable onPress={() => router.push('/explore/tendances' as any)} className="border-b border-accent pb-0.5">
           <Text className="text-accent" style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 14 }}>

@@ -467,10 +467,9 @@ Notes de scope :
   `(tabs)`, comme le web les traite en pages secondaires classiques avec
   `BackButton`.
 - **"Listes populaires" réutilise `components/profile/ListCard.tsx`** (déjà
-  construit en 6.6/6.7) plutôt que d'en dupliquer un ; le tap sur "voir tout"
-  affiche un toast "Bientôt disponible" (comme le tap sur une liste individuelle)
-  puisque ni `/lists` ni `/lists/[id]` n'existent encore côté mobile (Phase 7
-  "Listes" séparée, pas commencée).
+  construit en 6.6/6.7). `app/lists/index.tsx` (miroir de `/lists` web, grille de
+  `getPublicLists(30)`) ajouté après coup — le tap sur "voir tout" y navigue
+  désormais au lieu d'afficher un toast "Bientôt disponible".
 - **Cartes avec bouton "Pas pour moi" non fusionnées dans `AlbumCard`/`TrackCard`**
   existants : ce contrat (bouton de dismiss superposé à la cover) est spécifique
   aux sections de recommandations et aurait changé le contrat de composants déjà

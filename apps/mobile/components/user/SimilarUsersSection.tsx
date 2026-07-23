@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import { Avatar } from '../avatars/Avatar';
 import { toggleFollow } from '../../lib/social';
 import { type SimilarUser } from '../../lib/explore';
-import { h2Style, smStyle } from '../../lib/typography';
+import { h2Style } from '../../lib/typography';
 
 function UserRow({ user }: { user: SimilarUser }) {
   const router = useRouter();
@@ -80,9 +80,6 @@ export function SimilarUsersSection({ users }: { users: SimilarUser[] }) {
       <View className="mb-4">
         <Text style={h2Style} className="text-text-primary">
           Goûts <Text style={{ fontFamily: 'InstrumentSerif_400Regular_Italic' }} className="text-accent-deep">similaires</Text>
-        </Text>
-        <Text style={smStyle} className="text-text-secondary mt-1">
-          Triés par affinité de goût. Au plus proche en premier.
         </Text>
       </View>
       <View style={{ gap: 8 }}>

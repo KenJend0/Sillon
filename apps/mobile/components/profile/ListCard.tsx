@@ -48,7 +48,11 @@ export const ListCard = memo(function ListCard({ list, style }: Props) {
           })
         )}
         {list.creator_username && (
-          <View className="absolute top-2 left-2 flex-row items-center gap-1.5 bg-paper-hi/90 border border-border rounded-full pl-0.5 pr-2 py-0.5">
+          <Pressable
+            onPress={() => router.push(`/u/${list.creator_username}` as any)}
+            hitSlop={4}
+            className="absolute top-2 left-2 flex-row items-center gap-1.5 bg-paper-hi/90 border border-border rounded-full pl-0.5 pr-2 py-0.5"
+          >
             <View className="rounded-full overflow-hidden border border-rule bg-accent/20" style={{ width: 18, height: 18 }}>
               {list.creator_avatar && (
                 <Image source={{ uri: list.creator_avatar }} style={{ width: 18, height: 18 }} contentFit="cover" />
@@ -57,7 +61,7 @@ export const ListCard = memo(function ListCard({ list, style }: Props) {
             <Text numberOfLines={1} className="text-text-primary" style={{ fontFamily: 'Inter_500Medium', fontSize: 10 }}>
               @{list.creator_username}
             </Text>
-          </View>
+          </Pressable>
         )}
         {list.is_public && !isOwnList && (
           <Pressable
@@ -76,7 +80,7 @@ export const ListCard = memo(function ListCard({ list, style }: Props) {
         </Text>
       </View>
       <Text className="text-text-tertiary mt-0.5" style={labelStyle}>
-        {list.item_count} album{list.item_count !== 1 ? 's' : ''}
+        {list.item_count} item{list.item_count !== 1 ? 's' : ''}
       </Text>
     </Pressable>
   );

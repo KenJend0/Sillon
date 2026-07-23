@@ -84,9 +84,6 @@ export default function SimilarUsersSection({ users }: { users: SimilarUser[] })
                 <h2 className="text-h2 text-text-primary">
                     Goûts <em className="italic text-accent-deep">similaires</em>
                 </h2>
-                <p className="text-sm text-text-secondary mt-1">
-                    Triés par affinité de goût. Au plus proche en premier.
-                </p>
             </div>
             <div className="flex flex-col gap-2">
                 {users.map((user) => (
