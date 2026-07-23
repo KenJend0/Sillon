@@ -12,16 +12,13 @@ import {
 import { Link } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { SillonMark } from '../../components/icons/SillonMark';
+import { showToast } from '../../components/ui/Toast';
 
 export default function ResetPasswordScreen() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
 
   const handleReset = async () => {
-    setError(null);
-    setInfo(null);
     setLoading(true);
 
     // Voir le commentaire équivalent dans (auth)/signup.tsx : un lien https:// est fiable
@@ -33,11 +30,11 @@ export default function ResetPasswordScreen() {
     setLoading(false);
 
     if (resetError) {
-      setError("Impossible d'envoyer l'email de réinitialisation pour l'instant.");
+      showToast("Impossible d'envoyer l'email de réinitialisation pour l'instant.", 'error');
       return;
     }
 
-    setInfo('Email de réinitialisation envoyé ! Vérifie ta boîte mail.');
+    showToast('Email de réinitialisation envoyé ! Vérifie ta boîte mail.', 'success');
     setEmail('');
   };
 
@@ -53,21 +50,6 @@ export default function ResetPasswordScreen() {
         <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-text-secondary text-center mb-8">
           Réinitialise ton mot de passe
         </Text>
-
-        {error && (
-          <View className="bg-like/10 border border-like rounded-card px-3 py-2 mb-4">
-            <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-like text-sm">
-              {error}
-            </Text>
-          </View>
-        )}
-        {info && (
-          <View className="bg-sage/10 border border-sage rounded-card px-3 py-2 mb-4">
-            <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-sage text-sm">
-              {info}
-            </Text>
-          </View>
-        )}
 
         <View className="mb-2">
           <Text

@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import { SillonMark } from '../../components/icons/SillonMark';
+import { showToast } from '../../components/ui/Toast';
 
 export default function NewPasswordScreen() {
   const router = useRouter();
@@ -20,17 +21,14 @@ export default function NewPasswordScreen() {
   const [confirm, setConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
-    setError(null);
-
     if (password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères');
+      showToast('Le mot de passe doit contenir au moins 8 caractères', 'error');
       return;
     }
     if (password !== confirm) {
-      setError('Les mots de passe ne correspondent pas');
+      showToast('Les mots de passe ne correspondent pas', 'error');
       return;
     }
 
@@ -39,7 +37,7 @@ export default function NewPasswordScreen() {
     setLoading(false);
 
     if (updateError) {
-      setError(updateError.message || 'Erreur lors de la mise à jour du mot de passe');
+      showToast(updateError.message || 'Erreur lors de la mise à jour du mot de passe', 'error');
       return;
     }
 
@@ -59,14 +57,6 @@ export default function NewPasswordScreen() {
         <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-text-secondary text-center mb-8">
           Choisis un nouveau mot de passe
         </Text>
-
-        {error && (
-          <View className="bg-like/10 border border-like rounded-card px-3 py-2 mb-4">
-            <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-like text-sm">
-              {error}
-            </Text>
-          </View>
-        )}
 
         <View className="mb-4">
           <Text

@@ -13,6 +13,7 @@ import { Link, useRouter } from 'expo-router';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import { SillonMark } from '../../components/icons/SillonMark';
+import { showToast } from '../../components/ui/Toast';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -21,12 +22,8 @@ export default function SignupScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
 
   const handleSignup = async () => {
-    setError(null);
-    setInfo(null);
     setLoading(true);
 
     const { data, error: signUpError } = await supabase.auth.signUp({
@@ -54,7 +51,7 @@ export default function SignupScreen() {
       } else if (message.includes('Password')) {
         message = 'Le mot de passe doit contenir au moins 8 caractères';
       }
-      setError(message);
+      showToast(message, 'error');
       return;
     }
 
@@ -63,7 +60,7 @@ export default function SignupScreen() {
       return;
     }
 
-    setInfo('Compte créé ! Vérifie ta boîte mail et clique sur le lien pour activer ton compte.');
+    showToast('Compte créé ! Vérifie ta boîte mail et clique sur le lien pour activer ton compte.', 'success');
     setEmail('');
     setPassword('');
     setFirstName('');
@@ -81,21 +78,6 @@ export default function SignupScreen() {
         <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-text-secondary text-center mb-8">
           Crée ton compte Sillon
         </Text>
-
-        {error && (
-          <View className="bg-like/10 border border-like rounded-card px-3 py-2 mb-4">
-            <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-like text-sm">
-              {error}
-            </Text>
-          </View>
-        )}
-        {info && (
-          <View className="bg-sage/10 border border-sage rounded-card px-3 py-2 mb-4">
-            <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-sage text-sm">
-              {info}
-            </Text>
-          </View>
-        )}
 
         <View className="mb-4">
           <Text

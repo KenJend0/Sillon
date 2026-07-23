@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -13,6 +13,7 @@ import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import { SillonMark } from '../../components/icons/SillonMark';
+import { showToast } from '../../components/ui/Toast';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -21,14 +22,15 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(
-    urlError === 'confirmation_failed'
-      ? 'Le lien est invalide ou expiré. Réessaie ou demande un nouveau lien.'
-      : null
-  );
+
+  useEffect(() => {
+    if (urlError === 'confirmation_failed') {
+      showToast('Le lien est invalide ou expiré. Réessaie ou demande un nouveau lien.', 'error');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogin = async () => {
-    setError(null);
     setLoading(true);
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -45,7 +47,7 @@ export default function LoginScreen() {
       } else if (message.includes('Email not confirmed')) {
         message = 'Confirme ton email avant de te connecter.';
       }
-      setError(message);
+      showToast(message, 'error');
       return;
     }
 
@@ -64,14 +66,6 @@ export default function LoginScreen() {
         <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-text-secondary text-center mb-8">
           Connecte-toi à ton compte
         </Text>
-
-        {error && (
-          <View className="bg-like/10 border border-like rounded-card px-3 py-2 mb-4">
-            <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-like text-sm">
-              {error}
-            </Text>
-          </View>
-        )}
 
         <View className="mb-4">
           <Text

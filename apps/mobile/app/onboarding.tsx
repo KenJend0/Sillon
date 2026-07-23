@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { changeUsername, checkUsernameAvailability } from '../lib/profile';
+import { setOnboardingUsername, checkUsernameAvailability } from '../lib/profile';
 import { getSuggestedUsers, type SuggestedUser } from '../lib/social';
 import { useAuth } from '../lib/AuthContext';
 import { Avatar } from '../components/avatars/Avatar';
@@ -94,7 +94,7 @@ export default function OnboardingScreen() {
     }
     setSubmittingUsername(true);
     try {
-      const result = await changeUsername(trimmed);
+      const result = await setOnboardingUsername(trimmed);
       if (!result.ok) {
         showToast(result.error || 'Erreur, réessaie.', 'error');
         return;

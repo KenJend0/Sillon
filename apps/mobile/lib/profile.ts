@@ -81,6 +81,49 @@ export async function checkUsernameAvailability(username: string): Promise<{ ok:
   return { ok: true, available: !data };
 }
 
+/**
+ * Miroir de setOnboardingUsername (web) : pose le pseudo choisi à l'onboarding SANS
+ * marquer username_changed — l'utilisateur garde son droit de changement unique pour
+ * plus tard (Réglages, via changeUsername ci-dessous, qui lui pose bien le flag).
+ */
+export async function setOnboardingUsername(newUsername: string): Promise<{ ok: boolean; username?: string; error?: string }> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData.session?.user;
+  if (!user) return { ok: false, error: 'not_authenticated' };
+
+  const trimmed = newUsername.trim();
+  if (!USERNAME_REGEX.test(trimmed)) return { ok: false, error: 'invalid_username' };
+  if (findBannedUsernameWord(trimmed)) return { ok: false, error: 'Ce pseudo contient du contenu inapproprié.' };
+
+  const { data: current, error: currentError } = await supabase
+    .from('profiles')
+    .select('username_changed')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (currentError && currentError.code !== 'PGRST116') return { ok: false, error: 'An error occurred' };
+  if (current?.username_changed) return { ok: false, error: 'already_onboarded' };
+
+  const { data: existing, error: existingError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', trimmed)
+    .neq('id', user.id)
+    .maybeSingle();
+
+  if (existingError && existingError.code !== 'PGRST116') return { ok: false, error: 'An error occurred' };
+  if (existing) return { ok: false, error: 'username_taken' };
+
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ username: trimmed })
+    .eq('id', user.id);
+
+  if (updateError) return { ok: false, error: 'An error occurred' };
+
+  return { ok: true, username: trimmed };
+}
+
 export async function changeUsername(newUsername: string): Promise<{ ok: boolean; username?: string; error?: string }> {
   const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData.session?.user;
