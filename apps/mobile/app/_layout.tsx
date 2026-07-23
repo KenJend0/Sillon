@@ -39,6 +39,7 @@ export default function RootLayout() {
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(auth)" />
                 <Stack.Screen name="auth/callback" />
+                <Stack.Screen name="onboarding" />
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="albums/[id]" options={{ animation: 'slide_from_right' }} />
                 <Stack.Screen name="tracks/[id]" options={{ animation: 'slide_from_right' }} />

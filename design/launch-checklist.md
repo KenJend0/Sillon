@@ -9,8 +9,8 @@
 
 - [x] Changer le nom de l'app dans `app.json` / `app.config.js` (Expo) : `"name": "Sillon"`
 - [x] Changer le `slug` Expo : `"sillon-mobile"` (pas `"sillon"` seul — même convention que l'ancien `waveform-mobile`)
-- [x] Changer le Bundle ID iOS : `com.sillon.app` (décidé à la place de `fm.sillon.app` — convention plus standard)
-- [x] Changer l'Application ID Android : `com.sillon.app`
+- [x] Changer le Bundle ID iOS : `fm.sillon.app` (`com.sillon.app` était pris chez Apple, ID unique au niveau mondial)
+- [x] Changer l'Application ID Android : `fm.sillon.app`
 - [x] Remplacer toutes les occurrences "Waveform" dans le code (variables, commentaires, constantes)
 - [x] Mettre à jour le titre de l'onglet web (`<title>Sillon</title>`)
 - [x] Mettre à jour les meta tags web (og:title, og:description)
@@ -172,12 +172,13 @@ Tester chaque écran dans l'ordre, sur un vrai appareil.
 - [ ] Tester la latence Redis en production (pas seulement en dev)
 
 ### Rotation des clés API — à faire en DERNIER avant soumission
-- [ ] Lister toutes les clés API utilisées (Stripe, Upstash, services tiers, etc.)
+- [ ] Lister toutes les clés API utilisées ( Upstash, services tiers, etc.)
 - [ ] Régénérer chaque clé dans l'interface du service concerné
 - [ ] Mettre à jour les variables d'environnement en production
 - [ ] Mettre à jour les secrets EAS (`eas secret:push`)
 - [ ] Vérifier que l'app fonctionne toujours après rotation
 - [ ] Révoquer les anciennes clés
+- SEO partage
 
 ---
 

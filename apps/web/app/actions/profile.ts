@@ -216,11 +216,7 @@ export async function setOnboardingUsername(newUsername: string) {
 }
 
 export async function checkUsernameAvailability(username: string) {
-  const user = await getAuthUser();
-  if (!user) {
-    return { ok: false, error: 'not_authenticated' };
-  }
-
+  // Cheap synchronous checks first — avoid hitting the network at all for obviously invalid input.
   if (!USERNAME_REGEX.test(username)) {
     return { ok: true, available: false, error: 'invalid_username' };
   }
@@ -229,11 +225,20 @@ export async function checkUsernameAvailability(username: string) {
   }
 
   const supabase = await createSupabaseServer();
+  // This is a read-only availability probe, not a mutation — getSession() reads the JWT from
+  // cookies with no network round-trip, unlike getAuthUser()/getUser() which revalidates against
+  // Supabase Auth on every call. That revalidation is worth it for writes, not for typeahead checks
+  // fired on every keystroke.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) {
+    return { ok: false, error: 'not_authenticated' };
+  }
+
   const { data, error } = await supabase
     .from('profiles')
     .select('id')
     .eq('username', username)
-    .neq('id', user.id)
+    .neq('id', session.user.id)
     .maybeSingle();
 
   if (error && error.code !== 'PGRST116') {

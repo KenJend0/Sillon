@@ -53,7 +53,7 @@ export default function SignupScreen() {
     }
 
     if (data.user && data.session) {
-      router.replace('/(tabs)/explore');
+      router.replace('/');
       return;
     }
 

@@ -226,20 +226,12 @@ export default function OnboardingFlow({ suggestedUsers }: Props) {
                         </p>
                     )}
 
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setStep(3)}
-                            className="text-meta text-text-tertiary hover:text-text-primary transition-colors duration-150"
-                        >
-                            Passer
-                        </button>
-                        <button
-                            onClick={() => setStep(3)}
-                            className="flex-1 py-3 bg-[#1C1C1C] text-[#F5F3EF] text-meta font-medium rounded-[8px] hover:opacity-85 transition-opacity"
-                        >
-                            Continuer →
-                        </button>
-                    </div>
+                    <button
+                        onClick={() => setStep(3)}
+                        className="w-full py-3 bg-[#1C1C1C] text-[#F5F3EF] text-meta font-medium rounded-[8px] hover:opacity-85 transition-opacity"
+                    >
+                        Continuer →
+                    </button>
                 </div>
             </div>
         );

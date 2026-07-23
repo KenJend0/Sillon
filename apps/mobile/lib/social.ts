@@ -116,3 +116,70 @@ export async function getFollowingList(username: string): Promise<{ success: boo
   const { data: profiles } = await supabase.from('profiles').select('id, username, avatar_url').in('id', followeeIds);
   return { success: true, items: await attachFollowState(profiles ?? []) };
 }
+
+export type SuggestedUser = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
+/**
+ * Miroir de getSuggestedUsers (web) : priorise les utilisateurs avec une activité
+ * publique récente, exclut déjà-suivis/bloqués, fallback sur les inscriptions récentes.
+ */
+export async function getSuggestedUsers(limit = 5): Promise<SuggestedUser[]> {
+  const myId = await currentUserId();
+  if (!myId) return [];
+
+  const [{ data: followed }, { data: blocked }] = await Promise.all([
+    supabase.from('follows').select('followee_id').eq('follower_id', myId),
+    supabase.from('user_blocks').select('blocked_id').eq('blocker_id', myId),
+  ]);
+
+  const excludedIds = new Set<string>([
+    ...(followed ?? []).map((f) => f.followee_id),
+    ...((blocked ?? []) as Array<{ blocked_id: string }>).map((b) => b.blocked_id),
+  ]);
+
+  const { data: recentEntries } = await supabase
+    .from('diary_entries')
+    .select('user_id')
+    .eq('is_public', true)
+    .neq('user_id', myId)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  const suggestedIds: string[] = [];
+  if (recentEntries?.length) {
+    const seen = new Set<string>();
+    for (const entry of recentEntries) {
+      if (!seen.has(entry.user_id) && !excludedIds.has(entry.user_id) && suggestedIds.length < limit) {
+        seen.add(entry.user_id);
+        suggestedIds.push(entry.user_id);
+      }
+    }
+  }
+
+  if (suggestedIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, username, display_name, avatar_url')
+      .in('id', suggestedIds)
+      .not('username', 'is', null);
+    return (profiles as SuggestedUser[]) || [];
+  }
+
+  // Fallback : inscriptions récentes non suivies/bloquées
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, username, display_name, avatar_url')
+    .neq('id', myId)
+    .not('username', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(limit + excludedIds.size);
+
+  return ((profiles as SuggestedUser[]) || [])
+    .filter((p) => !excludedIds.has(p.id))
+    .slice(0, limit);
+}

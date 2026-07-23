@@ -435,16 +435,16 @@ Notes de scope :
         sur le web via `CommunityListsSection`, inline dans `app/explore/page.tsx`)
 
 Notes de scope :
-- **Onboarding non porté (décision de scope explicite)** : le web fait un hard
-  redirect vers `/onboarding` (choix de username, comptes suggérés à suivre) si
-  `userNeedsOnboarding` — ce flow complet n'existe pas côté mobile et n'est dans
-  aucune phase du roadmap ; hors scope de cette passe. Seul `getProfileTier()`
-  (`lib/explore.ts`, 100% RLS, seuil de 3 entrées de journal comme le web) est
-  repris pour l'affichage conditionnel déjà présent sur la page elle-même :
-  `OnboardingCTASection` (nouveau, `components/auth/`) affichée à la place de
-  "Pour toi" si `tier === 'new'`, "Pour toi"/"Users similaires" masqués si pas
-  `'established'` — exactement le même comportement que le web une fois le
-  redirect retiré.
+- **Onboarding désormais porté** (`app/onboarding.tsx`, gating dans `app/index.tsx`) :
+  3 étapes comme le web (pseudo, comptes suggérés, CTA `/add`), réutilise
+  `changeUsername`/`checkUsernameAvailability` (`lib/profile.ts`) et une nouvelle
+  `getSuggestedUsers` (`lib/social.ts`) miroir de la version web. `getProfileTier()`
+  (`lib/explore.ts`, 100% RLS, seuil de 3 entrées de journal comme le web) reste
+  utilisé séparément pour l'affichage conditionnel sur la page Explore elle-même :
+  `OnboardingCTASection` (`components/auth/`) affichée à la place de "Pour toi" si
+  `tier === 'new'`, "Pour toi"/"Users similaires" masqués si pas `'established'` —
+  ce comportement-là est indépendant du flow d'onboarding (reste visible tant que
+  le journal est vide, pas juste au premier lancement).
 - **Tout porté sans dégradation** (contrairement à 6.4 où "Pour toi"/"Découverte"
   avaient été passés en tableaux vides) : `getTrendingThisWeek`, `getForYouSuggestions`
   (fallback Jaccard inclus), `getForYouTracks` (idem), `getDiscoveryAlbums` (modes

@@ -35,10 +35,10 @@ import { getCuratorPick, type CuratorPick } from '../../../lib/curator';
  * uniquement la disposition mobile web (space-y-12 lg:hidden) : pas de layout
  * 2 colonnes avec sidebar sticky, qui ne s'applique pas ici.
  *
- * Onboarding : le web redirige vers /onboarding si userNeedsOnboarding — ce flow
- * (choix de username, comptes suggérés) n'existe pas côté mobile et reste hors
- * scope de cette passe. Seul getProfileTier() est repris pour l'affichage
- * conditionnel déjà présent sur la page elle-même (CTA inline si tier === 'new').
+ * Onboarding : géré en amont par app/index.tsx (redirect vers /onboarding tant que
+ * le pseudo par défaut n'a pas été changé), donc cet écran n'est jamais atteint par
+ * un utilisateur pas encore onboardé. getProfileTier() reste utilisé ici pour
+ * l'affichage conditionnel du CTA inline tant que le journal est vide (tier === 'new').
  */
 export default function ExploreScreen() {
   const scrollHandler = useNavScrollHandler();

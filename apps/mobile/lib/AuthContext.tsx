@@ -12,6 +12,7 @@ type AuthContextType = {
   loading: boolean;
   unseenActivity: boolean;
   refreshUnseenActivity: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -82,9 +83,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   };
 
+  const refreshProfile = useCallback(async () => {
+    try {
+      setProfile(await ensureProfile());
+    } catch {
+      // ignore — le profil en cache reste valide, on retentera au prochain changement d'état auth
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, profile, loading, unseenActivity, refreshUnseenActivity, signOut }}
+      value={{ session, user: session?.user ?? null, profile, loading, unseenActivity, refreshUnseenActivity, refreshProfile, signOut }}
     >
       {children}
     </AuthContext.Provider>

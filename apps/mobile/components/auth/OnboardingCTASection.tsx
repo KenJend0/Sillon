@@ -4,9 +4,9 @@ import { h2Style, smStyle } from '../../lib/typography';
 
 /**
  * Miroir de OnboardingCTASection (web) — affiché à la place de "Pour toi" quand
- * tier === 'new'. Ne remplace PAS le flow d'onboarding complet (choix de username,
- * comptes suggérés) : ce flow n'existe pas côté mobile, hors scope de cette passe
- * (voir notes de scope de la Phase 7 "Explore" dans MOBILE_ROADMAP.md).
+ * tier === 'new'. Complémentaire au flow d'onboarding (app/onboarding.tsx, qui
+ * gère le choix de pseudo une seule fois à l'inscription) : ceci reste visible
+ * tant que le journal est vide, pas juste au premier lancement.
  */
 export function OnboardingCTASection() {
   const router = useRouter();

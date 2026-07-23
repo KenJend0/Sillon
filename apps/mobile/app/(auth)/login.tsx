@@ -48,7 +48,7 @@ export default function LoginScreen() {
       return;
     }
 
-    router.replace('/(tabs)/explore');
+    router.replace('/');
   };
 
   return (

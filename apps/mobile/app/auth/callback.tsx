@@ -32,7 +32,7 @@ export default function AuthCallbackScreen() {
       if (type === 'recovery') {
         router.replace('/(auth)/new-password');
       } else {
-        router.replace('/(tabs)/explore');
+        router.replace('/');
       }
     });
   }, [params.token_hash, params.type, router]);
