@@ -33,7 +33,7 @@ export function ExpandableText({ text, style, clampLines = 3 }: Props) {
         {text}
       </Text>
       {canExpand && (
-        <Pressable onPress={() => setExpanded((v) => !v)} className="self-start mt-1 border-b border-accent">
+        <Pressable onPress={() => setExpanded((v) => !v)} hitSlop={12} className="self-start mt-1 border-b border-accent">
           <Text style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 12.5 }} className="text-accent">
             {expanded ? 'voir moins' : 'voir plus'}
           </Text>

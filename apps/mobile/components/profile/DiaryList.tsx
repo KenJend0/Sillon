@@ -186,19 +186,19 @@ export const DiaryList = memo(function DiaryList({ userId, initialAlbumEntries, 
       <View className="flex-row items-center justify-between mb-5">
         <Pressable onPress={() => setSortOpen((v) => !v)} className="flex-row items-center gap-1">
           <Text className="text-text-tertiary" style={labelStyle}>
-            Trié par: <Text className="text-text-primary" style={metaMediumStyle}>{currentSortLabel}</Text>
+            Trié par: <Text className="text-text-primary" style={labelStyle}>{currentSortLabel}</Text>
           </Text>
         </Pressable>
 
         <View className="flex-row items-center gap-1.5">
           <Pressable onPress={() => setMedia('albums')}>
-            <Text className={media === 'albums' ? 'text-text-primary' : 'text-text-tertiary'} style={media === 'albums' ? metaMediumStyle : labelStyle}>
+            <Text className={media === 'albums' ? 'text-text-primary' : 'text-text-tertiary'} style={labelStyle}>
               Albums
             </Text>
           </Pressable>
           <Text className="text-text-disabled">·</Text>
           <Pressable onPress={() => setMedia('titres')}>
-            <Text className={media === 'titres' ? 'text-text-primary' : 'text-text-tertiary'} style={media === 'titres' ? metaMediumStyle : labelStyle}>
+            <Text className={media === 'titres' ? 'text-text-primary' : 'text-text-tertiary'} style={labelStyle}>
               Titres
             </Text>
           </Pressable>

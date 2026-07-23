@@ -35,7 +35,9 @@ function ExpandableNote({ note, fontSize, clampLines }: { note: string; fontSize
         « {note.trim()} »
       </Text>
       {canExpand && (
-        <Pressable onPress={() => setExpanded((v) => !v)} className="self-start mt-1 border-b border-accent">
+        // hitSlop généreux : ce lien est niché dans la grande Pressable qui navigue vers
+        // l'album — un tap qui rate de peu son texte tombait sur la carte en dessous.
+        <Pressable onPress={() => setExpanded((v) => !v)} hitSlop={12} className="self-start mt-1 border-b border-accent">
           <Text className="text-accent" style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 12.5 }}>
             {expanded ? 'voir moins' : 'voir plus'}
           </Text>

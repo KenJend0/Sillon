@@ -706,3 +706,20 @@ C'est là que l'app passe de "ça marche" à "c'est vraiment natif".
 - **Même backend Supabase** — RLS gère la sécurité, pas besoin de dupliquer
 - **Supabase Edge Functions** pour Spotify + Last.fm — secrets jamais exposés dans l'app
 - **MusicBrainz, iTunes, Deezer** — APIs publiques, appelées directement depuis l'app
+
+## Bugs connus non résolus
+
+- **`/add` : boutons ponctuellement inertes après un enchaînement agressif de swipe-back**
+  (iOS). Repro : naviguer profondément (album → critique → profil → …) puis revenir en
+  arrière plusieurs fois via le geste de bord natif plutôt que via un vrai back ; une fois
+  de retour sur `/add`, certains boutons précis (ex. "Chercher un titre", "Écrire une
+  critique") ne réagissent plus au tap, alors que leurs voisins strictement identiques
+  (ex. "Chercher un album") fonctionnent. Un `useFocusEffect` dans `AddQueueMobile`
+  réinitialise déjà `tabSwipeEnabled` (voir ScrollNavContext) à la perte de focus, ce qui a
+  résolu la majorité des cas (avant : plus aucun bouton ne répondait) — il reste ce résidu
+  plus ciblé. Hypothèse la plus probable : bug connu de `react-native-screens` où un swipe-
+  back interrompu/enchaîné laisse un écran fantôme invisible capter les touches sur une
+  zone précise de l'écran (expliquerait l'asymétrie entre boutons pourtant identiques).
+  Fermer et rouvrir l'app réinitialise tout. Accepté comme cas limite pour l'instant — pas
+  reproductible en usage normal, seulement via un enchaînement de retours volontairement
+  agressif.

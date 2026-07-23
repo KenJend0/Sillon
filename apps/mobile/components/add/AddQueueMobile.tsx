@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -76,6 +76,17 @@ export default function AddQueueMobile({ initialQueue }: Props) {
   const insets = useSafeAreaInsets();
   const { setTabSwipeEnabled } = useScrollNav();
   const today = new Date().toISOString().split('T')[0];
+
+  // Filet de sécurité : si le geste de swipe de carte est interrompu avant sa fin normale
+  // (onFinalize) — typiquement en poussant/dépilant d'autres écrans pendant un drag en
+  // cours — tabSwipeEnabled peut rester coincé à false, ce qui bloque le swipe d'onglet
+  // (et potentiellement plus) tant que l'app n'est pas relancée. On le force à true à
+  // chaque fois que cet onglet perd le focus, peu importe l'état du geste en cours.
+  useFocusEffect(
+    useCallback(() => {
+      return () => setTabSwipeEnabled(true);
+    }, [setTabSwipeEnabled])
+  );
 
   const [queue, setQueue] = useState<AddQueueItem[]>(initialQueue);
   const [index, setIndex] = useState(0);

@@ -106,7 +106,7 @@ export default function ExploreScreen() {
         scrollEventThrottle={16}
         refreshControl={refreshControl}
         className="flex-1 bg-background"
-        contentContainerStyle={{ paddingTop: 12, paddingHorizontal: 16, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
         // Index 0 = la barre de recherche : reste collée en haut au scroll, comme
         // StickySearchBar (web, sticky top-0 + IntersectionObserver). stickyHeaderIndices
         // se réfère à l'index parmi les enfants directs du ScrollView ci-dessous.
@@ -116,7 +116,7 @@ export default function ExploreScreen() {
           par bg-background — une fois cette View collée en haut (sticky), ça laissait
           un espace transparent au-dessus de la barre où le contenu défilant en dessous
           restait visible en transparence. */}
-      <View className="pt-6 bg-background pb-5">
+      <View className="pt-2 bg-background pb-5">
         <SearchTrigger />
       </View>
 
