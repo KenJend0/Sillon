@@ -265,7 +265,7 @@ export default function ArtistPage() {
             <View className="flex-row border-t border-b border-rule py-3 mt-5">
               {artistStats.globalAvgRating !== null && (
                 <View className="flex-1 pr-4 border-r border-rule">
-                  <Text className="text-text-warm" style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 26, lineHeight: 26 }}>
+                  <Text className="text-text-warm" style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 26, lineHeight: 32 }}>
                     {artistStats.globalAvgRating.toFixed(1).replace('.', ',')}
                     <Text className="uppercase text-text-tertiary" style={{ fontFamily: 'Inter_400Regular', fontSize: 9 }}> /10</Text>
                   </Text>
@@ -274,7 +274,7 @@ export default function ArtistPage() {
               )}
               {artistStats.totalListeners > 0 && (
                 <View className="flex-1 px-4 border-r border-rule">
-                  <Text className="text-text-warm" style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 26, lineHeight: 26 }}>
+                  <Text className="text-text-warm" style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 26, lineHeight: 32 }}>
                     {artistStats.totalListeners.toLocaleString()}
                   </Text>
                   <Text className="uppercase text-text-tertiary mt-1.5" style={{ fontFamily: 'Inter_400Regular', fontSize: 10.5, letterSpacing: 1.68 }}>Auditeurs</Text>
@@ -282,7 +282,7 @@ export default function ArtistPage() {
               )}
               {artistStats.totalReviews > 0 && (
                 <View className="flex-1 pl-4">
-                  <Text className="text-text-warm" style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 26, lineHeight: 26 }}>
+                  <Text className="text-text-warm" style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 26, lineHeight: 32 }}>
                     {artistStats.totalReviews.toLocaleString()}
                   </Text>
                   <Text className="uppercase text-text-tertiary mt-1.5" style={{ fontFamily: 'Inter_400Regular', fontSize: 10.5, letterSpacing: 1.68 }}>Critiques</Text>

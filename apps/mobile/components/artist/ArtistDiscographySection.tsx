@@ -19,11 +19,11 @@ type DbAlbum = {
 
 type ReleaseType = 'Album' | 'EP' | 'Single' | 'Live';
 const RELEASE_TYPE_FILTERS: { label: string; value: ReleaseType | 'Tous' }[] = [
-  { label: 'Tous', value: 'Tous' },
   { label: 'Albums', value: 'Album' },
   { label: 'EPs', value: 'EP' },
   { label: 'Singles', value: 'Single' },
   { label: 'Lives', value: 'Live' },
+  { label: 'Tous', value: 'Tous' },
 ];
 
 type DiscographyItem = {
@@ -48,7 +48,7 @@ type Props = { albums: DbAlbum[]; mbReleases: ArtistRelease[]; artistName: strin
  */
 export function ArtistDiscographySection({ albums, mbReleases, artistName }: Props) {
   const router = useRouter();
-  const [typeFilter, setTypeFilter] = useState<ReleaseType | 'Tous'>('Tous');
+  const [typeFilter, setTypeFilter] = useState<ReleaseType | 'Tous'>('Album');
   const { importingMbid, importAlbum } = useMusicBrainzAlbumImport();
 
   const discography = useMemo(() => {
@@ -102,7 +102,7 @@ export function ArtistDiscographySection({ albums, mbReleases, artistName }: Pro
   }, {} as Record<ReleaseType, number>);
   const availableFilters = RELEASE_TYPE_FILTERS.filter((f) => f.value === 'Tous' || (typeCounts[f.value as ReleaseType] ?? 0) > 0);
   const showFilters = availableFilters.length > 2;
-  const effectiveFilter = availableFilters.some((f) => f.value === typeFilter) ? typeFilter : 'Tous';
+  const effectiveFilter = availableFilters.some((f) => f.value === typeFilter) ? typeFilter : (availableFilters[0]?.value ?? 'Tous');
   const filtered = effectiveFilter === 'Tous' ? discography : discography.filter((item) => typeOf(item) === effectiveFilter);
 
   return (
@@ -164,7 +164,7 @@ export function ArtistDiscographySection({ albums, mbReleases, artistName }: Pro
                     )}
                     {item.avgRating != null && (
                       <View className="absolute top-1.5 right-1.5 flex-row items-baseline gap-0.5 bg-paper-hi/90 border border-accent rounded-badge-sm px-1.5 py-0.5">
-                        <Text className="text-accent" style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 13, lineHeight: 13, paddingRight: 2 }}>
+                        <Text className="text-accent" style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 13, lineHeight: 16, paddingRight: 2 }}>
                           {item.avgRating.toFixed(1).replace('.', ',')}
                         </Text>
                         <Text className="text-accent uppercase opacity-70" style={{ fontFamily: 'Inter_400Regular', fontSize: 8 }}>/10</Text>
